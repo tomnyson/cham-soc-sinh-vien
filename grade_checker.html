@@ -1,0 +1,1735 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiểm tra điểm qua môn</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s;
+        }
+
+        .upload-section:hover {
+            border-color: #764ba2;
+            background: #f0f1ff;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-label {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            display: inline-block;
+            transition: transform 0.3s;
+        }
+
+        .file-label:hover {
+            transform: scale(1.05);
+        }
+
+        .file-name {
+            margin-top: 15px;
+            font-size: 1em;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .weights-info {
+            background: #e8f4f8;
+            border-left: 5px solid #17a2b8;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 10px;
+        }
+
+        .weights-info h3 {
+            color: #17a2b8;
+            margin-bottom: 15px;
+        }
+
+        .weights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            font-size: 0.9em;
+        }
+
+        .weight-item {
+            background: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+        }
+
+        .results-section {
+            margin-top: 30px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .stat-card h3 {
+            font-size: 2.5em;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            opacity: 0.9;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .pass {
+            background: #d4edda;
+            color: #155724;
+            font-weight: bold;
+        }
+
+        .fail {
+            background: #f8d7da;
+            color: #721c24;
+            font-weight: bold;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .badge-pass {
+            background: #28a745;
+            color: white;
+        }
+
+        .badge-fail {
+            background: #dc3545;
+            color: white;
+        }
+
+        .export-btn {
+            background: #28a745;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+
+        .export-btn:hover {
+            background: #218838;
+            transform: scale(1.05);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .config-section {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
+
+        .config-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .config-header h3 {
+            color: #856404;
+            margin: 0;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+
+        select {
+            padding: 8px 15px;
+            border: 2px solid #667eea;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        .weight-editor {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .weight-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 100px;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .weight-row input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .weight-row button {
+            padding: 8px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .weight-row button:hover {
+            background: #c82333;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 Kiểm tra điểm qua môn</h1>
+            <p>Upload file Excel để tính điểm và kiểm tra kết quả học tập</p>
+            <p style="font-size: 0.9em; margin-top: 5px;">Tổng trọng số: 60% | Qua môn: ≥3/6 điểm (50%)</p>
+        </div>
+
+        <div class="content">
+            <div class="config-section">
+                <div class="config-header">
+                    <h3>⚙️ Cấu hình trọng số</h3>
+                    <div class="btn-group">
+                        <select id="profileSelect" onchange="loadProfile()">
+                            <option value="default">Mặc định (60%)</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="openWeightEditor()">✏️ Chỉnh sửa</button>
+                        <button class="btn btn-success" onclick="createNewProfile()">➕ Tạo mới</button>
+                        <button class="btn" style="background: #6f42c1; color: white;" onclick="duplicateCurrentProfile()">📑 Nhân bản</button>
+                        <button class="btn btn-warning" onclick="exportConfig()">📤 Xuất</button>
+                        <label for="importConfig" class="btn" style="background: #17a2b8; color: white; cursor: pointer;">📥 Nhập</label>
+                        <input type="file" id="importConfig" accept=".json" style="display: none;" onchange="importConfig(event)">
+                    </div>
+                </div>
+                <div id="currentWeightSummary" style="font-size: 0.9em; color: #856404;">
+                    Đang sử dụng: <strong>Mặc định</strong> - Tổng: 60%
+                </div>
+            </div>
+
+            <div class="upload-section">
+                <div class="file-input-wrapper">
+                    <input type="file" id="fileInput" accept=".xlsx, .xls" onchange="handleFile(event)">
+                    <label for="fileInput" class="file-label">
+                        📂 Chọn file Excel điểm
+                    </label>
+                </div>
+                <div class="file-name" id="fileName"></div>
+            </div>
+
+            <div class="config-section" style="background: #e7f3ff; border-left-color: #0066cc;">
+                <div class="config-header">
+                    <h3 style="color: #004085;">👥 Quản lý lớp học</h3>
+                    <div class="btn-group">
+                        <select id="classSelect" onchange="loadClass()" style="min-width: 200px;">
+                            <option value="">-- Chọn lớp --</option>
+                        </select>
+                        <button class="btn btn-success" onclick="createNewClass()">➕ Tạo lớp mới</button>
+                        <button class="btn btn-primary" onclick="editClass()">✏️ Sửa</button>
+                        <button class="btn" style="background: #dc3545; color: white;" onclick="deleteClass()">🗑️ Xóa</button>
+                    </div>
+                </div>
+                <div id="classInfo" style="font-size: 0.9em; color: #004085; display: none;">
+                    <strong>Thông tin:</strong> <span id="classDetails"></span>
+                </div>
+            </div>
+
+            <div class="config-section" style="background: #d1ecf1; border-left-color: #17a2b8;">
+                <h3 style="color: #0c5460; margin-bottom: 15px;">📋 Tạo bảng điểm Template</h3>
+                <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label style="color: #0c5460; font-weight: bold; display: block; margin-bottom: 5px;">Chọn nguồn danh sách:</label>
+                        <div style="display: flex; gap: 10px;">
+                            <label style="display: flex; align-items: center; gap: 5px;">
+                                <input type="radio" name="templateSource" value="class" checked onchange="updateTemplateSource()">
+                                <span>Từ lớp đã lưu</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 5px;">
+                                <input type="radio" name="templateSource" value="upload" onchange="updateTemplateSource()">
+                                <span>Upload file mới</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="classSourceSection">
+                    <p style="color: #0c5460; margin-bottom: 10px;">Sử dụng danh sách sinh viên từ lớp đã chọn ở trên</p>
+                </div>
+
+                <div id="uploadSourceSection" style="display: none;">
+                    <div style="display: flex; gap: 15px; align-items: center;">
+                        <div style="flex: 1;">
+                            <input type="file" id="classListInput" accept=".xlsx, .xls" style="display: none;" onchange="handleClassListUpload(event)">
+                            <label for="classListInput" class="btn btn-primary" style="cursor: pointer; display: inline-block;">
+                                📁 Chọn danh sách lớp
+                            </label>
+                            <span id="classListFileName" style="margin-left: 10px; color: #0c5460;"></span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px; font-size: 0.9em; color: #0c5460;">
+                        <strong>Lưu ý:</strong> File danh sách lớp cần có ít nhất 2 cột: MSSV và Họ và tên
+                    </div>
+                </div>
+
+                <button class="btn" style="background: #17a2b8; color: white; margin-top: 15px;" onclick="generateTemplate()" id="generateTemplateBtn" disabled>
+                    📝 Tạo Template Excel
+                </button>
+            </div>
+
+            <div class="weights-info">
+                <h3>📊 Thông tin trọng số điểm (Tổng: 60%)</h3>
+                <div class="weights-grid">
+                    <div class="weight-item"><strong>Lab 1:</strong> 3.5%</div>
+                    <div class="weight-item"><strong>Quiz 3:</strong> 1.5%</div>
+                    <div class="weight-item"><strong>Quiz 4:</strong> 1.5%</div>
+                    <div class="weight-item"><strong>Quiz 5:</strong> 1.5%</div>
+                    <div class="weight-item"><strong>Quiz 6:</strong> 1.5%</div>
+                    <div class="weight-item"><strong>Quiz 7:</strong> 1.5%</div>
+                    <div class="weight-item"><strong>Quiz 8:</strong> 1.5%</div>
+                    <div class="weight-item"><strong>Assignment GĐ1:</strong> 10%</div>
+                    <div class="weight-item"><strong>Assignment GĐ2:</strong> 10%</div>
+                    <div class="weight-item"><strong>Lab 2:</strong> 3.5%</div>
+                    <div class="weight-item"><strong>Lab 3:</strong> 3.5%</div>
+                    <div class="weight-item"><strong>Lab 4:</strong> 3.5%</div>
+                    <div class="weight-item"><strong>Lab 5:</strong> 3.5%</div>
+                    <div class="weight-item"><strong>Lab 6:</strong> 3.5%</div>
+                    <div class="weight-item"><strong>Lab 7:</strong> 3.5%</div>
+                    <div class="weight-item"><strong>Lab 8:</strong> 3.5%</div>
+                    <div class="weight-item"><strong>Quiz 1:</strong> 1.5%</div>
+                    <div class="weight-item"><strong>Quiz 2:</strong> 1.5%</div>
+                </div>
+            </div>
+
+            <div id="resultsSection" class="results-section hidden">
+                <div class="stats">
+                    <div class="stat-card">
+                        <h3 id="totalStudents">0</h3>
+                        <p>Tổng sinh viên</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="passedStudents">0</h3>
+                        <p>Đã qua môn (≥3/6)</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="failedStudents">0</h3>
+                        <p>Chưa qua môn (<3/6)</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="passRate">0%</h3>
+                        <p>Tỷ lệ qua môn</p>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>STT</th>
+                                <th>MSSV</th>
+                                <th>Họ và tên</th>
+                                <th>Điểm tổng</th>
+                                <th>Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsBody">
+                        </tbody>
+                    </table>
+                </div>
+
+                <button class="export-btn" onclick="exportResults()">📥 Xuất kết quả Excel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal chỉnh sửa lớp học -->
+    <div id="classModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>✏️ Chỉnh sửa lớp học</h2>
+                <button class="close-btn" onclick="closeClassEditor()">&times;</button>
+            </div>
+            <div>
+                <label><strong>Tên lớp:</strong></label>
+                <input type="text" id="className" placeholder="VD: SE1801" style="width: 100%; padding: 8px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px;">
+
+                <label><strong>Mô tả:</strong></label>
+                <input type="text" id="classDescription" placeholder="VD: Lập trình Java - Khóa 18" style="width: 100%; padding: 8px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px;">
+
+                <div style="margin: 15px 0;">
+                    <strong>Danh sách sinh viên:</strong>
+                    <div style="display: flex; gap: 10px; margin: 10px 0;">
+                        <input type="file" id="classStudentListInput" accept=".xlsx, .xls" style="display: none;" onchange="handleClassStudentUpload(event)">
+                        <label for="classStudentListInput" class="btn btn-primary" style="cursor: pointer;">
+                            📁 Upload danh sách
+                        </label>
+                        <button class="btn btn-success" onclick="addStudentRow()">➕ Thêm SV thủ công</button>
+                    </div>
+                </div>
+
+                <div id="studentEditor" class="weight-editor" style="max-height: 300px;">
+                    <!-- Student rows will be added here -->
+                </div>
+
+                <div style="margin-top: 15px; font-weight: bold;">
+                    Tổng số sinh viên: <span id="totalStudents">0</span>
+                </div>
+
+                <div class="btn-group" style="margin-top: 20px; justify-content: flex-end;">
+                    <button class="btn btn-primary" onclick="saveClass()">💾 Lưu</button>
+                    <button class="btn" style="background: #6c757d; color: white;" onclick="closeClassEditor()">Hủy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal chỉnh sửa trọng số -->
+    <div id="weightModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>✏️ Chỉnh sửa trọng số</h2>
+                <button class="close-btn" onclick="closeWeightEditor()">&times;</button>
+            </div>
+            <div>
+                <label><strong>Tên profile:</strong></label>
+                <input type="text" id="profileName" placeholder="Nhập tên profile" style="width: 100%; padding: 8px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px;">
+
+                <div style="margin: 10px 0;">
+                    <label><strong>Sao chép từ profile:</strong></label>
+                    <div style="display: flex; gap: 10px; margin-top: 5px;">
+                        <select id="copyFromProfile" style="flex: 1;">
+                            <option value="">-- Chọn profile để sao chép --</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="copyFromProfile()" style="padding: 8px 15px;">📋 Sao chép</button>
+                    </div>
+                </div>
+
+                <label><strong>Ngưỡng qua môn (điểm):</strong></label>
+                <input type="number" id="passThreshold" placeholder="3" step="0.1" style="width: 100%; padding: 8px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px;">
+
+                <div style="margin: 15px 0;">
+                    <strong>Danh sách trọng số:</strong>
+                    <button class="btn btn-success" onclick="addWeightRow()" style="margin-left: 10px; padding: 5px 15px;">➕ Thêm</button>
+                </div>
+
+                <div id="weightEditor" class="weight-editor"></div>
+
+                <div style="margin-top: 15px; font-weight: bold;">
+                    Tổng trọng số: <span id="totalWeight">0</span>%
+                </div>
+
+                <div class="btn-group" style="margin-top: 20px; justify-content: flex-end;">
+                    <button class="btn btn-primary" onclick="saveWeightProfile()">💾 Lưu</button>
+                    <button class="btn" style="background: #6c757d; color: white;" onclick="closeWeightEditor()">Hủy</button>
+                    <button class="btn" style="background: #dc3545; color: white;" onclick="deleteProfile()">🗑️ Xóa profile</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Quản lý profiles trọng số
+        let profiles = {};
+        let currentProfile = 'default';
+        let weights = {};
+        let passThreshold = 3;
+
+        let processedData = [];
+        let matchedColumns = {}; // Lưu các cột đã khớp để hiển thị
+        let classListData = []; // Lưu danh sách lớp để tạo template
+
+        // Quản lý lớp học
+        let classes = {};
+        let currentClass = '';
+
+        // Khởi tạo profiles mặc định
+        function initDefaultProfiles() {
+            const defaultProfile = {
+                name: 'Mặc định (60%)',
+                passThreshold: 3,
+                weights: {
+                    'Lab 1': 3.5,
+                    'Lab 2': 3.5,
+                    'Lab 3': 3.5,
+                    'Lab 4': 3.5,
+                    'Lab 5': 3.5,
+                    'Lab 6': 3.5,
+                    'Lab 7': 3.5,
+                    'Lab 8': 3.5,
+                    'Quiz 1': 1.5,
+                    'Quiz 2': 1.5,
+                    'Quiz 3': 1.5,
+                    'Quiz 4': 1.5,
+                    'Quiz 5': 1.5,
+                    'Quiz 6': 1.5,
+                    'Quiz 7': 1.5,
+                    'Quiz 8': 1.5,
+                    'GD 1': 10,
+                    'GD 2': 10
+                }
+            };
+
+            // Load từ localStorage hoặc dùng mặc định
+            const saved = localStorage.getItem('gradeProfiles');
+            if (saved) {
+                profiles = JSON.parse(saved);
+            } else {
+                profiles = { default: defaultProfile };
+                saveProfiles();
+            }
+
+            // Load profile hiện tại
+            const savedCurrent = localStorage.getItem('currentProfile');
+            if (savedCurrent && profiles[savedCurrent]) {
+                currentProfile = savedCurrent;
+            }
+
+            loadProfile();
+            updateProfileSelect();
+        }
+
+        function saveProfiles() {
+            localStorage.setItem('gradeProfiles', JSON.stringify(profiles));
+        }
+
+        function loadProfile() {
+            const select = document.getElementById('profileSelect');
+            if (select && select.value) {
+                currentProfile = select.value;
+            }
+
+            const profile = profiles[currentProfile];
+            if (profile) {
+                weights = { ...profile.weights };
+                passThreshold = profile.passThreshold || 3;
+                localStorage.setItem('currentProfile', currentProfile);
+                updateWeightSummary();
+            }
+        }
+
+        function updateProfileSelect() {
+            const select = document.getElementById('profileSelect');
+            select.innerHTML = '';
+            for (const [key, profile] of Object.entries(profiles)) {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = profile.name;
+                if (key === currentProfile) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            }
+        }
+
+        function updateWeightSummary() {
+            const total = Object.values(weights).reduce((sum, w) => sum + w, 0);
+            const profile = profiles[currentProfile];
+            document.getElementById('currentWeightSummary').innerHTML =
+                `Đang sử dụng: <strong>${profile.name}</strong> - Tổng: ${total.toFixed(1)}% - Qua môn: ≥${passThreshold} điểm`;
+        }
+
+        // Chỉnh sửa trọng số
+        function openWeightEditor() {
+            const profile = profiles[currentProfile];
+            document.getElementById('profileName').value = profile.name;
+            document.getElementById('passThreshold').value = profile.passThreshold || 3;
+
+            // Populate dropdown sao chép profile
+            populateCopyProfileDropdown();
+
+            renderWeightEditor();
+            document.getElementById('weightModal').classList.add('show');
+        }
+
+        function populateCopyProfileDropdown() {
+            const select = document.getElementById('copyFromProfile');
+            select.innerHTML = '<option value="">-- Chọn profile để sao chép --</option>';
+
+            for (const [key, profile] of Object.entries(profiles)) {
+                if (key !== currentProfile) { // Không hiển thị profile hiện tại
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = profile.name;
+                    select.appendChild(option);
+                }
+            }
+        }
+
+        function copyFromProfile() {
+            const select = document.getElementById('copyFromProfile');
+            const sourceProfileId = select.value;
+
+            if (!sourceProfileId) {
+                alert('Vui lòng chọn profile để sao chép!');
+                return;
+            }
+
+            const sourceProfile = profiles[sourceProfileId];
+            if (!sourceProfile) {
+                alert('Không tìm thấy profile!');
+                return;
+            }
+
+            // Copy ngưỡng qua môn
+            document.getElementById('passThreshold').value = sourceProfile.passThreshold || 3;
+
+            // Copy weights
+            const editor = document.getElementById('weightEditor');
+            editor.innerHTML = '';
+
+            for (const [key, value] of Object.entries(sourceProfile.weights)) {
+                addWeightRowWithData(key, value);
+            }
+
+            calculateTotalWeight();
+
+            // Reset dropdown
+            select.value = '';
+
+            alert(`Đã sao chép cấu hình từ "${sourceProfile.name}"!\nBạn có thể chỉnh sửa thêm trước khi lưu.`);
+        }
+
+        function closeWeightEditor() {
+            document.getElementById('weightModal').classList.remove('show');
+        }
+
+        function renderWeightEditor() {
+            const editor = document.getElementById('weightEditor');
+            editor.innerHTML = '';
+
+            const profile = profiles[currentProfile];
+            for (const [key, value] of Object.entries(profile.weights)) {
+                addWeightRowWithData(key, value);
+            }
+            calculateTotalWeight();
+        }
+
+        function addWeightRow() {
+            addWeightRowWithData('', 0);
+        }
+
+        function addWeightRowWithData(name, weight) {
+            const editor = document.getElementById('weightEditor');
+            const row = document.createElement('div');
+            row.className = 'weight-row';
+            row.innerHTML = `
+                <input type="text" placeholder="Tên cột (VD: Lab 1)" value="${name}" class="weight-name">
+                <input type="number" placeholder="Trọng số (%)" value="${weight}" step="0.1" class="weight-value" oninput="calculateTotalWeight()">
+                <button onclick="removeWeightRow(this)">Xóa</button>
+            `;
+            editor.appendChild(row);
+            calculateTotalWeight();
+        }
+
+        function removeWeightRow(btn) {
+            btn.parentElement.remove();
+            calculateTotalWeight();
+        }
+
+        function calculateTotalWeight() {
+            const rows = document.querySelectorAll('.weight-row');
+            let total = 0;
+            rows.forEach(row => {
+                const value = parseFloat(row.querySelector('.weight-value').value) || 0;
+                total += value;
+            });
+            document.getElementById('totalWeight').textContent = total.toFixed(1);
+        }
+
+        function saveWeightProfile() {
+            const name = document.getElementById('profileName').value.trim();
+            const threshold = parseFloat(document.getElementById('passThreshold').value) || 3;
+
+            if (!name) {
+                alert('Vui lòng nhập tên profile!');
+                return;
+            }
+
+            const rows = document.querySelectorAll('.weight-row');
+            const newWeights = {};
+            rows.forEach(row => {
+                const key = row.querySelector('.weight-name').value.trim();
+                const value = parseFloat(row.querySelector('.weight-value').value) || 0;
+                if (key) {
+                    newWeights[key] = value;
+                }
+            });
+
+            profiles[currentProfile] = {
+                name: name,
+                passThreshold: threshold,
+                weights: newWeights
+            };
+
+            saveProfiles();
+            loadProfile();
+            updateProfileSelect();
+            closeWeightEditor();
+            alert('Đã lưu profile thành công!');
+        }
+
+        function createNewProfile() {
+            const name = prompt('Nhập tên profile mới:');
+            if (!name) return;
+
+            const id = 'profile_' + Date.now();
+            profiles[id] = {
+                name: name,
+                passThreshold: 3,
+                weights: {}
+            };
+
+            currentProfile = id;
+            saveProfiles();
+            updateProfileSelect();
+            openWeightEditor();
+        }
+
+        function duplicateCurrentProfile() {
+            const sourceProfile = profiles[currentProfile];
+            const newName = prompt(`Nhập tên cho bản sao của "${sourceProfile.name}":`, `${sourceProfile.name} (Copy)`);
+
+            if (!newName) return;
+
+            const id = 'profile_' + Date.now();
+            profiles[id] = {
+                name: newName,
+                passThreshold: sourceProfile.passThreshold,
+                weights: { ...sourceProfile.weights } // Deep copy weights
+            };
+
+            currentProfile = id;
+            saveProfiles();
+            updateProfileSelect();
+            loadProfile();
+
+            alert(`Đã tạo bản sao "${newName}"!\nBạn có thể chỉnh sửa nó bằng nút "✏️ Chỉnh sửa".`);
+        }
+
+        function deleteProfile() {
+            if (currentProfile === 'default') {
+                alert('Không thể xóa profile mặc định!');
+                return;
+            }
+
+            if (confirm('Bạn có chắc muốn xóa profile này?')) {
+                delete profiles[currentProfile];
+                currentProfile = 'default';
+                saveProfiles();
+                updateProfileSelect();
+                loadProfile();
+                closeWeightEditor();
+            }
+        }
+
+        function exportConfig() {
+            const data = JSON.stringify(profiles, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `grade_config_${new Date().getTime()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importConfig(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (confirm('Import cấu hình sẽ ghi đè tất cả profiles hiện tại. Bạn có chắc chắn?')) {
+                        profiles = imported;
+                        saveProfiles();
+                        currentProfile = 'default';
+                        updateProfileSelect();
+                        loadProfile();
+                        alert('Import thành công!');
+                    }
+                } catch (error) {
+                    alert('Lỗi: File không hợp lệ!');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Reset input
+        }
+
+        // Xử lý upload danh sách lớp
+        function handleClassListUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            document.getElementById('classListFileName').textContent = `📄 ${file.name}`;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+                parseClassList(jsonData);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function parseClassList(data) {
+            if (data.length < 2) {
+                alert('File không có dữ liệu hợp lệ!');
+                classListData = [];
+                document.getElementById('generateTemplateBtn').disabled = true;
+                return;
+            }
+
+            const headers = data[0];
+
+            // Tìm index của các cột
+            const mssvIndex = headers.findIndex(h => {
+                if (!h) return false;
+                const normalized = normalizeString(h);
+                return normalized.includes('mssv') ||
+                       normalized.includes('masinhvien') ||
+                       normalized.includes('masv') ||
+                       normalized === 'masinhvien' ||
+                       normalized === 'ma';
+            });
+
+            const nameIndex = headers.findIndex(h => {
+                if (!h) return false;
+                const normalized = normalizeString(h);
+                return normalized.includes('ten') ||
+                       normalized.includes('hova') ||
+                       normalized.includes('hovaten') ||
+                       normalized.includes('ho') ||
+                       normalized === 'ten' ||
+                       normalized === 'hovaten';
+            });
+
+            if (mssvIndex === -1 || nameIndex === -1) {
+                const headerList = headers.filter(h => h).map((h, i) => `${i}: "${h}"`).join('\n');
+                alert(`Không tìm thấy cột MSSV hoặc Họ tên!\n\nCác cột tìm thấy:\n${headerList}\n\nVui lòng đảm bảo file có:\n- Cột chứa "MSSV"\n- Cột chứa "Họ và tên"`);
+                classListData = [];
+                document.getElementById('generateTemplateBtn').disabled = true;
+                return;
+            }
+
+            // Parse danh sách sinh viên
+            classListData = [];
+            for (let i = 1; i < data.length; i++) {
+                const row = data[i];
+                if (!row || row.length === 0) continue;
+
+                const mssv = row[mssvIndex] || '';
+                const name = row[nameIndex] || '';
+
+                if (mssv) {
+                    classListData.push({ mssv, name });
+                }
+            }
+
+            if (classListData.length === 0) {
+                alert('Không tìm thấy sinh viên nào trong file!');
+                document.getElementById('generateTemplateBtn').disabled = true;
+                return;
+            }
+
+            document.getElementById('generateTemplateBtn').disabled = false;
+            alert(`Đã tải danh sách ${classListData.length} sinh viên!\nClick "Tạo Template Excel" để tạo file mẫu.`);
+        }
+
+        function generateTemplate() {
+            const source = document.querySelector('input[name="templateSource"]:checked').value;
+
+            // Xác định data source
+            let students = [];
+            if (source === 'class') {
+                if (!currentClass || !classes[currentClass]) {
+                    alert('Vui lòng chọn lớp trước!');
+                    return;
+                }
+                students = classes[currentClass].students || [];
+            } else {
+                students = classListData;
+            }
+
+            if (students.length === 0) {
+                alert('Danh sách sinh viên trống!');
+                return;
+            }
+
+            const profile = profiles[currentProfile];
+            if (!profile || Object.keys(profile.weights).length === 0) {
+                alert('Profile hiện tại không có cột điểm nào!\nVui lòng chỉnh sửa profile và thêm các cột điểm.');
+                return;
+            }
+
+            // Tạo header row
+            const headers = ['Mã sinh viên', 'Họ và tên'];
+            const weightColumns = Object.keys(profile.weights).sort((a, b) => {
+                // Sắp xếp: Lab trước, Quiz sau, GD cuối
+                const getOrder = (key) => {
+                    if (key.includes('Lab')) return 1;
+                    if (key.includes('Quiz')) return 2;
+                    if (key.includes('GD')) return 3;
+                    return 4;
+                };
+                const orderDiff = getOrder(a) - getOrder(b);
+                if (orderDiff !== 0) return orderDiff;
+                const numA = parseInt(a.match(/\d+/)?.[0] || 0);
+                const numB = parseInt(b.match(/\d+/)?.[0] || 0);
+                return numA - numB;
+            });
+
+            // Thêm tên cột và trọng số vào header
+            weightColumns.forEach(col => {
+                const weight = profile.weights[col];
+                headers.push(`${col} (${weight}%)`);
+            });
+
+            // Tạo data rows
+            const rows = [headers];
+            students.forEach(student => {
+                const row = [student.mssv, student.name];
+                // Thêm các ô trống cho điểm
+                weightColumns.forEach(() => row.push(''));
+                rows.push(row);
+            });
+
+            // Tạo worksheet
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+
+            // Style cho header (bold, background color)
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            for (let col = range.s.c; col <= range.e.c; col++) {
+                const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+                if (!ws[cellAddress]) continue;
+                ws[cellAddress].s = {
+                    font: { bold: true },
+                    fill: { fgColor: { rgb: "FFFF00" } }
+                };
+            }
+
+            // Set column widths
+            const colWidths = [
+                { wch: 15 }, // MSSV
+                { wch: 25 }  // Họ và tên
+            ];
+            weightColumns.forEach(() => {
+                colWidths.push({ wch: 12 }); // Các cột điểm
+            });
+            ws['!cols'] = colWidths;
+
+            // Tạo workbook
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Bảng điểm');
+
+            // Thêm sheet hướng dẫn
+            const instructionData = [
+                ['HƯỚNG DẪN SỬ DỤNG'],
+                [''],
+                ['1. Nhập điểm cho sinh viên vào các cột tương ứng'],
+                ['2. Điểm được tính theo thang 100'],
+                ['3. Để trống hoặc điền 0 nếu sinh viên không có điểm'],
+                ['4. Sau khi nhập xong, upload file này vào tool để tính tổng điểm'],
+                [''],
+                ['Thông tin Profile:'],
+                [`Tên: ${profile.name}`],
+                [`Ngưỡng qua môn: ${profile.passThreshold} điểm`],
+                [`Tổng trọng số: ${Object.values(profile.weights).reduce((s, w) => s + w, 0)}%`],
+                [''],
+                ['Danh sách trọng số:']
+            ];
+
+            weightColumns.forEach(col => {
+                instructionData.push([`${col}: ${profile.weights[col]}%`]);
+            });
+
+            const wsInstruction = XLSX.utils.aoa_to_sheet(instructionData);
+            XLSX.utils.book_append_sheet(wb, wsInstruction, 'Hướng dẫn');
+
+            // Download file
+            const fileName = `Template_${profile.name.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().getTime()}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+
+            alert(`Đã tạo template thành công!\nFile: ${fileName}\n\nSố sinh viên: ${students.length}\nSố cột điểm: ${weightColumns.length}`);
+        }
+
+        // Quản lý lớp học
+        function initClasses() {
+            const saved = localStorage.getItem('classes');
+            if (saved) {
+                classes = JSON.parse(saved);
+            }
+            updateClassSelect();
+        }
+
+        function saveClasses() {
+            localStorage.setItem('classes', JSON.stringify(classes));
+        }
+
+        function updateClassSelect() {
+            const select = document.getElementById('classSelect');
+            select.innerHTML = '<option value="">-- Chọn lớp --</option>';
+
+            for (const [key, classData] of Object.entries(classes)) {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = classData.name;
+                if (key === currentClass) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            }
+
+            updateGenerateButtonState();
+        }
+
+        function loadClass() {
+            const select = document.getElementById('classSelect');
+            currentClass = select.value;
+
+            if (currentClass && classes[currentClass]) {
+                const classData = classes[currentClass];
+                classListData = classData.students || [];
+
+                document.getElementById('classInfo').style.display = 'block';
+                document.getElementById('classDetails').textContent =
+                    `${classData.name} - ${classData.description || ''} (${classListData.length} sinh viên)`;
+            } else {
+                classListData = [];
+                document.getElementById('classInfo').style.display = 'none';
+            }
+
+            updateGenerateButtonState();
+        }
+
+        function createNewClass() {
+            const name = prompt('Nhập tên lớp (VD: SE1801):');
+            if (!name) return;
+
+            const id = 'class_' + Date.now();
+            classes[id] = {
+                name: name,
+                description: '',
+                students: []
+            };
+
+            currentClass = id;
+            saveClasses();
+            updateClassSelect();
+            editClass();
+        }
+
+        function editClass() {
+            if (!currentClass) {
+                alert('Vui lòng chọn lớp trước!');
+                return;
+            }
+
+            const classData = classes[currentClass];
+            document.getElementById('className').value = classData.name;
+            document.getElementById('classDescription').value = classData.description || '';
+
+            renderStudentEditor(classData.students || []);
+            document.getElementById('classModal').classList.add('show');
+        }
+
+        function closeClassEditor() {
+            document.getElementById('classModal').classList.remove('show');
+        }
+
+        function renderStudentEditor(students) {
+            const editor = document.getElementById('studentEditor');
+            editor.innerHTML = '';
+
+            students.forEach(student => {
+                addStudentRowWithData(student.mssv, student.name);
+            });
+
+            updateStudentCount();
+        }
+
+        function addStudentRow() {
+            addStudentRowWithData('', '');
+        }
+
+        function addStudentRowWithData(mssv, name) {
+            const editor = document.getElementById('studentEditor');
+            const row = document.createElement('div');
+            row.className = 'weight-row';
+            row.innerHTML = `
+                <input type="text" placeholder="MSSV" value="${mssv}" class="student-mssv">
+                <input type="text" placeholder="Họ và tên" value="${name}" class="student-name">
+                <button onclick="removeStudentRow(this)">Xóa</button>
+            `;
+            editor.appendChild(row);
+            updateStudentCount();
+        }
+
+        function removeStudentRow(btn) {
+            btn.parentElement.remove();
+            updateStudentCount();
+        }
+
+        function updateStudentCount() {
+            const rows = document.querySelectorAll('#studentEditor .weight-row');
+            document.getElementById('totalStudents').textContent = rows.length;
+        }
+
+        function handleClassStudentUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+                parseStudentList(jsonData);
+            };
+            reader.readAsArrayBuffer(file);
+            event.target.value = '';
+        }
+
+        function parseStudentList(data) {
+            if (data.length < 2) {
+                alert('File không có dữ liệu hợp lệ!');
+                return;
+            }
+
+            const headers = data[0];
+            const mssvIndex = headers.findIndex(h => {
+                if (!h) return false;
+                const normalized = normalizeString(h);
+                return normalized.includes('mssv') || normalized.includes('masinhvien') ||
+                       normalized.includes('masv') || normalized === 'ma';
+            });
+
+            const nameIndex = headers.findIndex(h => {
+                if (!h) return false;
+                const normalized = normalizeString(h);
+                return normalized.includes('ten') || normalized.includes('hova') ||
+                       normalized.includes('hovaten') || normalized.includes('ho');
+            });
+
+            if (mssvIndex === -1 || nameIndex === -1) {
+                alert('Không tìm thấy cột MSSV hoặc Họ tên!');
+                return;
+            }
+
+            // Clear existing students
+            document.getElementById('studentEditor').innerHTML = '';
+
+            // Add students from file
+            for (let i = 1; i < data.length; i++) {
+                const row = data[i];
+                if (!row || row.length === 0) continue;
+
+                const mssv = row[mssvIndex] || '';
+                const name = row[nameIndex] || '';
+
+                if (mssv) {
+                    addStudentRowWithData(mssv, name);
+                }
+            }
+
+            alert(`Đã tải ${document.querySelectorAll('#studentEditor .weight-row').length} sinh viên!`);
+        }
+
+        function saveClass() {
+            if (!currentClass) return;
+
+            const name = document.getElementById('className').value.trim();
+            const description = document.getElementById('classDescription').value.trim();
+
+            if (!name) {
+                alert('Vui lòng nhập tên lớp!');
+                return;
+            }
+
+            const rows = document.querySelectorAll('#studentEditor .weight-row');
+            const students = [];
+            rows.forEach(row => {
+                const mssv = row.querySelector('.student-mssv').value.trim();
+                const studentName = row.querySelector('.student-name').value.trim();
+                if (mssv && studentName) {
+                    students.push({ mssv, name: studentName });
+                }
+            });
+
+            classes[currentClass] = {
+                name: name,
+                description: description,
+                students: students
+            };
+
+            saveClasses();
+            updateClassSelect();
+            loadClass();
+            closeClassEditor();
+            alert(`Đã lưu lớp "${name}" với ${students.length} sinh viên!`);
+        }
+
+        function deleteClass() {
+            if (!currentClass) {
+                alert('Vui lòng chọn lớp trước!');
+                return;
+            }
+
+            const classData = classes[currentClass];
+            if (confirm(`Bạn có chắc muốn xóa lớp "${classData.name}"?`)) {
+                delete classes[currentClass];
+                currentClass = '';
+                classListData = [];
+                saveClasses();
+                updateClassSelect();
+                document.getElementById('classInfo').style.display = 'none';
+            }
+        }
+
+        function updateTemplateSource() {
+            const source = document.querySelector('input[name="templateSource"]:checked').value;
+
+            if (source === 'class') {
+                document.getElementById('classSourceSection').style.display = 'block';
+                document.getElementById('uploadSourceSection').style.display = 'none';
+            } else {
+                document.getElementById('classSourceSection').style.display = 'none';
+                document.getElementById('uploadSourceSection').style.display = 'block';
+            }
+
+            updateGenerateButtonState();
+        }
+
+        function updateGenerateButtonState() {
+            const source = document.querySelector('input[name="templateSource"]:checked').value;
+            const btn = document.getElementById('generateTemplateBtn');
+
+            if (source === 'class') {
+                // Từ lớp đã lưu
+                btn.disabled = !currentClass || !classes[currentClass] ||
+                               !classes[currentClass].students ||
+                               classes[currentClass].students.length === 0;
+            } else {
+                // Upload file
+                btn.disabled = classListData.length === 0;
+            }
+        }
+
+        // Khởi tạo khi load trang
+        window.addEventListener('DOMContentLoaded', () => {
+            initDefaultProfiles();
+            initClasses();
+        });
+
+        // Hàm loại bỏ dấu tiếng Việt
+        function removeVietnameseTones(str) {
+            if (!str) return '';
+            str = str.toString();
+            str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, 'a');
+            str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, 'e');
+            str = str.replace(/ì|í|ị|ỉ|ĩ/g, 'i');
+            str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, 'o');
+            str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, 'u');
+            str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, 'y');
+            str = str.replace(/đ/g, 'd');
+            str = str.replace(/À|Á|Ạ|Ả|Ã|Â|Ầ|Ấ|Ậ|Ẩ|Ẫ|Ă|Ằ|Ắ|Ặ|Ẳ|Ẵ/g, 'A');
+            str = str.replace(/È|É|Ẹ|Ẻ|Ẽ|Ê|Ề|Ế|Ệ|Ể|Ễ/g, 'E');
+            str = str.replace(/Ì|Í|Ị|Ỉ|Ĩ/g, 'I');
+            str = str.replace(/Ò|Ó|Ọ|Ỏ|Õ|Ô|Ồ|Ố|Ộ|Ổ|Ỗ|Ơ|Ờ|Ớ|Ợ|Ở|Ỡ/g, 'O');
+            str = str.replace(/Ù|Ú|Ụ|Ủ|Ũ|Ư|Ừ|Ứ|Ự|Ử|Ữ/g, 'U');
+            str = str.replace(/Ỳ|Ý|Ỵ|Ỷ|Ỹ/g, 'Y');
+            str = str.replace(/Đ/g, 'D');
+            return str;
+        }
+
+        // Hàm chuẩn hóa chuỗi để so sánh
+        function normalizeString(str) {
+            if (!str) return '';
+            str = removeVietnameseTones(str);
+            return str.toString()
+                .toLowerCase()
+                .replace(/\s+/g, '') // Bỏ tất cả khoảng trắng
+                .replace(/[()%]/g, '') // Bỏ dấu ngoặc và %
+                .trim();
+        }
+
+        // Hàm tìm kiếm cột điểm dựa trên header
+        function findScoreColumn(headerStr) {
+            const normalized = normalizeString(headerStr);
+
+            // Kiểm tra Lab (Lab1, Lab 1, Lab1(3.5%), etc.)
+            for (let i = 1; i <= 8; i++) {
+                const patterns = [
+                    `lab${i}`,
+                    `lab${i}3.5`,
+                    `lab${i}35`
+                ];
+                if (patterns.some(p => normalized.includes(p))) {
+                    return { key: `Lab ${i}`, weight: 3.5 };
+                }
+            }
+
+            // Kiểm tra Quiz (Quiz1, Quiz 1, Quiz1(1.5%), etc.)
+            for (let i = 1; i <= 8; i++) {
+                const patterns = [
+                    `quiz${i}`,
+                    `quiz${i}1.5`,
+                    `quiz${i}15`
+                ];
+                if (patterns.some(p => normalized.includes(p))) {
+                    return { key: `Quiz ${i}`, weight: 1.5 };
+                }
+            }
+
+            // Kiểm tra GD/Assignment (GD1, GĐ1, Assignment GD1, Đánh giá Assignment GĐ 1, etc.)
+            for (let i = 1; i <= 2; i++) {
+                const patterns = [
+                    `gd${i}`,
+                    `assignment`,
+                    `danhgia`
+                ];
+                // Nếu chứa 'assignment' hoặc 'danhgia' và số i
+                if (normalized.includes(String(i)) &&
+                    (patterns.some(p => normalized.includes(p)))) {
+                    return { key: `GD ${i}`, weight: 10 };
+                }
+                // Hoặc chỉ đơn giản là gd1, gd2
+                if (normalized === `gd${i}`) {
+                    return { key: `GD ${i}`, weight: 10 };
+                }
+            }
+
+            return null;
+        }
+
+        function handleFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            document.getElementById('fileName').textContent = `📄 ${file.name}`;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+                processData(jsonData);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processData(data) {
+            if (data.length < 2) {
+                alert('File không có dữ liệu hợp lệ!');
+                return;
+            }
+
+            const headers = data[0];
+            const results = [];
+            let passedCount = 0;
+            let failedCount = 0;
+            matchedColumns = {};
+
+            // Tìm index của các cột
+            const mssvIndex = headers.findIndex(h => {
+                if (!h) return false;
+                const normalized = normalizeString(h);
+                return normalized.includes('mssv') ||
+                       normalized.includes('masinhvien') ||
+                       normalized.includes('masv') ||
+                       normalized === 'masinhvien' ||
+                       normalized === 'ma';
+            });
+
+            const nameIndex = headers.findIndex(h => {
+                if (!h) return false;
+                const normalized = normalizeString(h);
+                return normalized.includes('ten') ||
+                       normalized.includes('hova') ||
+                       normalized.includes('hovaten') ||
+                       normalized.includes('ho') ||
+                       normalized === 'ten' ||
+                       normalized === 'hovaten';
+            });
+
+            if (mssvIndex === -1 || nameIndex === -1) {
+                // Hiển thị headers để debug
+                const headerList = headers.filter(h => h).map((h, i) => `${i}: "${h}"`).join('\n');
+                alert(`Không tìm thấy cột MSSV hoặc Họ tên!\n\nCác cột tìm thấy trong file:\n${headerList}\n\nVui lòng đảm bảo file có:\n- Cột chứa "MSSV" hoặc "Mã sinh viên"\n- Cột chứa "Họ và tên" hoặc "Tên"`);
+                return;
+            }
+
+            for (let i = 1; i < data.length; i++) {
+                const row = data[i];
+                if (!row || row.length === 0) continue;
+
+                const mssv = row[mssvIndex] || '';
+                const name = row[nameIndex] || '';
+
+                if (!mssv) continue;
+
+                let totalScore = 0;
+                let scoreDetails = {};
+
+                // Tính điểm theo trọng số
+                for (let j = 0; j < headers.length; j++) {
+                    const header = headers[j];
+                    if (!header) continue;
+
+                    const scoreColumn = findScoreColumn(header);
+                    if (scoreColumn) {
+                        const score = parseFloat(row[j]) || 0;
+                        // Công thức: (Điểm/100) × Hệ số
+                        const scoreRatio = score / 100; // Chuyển về thang 0-1
+                        const weightedScore = scoreRatio * scoreColumn.weight;
+                        totalScore += weightedScore;
+                        scoreDetails[scoreColumn.key] = score;
+
+                        // Lưu mapping để hiển thị
+                        if (!matchedColumns[scoreColumn.key]) {
+                            matchedColumns[scoreColumn.key] = header.toString();
+                        }
+                    }
+                }
+
+                // Tính điểm qua môn theo ngưỡng của profile
+                const passed = totalScore >= passThreshold;
+                if (passed) passedCount++;
+                else failedCount++;
+
+                results.push({
+                    mssv,
+                    name,
+                    totalScore: totalScore.toFixed(2),
+                    passed,
+                    scoreDetails
+                });
+            }
+
+            processedData = results;
+            displayResults(results, passedCount, failedCount);
+            displayMatchedColumns();
+        }
+
+        function displayResults(results, passedCount, failedCount) {
+            const totalCount = results.length;
+            const passRate = totalCount > 0 ? ((passedCount / totalCount) * 100).toFixed(1) : 0;
+
+            // Cập nhật thống kê
+            document.getElementById('totalStudents').textContent = totalCount;
+            document.getElementById('passedStudents').textContent = passedCount;
+            document.getElementById('failedStudents').textContent = failedCount;
+            document.getElementById('passRate').textContent = passRate + '%';
+
+            // Hiển thị bảng kết quả
+            const tbody = document.getElementById('resultsBody');
+            tbody.innerHTML = '';
+
+            results.forEach((student, index) => {
+                const tr = document.createElement('tr');
+                tr.className = student.passed ? 'pass' : 'fail';
+
+                tr.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${student.mssv}</td>
+                    <td>${student.name}</td>
+                    <td><strong>${student.totalScore}</strong></td>
+                    <td>
+                        <span class="status-badge ${student.passed ? 'badge-pass' : 'badge-fail'}">
+                            ${student.passed ? '✓ Đạt' : '✗ Chưa đạt'}
+                        </span>
+                    </td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('resultsSection').classList.remove('hidden');
+        }
+
+        function displayMatchedColumns() {
+            const weightsGrid = document.querySelector('.weights-grid');
+            weightsGrid.innerHTML = '';
+
+            // Hiển thị các cột đã khớp
+            const allColumns = Object.keys(weights).sort((a, b) => {
+                // Sắp xếp: Lab trước, Quiz sau, GD cuối
+                const getOrder = (key) => {
+                    if (key.includes('Lab')) return 1;
+                    if (key.includes('Quiz')) return 2;
+                    if (key.includes('GD')) return 3;
+                    return 4;
+                };
+                const orderDiff = getOrder(a) - getOrder(b);
+                if (orderDiff !== 0) return orderDiff;
+                // Sắp xếp theo số
+                const numA = parseInt(a.match(/\d+/)?.[0] || 0);
+                const numB = parseInt(b.match(/\d+/)?.[0] || 0);
+                return numA - numB;
+            });
+
+            let totalMatched = 0;
+            allColumns.forEach(key => {
+                const div = document.createElement('div');
+                div.className = 'weight-item';
+                const matched = matchedColumns[key];
+                if (matched) {
+                    div.innerHTML = `<strong>${key}:</strong> ${weights[key]}% <span style="color: green;">✓ (${matched})</span>`;
+                    div.style.background = '#d4edda';
+                    totalMatched++;
+                } else {
+                    div.innerHTML = `<strong>${key}:</strong> ${weights[key]}% <span style="color: red;">✗ Không tìm thấy</span>`;
+                    div.style.background = '#f8d7da';
+                }
+                weightsGrid.appendChild(div);
+            });
+
+            // Cập nhật tiêu đề
+            const weightsTitle = document.querySelector('.weights-info h3');
+            const totalWeight = Object.values(matchedColumns).length > 0
+                ? Object.keys(matchedColumns).reduce((sum, key) => sum + weights[key], 0)
+                : 0;
+            weightsTitle.innerHTML = `📊 Thông tin trọng số điểm (Đã khớp: ${totalMatched}/${allColumns.length} cột - ${totalWeight.toFixed(1)}%)`;
+        }
+
+        function exportResults() {
+            if (processedData.length === 0) {
+                alert('Không có dữ liệu để xuất!');
+                return;
+            }
+
+            const exportData = processedData.map((student, index) => ({
+                'STT': index + 1,
+                'MSSV': student.mssv,
+                'Họ và tên': student.name,
+                'Điểm tổng': student.totalScore,
+                'Trạng thái': student.passed ? 'Đạt' : 'Chưa đạt'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Kết quả');
+
+            XLSX.writeFile(wb, `Ket_qua_hoc_tap_${new Date().getTime()}.xlsx`);
+        }
+    </script>
+</body>
+</html>

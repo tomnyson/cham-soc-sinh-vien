@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FPT Polytechnic - Tra cứu điểm</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --fpt-orange: #FF6C00;
+            --fpt-orange-dark: #E65100;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--fpt-orange) 0%, var(--fpt-orange-dark) 100%);
+            color: white;
+            padding: 2rem 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-weight: 800;
+            font-size: 2rem;
+        }
+
+        .login-card {
+            max-width: 500px;
+            margin: 3rem auto;
+        }
+
+        .result-card {
+            max-width: 1200px;
+            margin: 2rem auto;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e5e7eb;
+        }
+
+        .stat-card h3 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--fpt-orange) 0%, var(--fpt-orange-dark) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .table thead {
+            background: linear-gradient(135deg, var(--fpt-orange) 0%, var(--fpt-orange-dark) 100%);
+            color: white;
+        }
+
+        .status-pass {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .status-fail {
+            color: #ef4444;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="container text-center">
+            <img src="https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png" alt="FPT Polytechnic" style="max-width: 200px; margin-bottom: 1rem;">
+            <h1><i class="bi bi-mortarboard-fill"></i> Tra cứu điểm sinh viên</h1>
+            <p class="mb-0">FPT Polytechnic</p>
+        </div>
+    </div>
+
+    <!-- Login Form -->
+    <div class="container">
+        <div id="loginSection">
+            <div class="card login-card shadow">
+                <div class="card-body p-4">
+                    <h4 class="card-title text-center mb-4">
+                        <i class="bi bi-person-badge"></i> Đăng nhập tra cứu điểm
+                    </h4>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Mã lớp:</label>
+                        <input type="text" class="form-control" id="classIdInput" placeholder="VD: class_1234567890">
+                        <small class="text-muted">Nhận từ giảng viên</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">MSSV:</label>
+                        <input type="text" class="form-control" id="mssvInput" placeholder="VD: PK03230">
+                    </div>
+
+                    <button class="btn btn-primary w-100 btn-lg" onclick="checkGrades()">
+                        <i class="bi bi-search"></i> Tra cứu điểm
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" style="display: none;">
+            <div class="result-card">
+                <!-- Student Info -->
+                <div class="card shadow mb-4">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h4 class="mb-2">
+                                    <i class="bi bi-person-circle text-primary"></i>
+                                    <span id="studentName">Tên sinh viên</span>
+                                </h4>
+                                <p class="mb-1"><strong>MSSV:</strong> <span id="studentMSSV">-</span></p>
+                                <p class="mb-0"><strong>Lớp:</strong> <span id="studentClass">-</span></p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <button class="btn btn-outline-secondary" onclick="logout()">
+                                    <i class="bi bi-box-arrow-left"></i> Đăng xuất
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="stat-card">
+                            <h3 id="totalScore">0.00</h3>
+                            <p class="text-muted mb-0">Tổng điểm</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="stat-card">
+                            <h3 id="statusText" class="status-fail">Chưa đạt</h3>
+                            <p class="text-muted mb-0">Trạng thái</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grades Table -->
+                <div class="card shadow">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-table"></i> Bảng điểm chi tiết
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr id="gradesHeader">
+                                        <th>Cột điểm</th>
+                                        <th>Trọng số</th>
+                                        <th>Điểm</th>
+                                        <th>Điểm quy đổi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="gradesBody">
+                                </tbody>
+                                <tfoot class="table-light">
+                                    <tr>
+                                        <td colspan="3" class="text-end fw-bold">Tổng điểm:</td>
+                                        <td class="fw-bold fs-5 text-primary" id="totalScoreFoot">0.00</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Share Link -->
+                <div class="card shadow mt-4">
+                    <div class="card-body">
+                        <h6 class="mb-3">
+                            <i class="bi bi-share"></i> Link chia sẻ
+                        </h6>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="shareLink" readonly>
+                            <button class="btn btn-outline-primary" onclick="copyShareLink()">
+                                <i class="bi bi-clipboard"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Check if URL has params
+        window.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const classId = urlParams.get('class');
+            const mssv = urlParams.get('mssv');
+
+            if (classId && mssv) {
+                document.getElementById('classIdInput').value = classId;
+                document.getElementById('mssvInput').value = mssv;
+                checkGrades();
+            }
+        });
+
+        async function checkGrades() {
+            const classId = document.getElementById('classIdInput').value.trim();
+            const mssv = document.getElementById('mssvInput').value.trim().toUpperCase();
+
+            if (!classId || !mssv) {
+                alert('Vui lòng nhập đầy đủ thông tin!');
+                return;
+            }
+
+            try {
+                // Fetch class data
+                const response = await fetch(`/api/classes/${classId}`);
+                const result = await response.json();
+
+                if (!result.success) {
+                    alert('Không tìm thấy lớp học!');
+                    return;
+                }
+
+                const classData = result.data;
+
+                // Find student
+                const student = classData.students.find(s => s.mssv === mssv);
+                if (!student) {
+                    alert('MSSV không có trong lớp này!');
+                    return;
+                }
+
+                // Check if grades exist
+                if (!classData.grades || !classData.grades.profileId) {
+                    alert('Lớp chưa có điểm!');
+                    return;
+                }
+
+                // Fetch profile
+                const profileResponse = await fetch(`/api/profiles/${classData.grades.profileId}`);
+                const profileResult = await profileResponse.json();
+
+                if (!profileResult.success) {
+                    alert('Không tìm thấy profile điểm!');
+                    return;
+                }
+
+                const profile = profileResult.data;
+                const studentGrades = classData.grades.students[mssv] || {};
+
+                // Display results
+                displayGrades(student, classData, profile, studentGrades);
+
+                // Update share link
+                const shareUrl = `${window.location.origin}/student.html?class=${classId}&mssv=${mssv}`;
+                document.getElementById('shareLink').value = shareUrl;
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Lỗi kết nối server: ' + error.message);
+            }
+        }
+
+        function displayGrades(student, classData, profile, studentGrades) {
+            // Hide login, show results
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'block';
+
+            // Student info
+            document.getElementById('studentName').textContent = student.name;
+            document.getElementById('studentMSSV').textContent = student.mssv;
+            document.getElementById('studentClass').textContent = classData.name;
+
+            // Calculate total
+            let total = 0;
+            const gradesBody = document.getElementById('gradesBody');
+            gradesBody.innerHTML = '';
+
+            Object.entries(profile.weights).sort((a, b) => {
+                const getOrder = (key) => {
+                    if (key.includes('Lab')) return 1;
+                    if (key.includes('Quiz')) return 2;
+                    if (key.includes('GD')) return 3;
+                    return 4;
+                };
+                return getOrder(a[0]) - getOrder(b[0]);
+            }).forEach(([column, weight]) => {
+                const score = studentGrades[column] || 0;
+                const converted = (score / 100) * weight;
+                total += converted;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${column}</strong></td>
+                    <td>${weight}%</td>
+                    <td class="text-center">${score.toFixed(1)}</td>
+                    <td class="text-center text-primary fw-bold">${converted.toFixed(2)}</td>
+                `;
+                gradesBody.appendChild(row);
+            });
+
+            // Display total
+            const passed = total >= (profile.passThreshold || 3);
+            document.getElementById('totalScore').textContent = total.toFixed(2);
+            document.getElementById('totalScoreFoot').textContent = total.toFixed(2);
+            
+            const statusEl = document.getElementById('statusText');
+            statusEl.textContent = passed ? '✓ Đạt' : '✗ Chưa đạt';
+            statusEl.className = passed ? 'status-pass' : 'status-fail';
+        }
+
+        function logout() {
+            document.getElementById('loginSection').style.display = 'block';
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('classIdInput').value = '';
+            document.getElementById('mssvInput').value = '';
+            
+            // Clear URL params
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        function copyShareLink() {
+            const input = document.getElementById('shareLink');
+            input.select();
+            document.execCommand('copy');
+            
+            alert('Đã copy link!');
+        }
+    </script>
+</body>
+</html>
