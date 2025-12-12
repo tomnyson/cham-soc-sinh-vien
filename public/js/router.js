@@ -1,5 +1,5 @@
 // ========================================
-// SIMPLE CLIENT-SIDE ROUTER
+// SIMPLE CLIENT-SIDE ROUTER WITH PARTIALS
 // ========================================
 
 class Router {
@@ -7,38 +7,95 @@ class Router {
         this.routes = {};
         this.currentRoute = null;
         this.params = {};
+        this.contentContainer = null;
+        this.handlePopState = this.handlePopState.bind(this);
+        this.handleLinkClick = this.handleLinkClick.bind(this);
+    }
+
+    normalizePath(path = '/') {
+        if (!path) return '/';
+        let normalized = path.trim();
+
+        if (normalized.startsWith('#')) {
+            normalized = normalized.slice(1);
+        }
+
+        if (!normalized.startsWith('/')) {
+            normalized = '/' + normalized;
+        }
+
+        // Remove trailing slash except root
+        if (normalized.length > 1 && normalized.endsWith('/')) {
+            normalized = normalized.slice(0, -1);
+        }
+
+        return normalized;
+    }
+
+    // Set content container
+    setContentContainer(selector) {
+        this.contentContainer = document.querySelector(selector);
+    }
+
+    // Load HTML partial
+    async loadPartial(partialPath) {
+        try {
+            const response = await fetch(partialPath);
+            if (!response.ok) {
+                throw new Error(`Failed to load partial: ${partialPath}`);
+            }
+            return await response.text();
+        } catch (error) {
+            console.error('Error loading partial:', error);
+            return `<div class="alert alert-danger">Error loading content</div>`;
+        }
     }
 
     // Register a route
-    register(path, handler) {
-        this.routes[path] = handler;
+    register(path, config) {
+        this.routes[path] = config;
     }
 
     // Navigate to a route
-    navigate(path, params = {}) {
+    async navigate(path, params = {}, options = {}) {
+        const { replace = false, silent = false } = options;
+        const normalizedPath = this.normalizePath(path);
         this.params = params;
-        
-        // Find matching route
-        const route = this.routes[path];
-        
+
+        const route = this.routes[normalizedPath];
+
         if (route) {
             // Call the previous route's cleanup if exists
             if (this.currentRoute && this.routes[this.currentRoute].cleanup) {
                 this.routes[this.currentRoute].cleanup();
             }
-            
-            this.currentRoute = path;
-            
-            // Update URL hash without reload
-            window.location.hash = path;
-            
+
+            this.currentRoute = normalizedPath;
+
+            if (!silent) {
+                const state = { path: normalizedPath, params };
+                if (replace) {
+                    window.history.replaceState(state, '', normalizedPath);
+                } else {
+                    window.history.pushState(state, '', normalizedPath);
+                }
+            }
+
             // Update navigation active states
-            this.updateNavigation(path);
-            
+            this.updateNavigation(normalizedPath);
+
+            // If route has a partial path, load it
+            if (route.partial && this.contentContainer) {
+                const html = await this.loadPartial(route.partial);
+                this.contentContainer.innerHTML = html;
+            }
+
             // Call route handler
-            route.handler(params);
+            if (route.handler) {
+                route.handler(params);
+            }
         } else {
-            console.error(`Route not found: ${path}`);
+            console.error(`❌ Route not found: ${path}`);
         }
     }
 
@@ -84,17 +141,50 @@ class Router {
 
     // Initialize router
     init() {
-        // Handle browser back/forward
-        window.addEventListener('hashchange', () => {
-            const hash = window.location.hash.slice(1) || '/';
-            if (this.routes[hash]) {
-                this.navigate(hash);
-            }
-        });
+        console.log('🔧 Router initialized');
+        console.log('📋 Registered routes:', Object.keys(this.routes));
 
-        // Load initial route
-        const initialHash = window.location.hash.slice(1) || '/';
-        this.navigate(initialHash);
+        // Set default content container
+        if (!this.contentContainer) {
+            this.setContentContainer('#page-content');
+        }
+
+        document.addEventListener('click', this.handleLinkClick);
+        window.addEventListener('popstate', this.handlePopState);
+
+        const initialPath = this.normalizePath(window.location.pathname || '/');
+        if (this.routes[initialPath]) {
+            this.navigate(initialPath, {}, { replace: true, silent: true });
+        } else if (this.routes['/']) {
+            this.navigate('/', {}, { replace: true, silent: true });
+        }
+    }
+
+    async handlePopState(event) {
+        const path = this.normalizePath(event.state?.path || window.location.pathname || '/');
+        const params = event.state?.params || {};
+        if (this.routes[path]) {
+            await this.navigate(path, params, { replace: true, silent: true });
+        } else {
+            console.warn(`⚠️ No route registered for path: ${path}`);
+        }
+    }
+
+    handleLinkClick(event) {
+        const link = event.target.closest('a[data-route]');
+        if (!link) return;
+
+        const route = link.getAttribute('data-route');
+        if (!route) return;
+
+        const normalizedRoute = this.normalizePath(route);
+        if (!this.routes[normalizedRoute]) return;
+
+        const isModifiedClick = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0;
+        if (isModifiedClick) return;
+
+        event.preventDefault();
+        this.navigate(normalizedRoute);
     }
 }
 

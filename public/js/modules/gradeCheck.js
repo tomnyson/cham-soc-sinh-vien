@@ -5,7 +5,10 @@
 const GradeCheckModule = {
     // Initialize module
     init() {
-        console.log('Grade Check Module initialized');
+        // Listen for data ready event to populate profile select
+        window.addEventListener('app-data-ready', () => {
+            this.populateProfileSelect();
+        });
     },
 
     // Show grade check view
@@ -20,26 +23,35 @@ const GradeCheckModule = {
 
     // Populate profile select dropdown
     populateProfileSelect() {
-        const select = document.getElementById('gradeProfileSelect');
+        // Support both gradeProfileSelect and profileSelect IDs
+        const select = document.getElementById('gradeProfileSelect') || document.getElementById('profileSelect');
         if (!select) return;
 
         // Clear and repopulate
         select.innerHTML = '<option value="">-- Chọn profile --</option>';
         
-        if (typeof profiles !== 'undefined') {
-            Object.entries(profiles).forEach(([key, profile]) => {
-                const option = document.createElement('option');
-                option.value = key;
-                option.textContent = profile.name;
-                select.appendChild(option);
-            });
-        }
+        // Get profiles from profileManager or global
+        const profilesData = window.profileManager?.profiles || window.profiles || {};
+        
+        Object.entries(profilesData).forEach(([key, profile]) => {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = profile.name;
+            
+            // Select current profile if it matches
+            if (window.profileManager?.currentProfile === key || window.currentProfile === key) {
+                option.selected = true;
+            }
+            
+            select.appendChild(option);
+        });
     },
 
     // Load profile for grade check
     loadGradeProfile() {
         try {
-            const select = document.getElementById('gradeProfileSelect');
+            // Support both gradeProfileSelect and profileSelect IDs
+            const select = document.getElementById('gradeProfileSelect') || document.getElementById('profileSelect');
             if (!select || !select.value) {
                 console.warn('Profile select not found or no value selected');
                 return;
@@ -47,34 +59,41 @@ const GradeCheckModule = {
 
             const profileId = select.value;
             
-            // Check if profiles is defined
-            if (typeof profiles === 'undefined') {
+            // Get profiles from profileManager or global
+            const profilesData = window.profileManager?.profiles || window.profiles || {};
+            
+            if (Object.keys(profilesData).length === 0) {
                 console.error('Profiles not loaded yet');
                 return;
             }
             
-            const profile = profiles[profileId];
+            const profile = profilesData[profileId];
             
             if (!profile) {
                 console.warn('Profile not found:', profileId);
                 return;
             }
 
-            // Update summary
+            // Update current profile in manager
+            if (window.profileManager) {
+                window.profileManager.currentProfile = profileId;
+                window.profileManager.weights = { ...profile.weights };
+                window.profileManager.passThreshold = profile.passThreshold || 3;
+            }
+
+            // Update summary (support both IDs)
             const total = Object.values(profile.weights).reduce((sum, w) => sum + w, 0);
-            const summaryEl = document.getElementById('gradeProfileSummary');
+            const summaryEl = document.getElementById('gradeProfileSummary') || document.getElementById('currentWeightSummary');
             if (summaryEl) {
                 summaryEl.innerHTML = `
-                    <strong>${profile.name}</strong> - 
+                    Đang sử dụng: <strong>${profile.name}</strong> - 
                     Tổng: ${total.toFixed(1)}% - 
                     Qua môn: ≥${profile.passThreshold} điểm
                 `;
-                summaryEl.className = 'alert alert-success mb-0 mt-3 mt-md-0';
-            } else {
-                console.warn('gradeProfileSummary element not found');
+                summaryEl.className = 'alert alert-success mb-0';
             }
 
-            // Update weights grid
+            // Update weights grid if exists
             this.displayWeights(profile.weights);
         } catch (error) {
             console.error('Error loading grade profile:', error);
@@ -117,7 +136,7 @@ const GradeCheckModule = {
 
     // Cleanup
     cleanup() {
-        console.log('Grade Check Module cleanup');
+        // Cleanup complete
     }
 };
 

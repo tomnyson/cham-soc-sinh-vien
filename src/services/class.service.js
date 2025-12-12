@@ -36,7 +36,7 @@ class ClassService {
      */
     async createClass(classData, userId = 'default') {
         try {
-            const { classId, name, description, students } = classData;
+            const { classId, name, description, students, grades } = classData;
 
             // Validate
             if (!classId || !name) {
@@ -54,6 +54,7 @@ class ClassService {
                 name,
                 description: description || '',
                 students: students || [],
+                grades: grades || null,
                 userId
             });
 
@@ -202,6 +203,42 @@ class ClassService {
             return { classData, results };
         } catch (error) {
             throw new Error(`Error adding students in bulk: ${error.message}`);
+        }
+    }
+
+    /**
+     * Lưu trữ lớp (Archive)
+     */
+    async archiveClass(classId, userId = 'default') {
+        try {
+            const classData = await Class.findByClassId(classId, userId);
+            if (!classData) {
+                throw new Error('Class not found');
+            }
+
+            classData.isArchived = true;
+            await classData.save();
+            return classData;
+        } catch (error) {
+            throw new Error(`Error archiving class: ${error.message}`);
+        }
+    }
+
+    /**
+     * Bỏ lưu trữ lớp (Unarchive)
+     */
+    async unarchiveClass(classId, userId = 'default') {
+        try {
+            const classData = await Class.findByClassId(classId, userId);
+            if (!classData) {
+                throw new Error('Class not found');
+            }
+
+            classData.isArchived = false;
+            await classData.save();
+            return classData;
+        } catch (error) {
+            throw new Error(`Error unarchiving class: ${error.message}`);
         }
     }
 }

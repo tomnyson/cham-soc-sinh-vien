@@ -8,7 +8,6 @@ const profileSchema = new mongoose.Schema({
     profileId: {
         type: String,
         required: true,
-        unique: true,
         index: true
     },
 
@@ -54,7 +53,7 @@ const profileSchema = new mongoose.Schema({
 });
 
 // Index cho tìm kiếm
-profileSchema.index({ userId: 1, profileId: 1 });
+profileSchema.index({ userId: 1, profileId: 1 }, { unique: true });
 profileSchema.index({ userId: 1, isDefault: 1 });
 
 // Virtual để lấy tổng trọng số

@@ -1,0 +1,57 @@
+<!-- Classes Management Page -->
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h3 mb-0">
+                    <i class="bi bi-people-fill text-primary me-2"></i>
+                    Quản lý Lớp học
+                </h1>
+                <button class="btn btn-primary" onclick="createNewClass()">
+                    <i class="bi bi-plus-circle me-1"></i> Tạo Lớp mới
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs mb-4" id="classTabNav" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-classes"
+                type="button" role="tab" aria-controls="active-classes" aria-selected="true"
+                onclick="filterClasses('active')">
+                <i class="bi bi-book me-1"></i> Đang học
+                <span class="badge bg-primary ms-1" id="activeClassCount">0</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="archived-tab" data-bs-toggle="tab" data-bs-target="#archived-classes"
+                type="button" role="tab" aria-controls="archived-classes" aria-selected="false"
+                onclick="filterClasses('archived')">
+                <i class="bi bi-archive me-1"></i> Lưu trữ
+                <span class="badge bg-secondary ms-1" id="archivedClassCount">0</span>
+            </button>
+        </li>
+    </ul>
+
+    <!-- Classes List View -->
+    <div id="classes-list-view">
+        <div id="classes-list" class="row">
+            <!-- Will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Class Detail View -->
+    <div id="class-detail-view" style="display: none;">
+        <!-- Will be populated by JavaScript -->
+    </div>
+</div>
+
+<script>
+    // Load classes when data is ready
+    window.addEventListener('app-data-ready', function () {
+        if (typeof renderClassesList === 'function') {
+            renderClassesList();
+        }
+    });
+</script>

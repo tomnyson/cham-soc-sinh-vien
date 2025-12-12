@@ -309,6 +309,38 @@ Cấu hình CORS_ORIGIN trong `.env`:
 CORS_ORIGIN=http://localhost:3000
 ```
 
+## 📚 Documentation
+
+Xem tài liệu chi tiết trong thư mục [docs/](./docs/):
+
+- **[Quick Start Guide](./docs/QUICK_START.md)** - Hướng dẫn bắt đầu nhanh
+- **[Final Summary](./docs/FINAL_SUMMARY.md)** - Tổng kết dự án
+- **[Refactoring Guide](./docs/REFACTORING_GUIDE.md)** - Hướng dẫn refactoring
+- **[EJS Implementation](./docs/EJS_IMPLEMENTATION.md)** - EJS template engine
+- **[Server-Side Rendering](./docs/SERVER_SIDE_RENDERING.md)** - SSR architecture
+- **[Verification Checklist](./docs/VERIFICATION_CHECKLIST.md)** - Testing checklist
+
+Xem đầy đủ: [docs/README.md](./docs/README.md)
+
+## 🎯 Features v2.0
+
+### API Reliability
+- ✅ Health check trước khi load data
+- ✅ Automatic retry với exponential backoff
+- ✅ Loading states với slow connection warnings
+- ✅ LocalStorage fallback cho offline mode
+- ✅ User-friendly error messages
+- ✅ Success notifications
+- ✅ Detailed logging
+
+### Architecture
+- ✅ EJS template engine
+- ✅ Server-side rendering
+- ✅ Master layout pattern
+- ✅ Reusable partials
+- ✅ View helpers
+- ✅ ES6 modules
+
 ## License
 
 MIT
@@ -316,3 +348,6 @@ MIT
 ## Author
 
 Developed with Node.js Express following professional best practices.
+
+**Version:** 2.0.0  
+**Last Updated:** November 3, 2025

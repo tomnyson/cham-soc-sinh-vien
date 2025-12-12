@@ -1,0 +1,111 @@
+<!-- Grade Check Page Content -->
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-0">
+                <i class="bi bi-clipboard-data-fill text-primary me-2"></i>
+                Kiểm tra điểm
+            </h1>
+        </div>
+    </div>
+
+    <!-- Profile Selection -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-6 mb-3 mb-md-0">
+                    <label class="form-label fw-semibold">Chọn Profile điểm:</label>
+                    <select class="form-select" id="profileSelect" onchange="loadProfile()">
+                        <option value="">-- Chọn profile --</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <div id="currentWeightSummary" class="alert alert-info mb-0">
+                        Chưa chọn profile
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Upload -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Upload file điểm</h5>
+            <div class="mb-3">
+                <input type="file" class="form-control" id="gradeFileInput" accept=".xlsx, .xls" onchange="handleFile(event)">
+                <div class="form-text">Chọn file Excel chứa điểm sinh viên</div>
+            </div>
+            <div id="fileName" class="text-muted"></div>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    <div id="resultsSection" class="hidden">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Kết quả</h5>
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalStudents">0</div>
+                            <div class="stat-label">Tổng sinh viên</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card text-success">
+                            <div class="stat-value" id="passedStudents">0</div>
+                            <div class="stat-label">Đạt</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card text-danger">
+                            <div class="stat-value" id="failedStudents">0</div>
+                            <div class="stat-label">Chưa đạt</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-value" id="passRate">0%</div>
+                            <div class="stat-label">Tỷ lệ đạt</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title mb-0">Danh sách sinh viên</h5>
+                    <button class="btn btn-success" onclick="exportResults()">
+                        <i class="bi bi-download me-1"></i> Xuất Excel
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>STT</th>
+                                <th>MSSV</th>
+                                <th>Họ và tên</th>
+                                <th>Tổng điểm</th>
+                                <th>Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Initialize grade check page when data is ready
+window.addEventListener('app-data-ready', function() {
+    if (typeof updateProfileSelect === 'function') {
+        updateProfileSelect();
+    }
+});
+</script>

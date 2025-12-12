@@ -1,0 +1,221 @@
+<!-- Profile Modal -->
+<div class="modal fade" id="profileModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center justify-content-center"
+                        style="width: 32px; height: 32px; background: linear-gradient(135deg, var(--fpt-orange) 0%, var(--fpt-orange-dark) 100%); border-radius: 8px;">
+                        <i class="bi bi-pencil-square text-white" style="font-size: 0.875rem;"></i>
+                    </div>
+                    <span>Chỉnh sửa Profile</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-dark" style="font-size: 0.875rem;">
+                        <i class="bi bi-tag-fill text-primary me-1"></i>
+                        Tên profile:
+                    </label>
+                    <input type="text" class="form-control" id="profileName" placeholder="VD: Kỳ học chính 2024">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-dark" style="font-size: 0.875rem;">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        Ngưỡng qua môn (điểm):
+                    </label>
+                    <input type="number" class="form-control" id="passThreshold" placeholder="3.0" step="0.1" min="0"
+                        max="10">
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <label class="form-label fw-semibold text-dark mb-0" style="font-size: 0.875rem;">
+                            <i class="bi bi-list-check text-warning me-1"></i>
+                            Danh sách trọng số:
+                        </label>
+                        <button class="btn btn-sm btn-success" onclick="addWeightRow()">
+                            <i class="bi bi-plus-circle me-1"></i> Thêm
+                        </button>
+                    </div>
+                </div>
+
+                <div id="weightEditor" class="weight-editor"></div>
+
+                <div class="mt-3 p-2 rounded"
+                    style="background: linear-gradient(135deg, #fff5ed 0%, #ffe8d9 100%); border-left: 3px solid var(--fpt-orange);">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="d-flex align-items-center justify-content-center"
+                            style="width: 40px; height: 40px; background: var(--fpt-orange); border-radius: 8px;">
+                            <i class="bi bi-calculator text-white" style="font-size: 1.125rem;"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small mb-0" style="font-size: 0.75rem;">Tổng trọng số</div>
+                            <div class="fs-4 fw-bold" style="color: var(--fpt-orange);">
+                                <span id="totalWeight">0</span>%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i> Hủy
+                </button>
+                <button type="button" class="btn btn-danger" onclick="deleteCurrentProfile()" id="deleteProfileBtn">
+                    <i class="bi bi-trash me-1"></i> Xóa
+                </button>
+                <button type="button" class="btn btn-primary" onclick="saveProfile()">
+                    <i class="bi bi-save me-1"></i> Lưu
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Class Modal -->
+<div class="modal fade" id="classModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center justify-content-center"
+                        style="width: 32px; height: 32px; background: linear-gradient(135deg, var(--fpt-blue) 0%, #0a2780 100%); border-radius: 8px;">
+                        <i class="bi bi-people text-white" style="font-size: 0.875rem;"></i>
+                    </div>
+                    <span>Chỉnh sửa lớp học</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-dark" style="font-size: 0.875rem;">
+                        <i class="bi bi-building text-primary me-1"></i>
+                        Tên lớp:
+                    </label>
+                    <input type="text" class="form-control" id="className" placeholder="VD: SE1801">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-dark" style="font-size: 0.875rem;">
+                        <i class="bi bi-file-text text-info me-1"></i>
+                        Mô tả:
+                    </label>
+                    <input type="text" class="form-control" id="classDescription"
+                        placeholder="VD: Lập trình Java - Khóa 18">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-dark" style="font-size: 0.875rem;">
+                        <i class="bi bi-clipboard-data text-warning me-1"></i>
+                        Barem điểm (Profile):
+                    </label>
+                    <select class="form-select" id="classProfileSelect">
+                        <option value="">-- Chọn profile --</option>
+                    </select>
+                    <div class="form-text">Chọn barem điểm để áp dụng ngay khi tạo lớp.</div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <label class="form-label fw-semibold text-dark mb-0" style="font-size: 0.875rem;">
+                            <i class="bi bi-person-lines-fill text-success me-1"></i>
+                            Danh sách sinh viên:
+                        </label>
+                        <div class="d-flex gap-2">
+                            <input type="file" id="classStudentListInput" accept=".xlsx, .xls" style="display: none;"
+                                onchange="handleClassStudentUpload(event)">
+                            <label for="classStudentListInput" class="btn btn-sm btn-primary mb-0">
+                                <i class="bi bi-upload me-1"></i> Upload
+                            </label>
+                            <button class="btn btn-sm btn-success" onclick="addStudentRow()">
+                                <i class="bi bi-plus-circle me-1"></i> Thêm
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="studentEditor" class="weight-editor"></div>
+
+                <div class="mt-3 p-2 rounded"
+                    style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-left: 3px solid var(--fpt-blue);">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="d-flex align-items-center justify-content-center"
+                            style="width: 40px; height: 40px; background: var(--fpt-blue); border-radius: 8px;">
+                            <i class="bi bi-people-fill text-white" style="font-size: 1.125rem;"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small mb-0" style="font-size: 0.75rem;">Tổng số sinh viên</div>
+                            <div class="fs-4 fw-bold" style="color: var(--fpt-blue);">
+                                <span id="classStudentCount">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i> Hủy
+                </button>
+                <button type="button" class="btn btn-primary" onclick="saveClass()">
+                    <i class="bi bi-save me-1"></i> Lưu
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Class Details Modal -->
+<div class="modal fade" id="classDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Chi tiết lớp học
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                    onclick="closeClassDetailsModal()"></button>
+            </div>
+            <div class="modal-body" id="classDetailsContent">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Load profiles into classProfileSelect when classModal is opened
+    document.addEventListener('DOMContentLoaded', function () {
+        const classModal = document.getElementById('classModal');
+        if (classModal) {
+            classModal.addEventListener('show.bs.modal', async function () {
+                const classProfileSelect = document.getElementById('classProfileSelect');
+                if (!classProfileSelect) return;
+
+                // Only load if empty (just the placeholder)
+                if (classProfileSelect.options.length <= 1) {
+                    try {
+                        const response = await fetch('/api/profiles', { credentials: 'include' });
+                        const data = await response.json();
+
+                        if (data.success && data.data && data.data.length > 0) {
+                            classProfileSelect.innerHTML = '<option value="">-- Chọn profile --</option>';
+                            data.data.forEach(profile => {
+                                const option = document.createElement('option');
+                                option.value = profile.profileId;
+                                option.textContent = profile.name || 'Không tên';
+                                classProfileSelect.appendChild(option);
+                            });
+                            console.log('Loaded ' + data.data.length + ' profiles into dropdown');
+                        }
+                    } catch (error) {
+                        console.error('Error loading profiles:', error);
+                    }
+                }
+            });
+        }
+    });
+</script>

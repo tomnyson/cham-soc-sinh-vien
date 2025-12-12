@@ -1,0 +1,44 @@
+<!-- Profiles Management Page -->
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                <h1 class="h3 mb-0">
+                    <i class="bi bi-gear-fill text-primary me-2"></i>
+                    Quản lý Profile
+                </h1>
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-primary" onclick="createNewProfile()" title="Tạo cấu hình mới">
+                        <i class="bi bi-plus-circle me-1"></i> Tạo Profile mới
+                    </button>
+                    <button class="btn btn-success" onclick="createDefaultProfileQuick()" title="Tạo nhanh profile mặc định (60%)">
+                        <i class="bi bi-stars me-1"></i> Profile mặc định
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="exportAllProfiles()" title="Xuất toàn bộ cấu hình thành file JSON">
+                        <i class="bi bi-download me-1"></i> Xuất cấu hình
+                    </button>
+                    <div class="d-flex align-items-center">
+                        <label for="profilesImportFile" class="btn btn-outline-secondary mb-0" title="Nhập cấu hình từ file JSON">
+                            <i class="bi bi-upload me-1"></i> Nhập cấu hình
+                        </label>
+                        <input type="file" id="profilesImportFile" accept=".json" style="display:none;" onchange="importProfiles(event)">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profiles List -->
+    <div id="profiles-list" class="row">
+        <!-- Will be populated by JavaScript -->
+    </div>
+</div>
+
+<script>
+// Load profiles when data is ready
+window.addEventListener('app-data-ready', function() {
+    if (typeof renderProfilesList === 'function') {
+        renderProfilesList();
+    }
+});
+</script>

@@ -1,4 +1,10 @@
 const Profile = require('../models/profile.model');
+const {
+    DEFAULT_PROFILE_ID,
+    DEFAULT_PROFILE_NAME,
+    DEFAULT_PASS_THRESHOLD,
+    DEFAULT_WEIGHTS
+} = require('../constants/profile.constants');
 
 /**
  * Profile Service - Business logic cho profiles
@@ -77,7 +83,7 @@ class ProfileService {
                 passThreshold: passThreshold || 3,
                 weights: weightsMap,
                 userId,
-                isDefault: false
+                isDefault: Boolean(profileData.isDefault)
             });
 
             await profile.save();
@@ -236,6 +242,62 @@ class ProfileService {
             return exportData;
         } catch (error) {
             throw new Error(`Error exporting profiles: ${error.message}`);
+        }
+    }
+
+    /**
+     * Ensure default profile exists for user, create if missing
+     */
+    async ensureDefaultProfile(userId = 'default') {
+        let retriedAfterIndexDrop = false;
+
+        const attemptEnsure = async () => {
+            let profile = await Profile.findByProfileId(DEFAULT_PROFILE_ID, userId);
+
+            if (profile) {
+                if (!profile.isDefault) {
+                    profile.isDefault = true;
+                    await profile.save();
+                }
+                return { profile, created: false };
+            }
+
+            await Profile.updateMany(
+                { userId, isDefault: true },
+                { isDefault: false }
+            );
+
+            profile = new Profile({
+                profileId: DEFAULT_PROFILE_ID,
+                name: DEFAULT_PROFILE_NAME,
+                passThreshold: DEFAULT_PASS_THRESHOLD,
+                weights: new Map(DEFAULT_WEIGHTS),
+                userId,
+                isDefault: true
+            });
+
+            await profile.save();
+            return { profile, created: true };
+        };
+
+        try {
+            return await attemptEnsure();
+        } catch (error) {
+            const duplicateDefault =
+                error?.code === 11000 &&
+                error?.message?.includes('profileId_1');
+
+            if (!retriedAfterIndexDrop && duplicateDefault) {
+                try {
+                    retriedAfterIndexDrop = true;
+                    await Profile.collection.dropIndex('profileId_1');
+                    return await attemptEnsure();
+                } catch (dropError) {
+                    throw new Error(`Error ensuring default profile (index cleanup failed): ${dropError.message}`);
+                }
+            }
+
+            throw new Error(`Error ensuring default profile: ${error.message}`);
         }
     }
 }

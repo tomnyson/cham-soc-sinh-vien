@@ -59,6 +59,13 @@ const classSchema = new mongoose.Schema({
         type: String,
         default: 'default',
         index: true
+    },
+
+    // Trạng thái lưu trữ
+    isArchived: {
+        type: Boolean,
+        default: false,
+        index: true
     }
 }, {
     timestamps: true,
@@ -70,7 +77,7 @@ classSchema.index({ userId: 1, classId: 1 });
 classSchema.index({ userId: 1, name: 1 });
 
 // Virtual để lấy số lượng sinh viên
-classSchema.virtual('studentCount').get(function() {
+classSchema.virtual('studentCount').get(function () {
     return this.students ? this.students.length : 0;
 });
 
@@ -79,29 +86,29 @@ classSchema.set('toJSON', { virtuals: true });
 classSchema.set('toObject', { virtuals: true });
 
 // Static method: Tìm lớp theo classId và userId
-classSchema.statics.findByClassId = function(classId, userId = 'default') {
+classSchema.statics.findByClassId = function (classId, userId = 'default') {
     return this.findOne({ classId, userId });
 };
 
 // Static method: Lấy tất cả lớp của user
-classSchema.statics.findByUserId = function(userId = 'default') {
+classSchema.statics.findByUserId = function (userId = 'default') {
     return this.find({ userId }).sort({ createdAt: -1 });
 };
 
 // Instance method: Thêm sinh viên
-classSchema.methods.addStudent = function(mssv, name) {
+classSchema.methods.addStudent = function (mssv, name) {
     this.students.push({ mssv, name });
     return this.save();
 };
 
 // Instance method: Xóa sinh viên
-classSchema.methods.removeStudent = function(mssv) {
+classSchema.methods.removeStudent = function (mssv) {
     this.students = this.students.filter(s => s.mssv !== mssv);
     return this.save();
 };
 
 // Instance method: Cập nhật sinh viên
-classSchema.methods.updateStudent = function(mssv, newData) {
+classSchema.methods.updateStudent = function (mssv, newData) {
     const student = this.students.find(s => s.mssv === mssv);
     if (student) {
         Object.assign(student, newData);

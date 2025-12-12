@@ -1,0 +1,25 @@
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <img src="https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png" alt="FPT Polytechnic" class="logo">
+    </div>
+    
+    <nav class="sidebar-nav">
+        <a href="/grade-check" data-route="/grade-check" class="nav-item <%= activeClass(currentRoute, '/grade-check') %>">
+            <i class="bi bi-clipboard-data-fill"></i>
+            <span>Kiểm tra điểm</span>
+        </a>
+        <a href="/profiles" data-route="/profiles" class="nav-item <%= activeClass(currentRoute, '/profiles') %>">
+            <i class="bi bi-gear-fill"></i>
+            <span>Quản lý Profile</span>
+        </a>
+        <a href="/classes" data-route="/classes" class="nav-item <%= activeClass(currentRoute, '/classes') %>">
+            <i class="bi bi-people-fill"></i>
+            <span>Quản lý Lớp học</span>
+        </a>
+        <a href="/template" data-route="/template" class="nav-item <%= activeClass(currentRoute, '/template') %>">
+            <i class="bi bi-file-earmark-text-fill"></i>
+            <span>Tạo Template</span>
+        </a>
+    </nav>
+</div>

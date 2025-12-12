@@ -1,0 +1,70 @@
+<h2 class="page-title mb-4">
+    <i class="bi bi-file-earmark-text text-primary"></i> Tạo Template Excel
+</h2>
+
+<!-- Profile Selection -->
+<div class="card mb-4">
+    <div class="card-header bg-warning bg-opacity-10">
+        <h5 class="mb-0 text-warning">
+            <i class="bi bi-gear"></i> Chọn Profile điểm
+        </h5>
+    </div>
+    <div class="card-body">
+        <select id="templateProfileSelect" class="form-select" onchange="updateTemplateProfile()">
+            <option value="">-- Chọn profile --</option>
+        </select>
+        <div id="templateProfileInfo" class="alert alert-warning mt-3 mb-0">
+            Chưa chọn profile
+        </div>
+    </div>
+</div>
+
+<!-- Source Selection -->
+<div class="card mb-4">
+    <div class="card-header bg-info bg-opacity-10">
+        <h5 class="mb-0 text-info">
+            <i class="bi bi-list-ul"></i> Chọn nguồn danh sách sinh viên
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="templateSource" value="class" id="sourceClass" checked onchange="updateTemplateSource()">
+                <label class="form-check-label fw-bold" for="sourceClass">
+                    Từ lớp đã lưu
+                </label>
+            </div>
+            <div id="classSourceSection" class="ms-4 mt-2">
+                <select id="templateClassSelect" class="form-select" onchange="updateTemplateClass()">
+                    <option value="">-- Chọn lớp --</option>
+                </select>
+                <div id="templateClassInfo" class="alert alert-info mt-2 mb-0">
+                    Chưa chọn lớp
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="templateSource" value="upload" id="sourceUpload" onchange="updateTemplateSource()">
+                <label class="form-check-label fw-bold" for="sourceUpload">
+                    Upload file danh sách mới
+                </label>
+            </div>
+            <div id="uploadSourceSection" class="ms-4 mt-2" style="display: none;">
+                <input type="file" id="classListInput" accept=".xlsx, .xls" style="display: none;" onchange="handleClassListUpload(event)">
+                <label for="classListInput" class="btn btn-primary">
+                    <i class="bi bi-upload"></i> Chọn file danh sách
+                </label>
+                <span id="classListFileName" class="ms-2 text-primary"></span>
+                <div class="alert alert-info mt-2 mb-0">
+                    <strong>Lưu ý:</strong> File cần có ít nhất 2 cột: MSSV và Họ và tên
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-success btn-lg" onclick="generateTemplate()" id="generateTemplateBtn" disabled>
+            <i class="bi bi-file-earmark-arrow-down"></i> Tạo Template Excel
+        </button>
+    </div>
+</div>

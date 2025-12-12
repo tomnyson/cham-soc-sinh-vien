@@ -9,7 +9,7 @@ const classService = require('../services/class.service');
  */
 const getAllClasses = async (req, res, next) => {
     try {
-        const userId = req.query.userId || 'default';
+        const userId = req.user._id; // Use authenticated user's ID
         const classes = await classService.getAllClasses(userId);
 
         res.json({
@@ -27,7 +27,7 @@ const getAllClasses = async (req, res, next) => {
 const getClassById = async (req, res, next) => {
     try {
         const { classId } = req.params;
-        const userId = req.query.userId || 'default';
+        const userId = req.user._id; // Use authenticated user's ID
 
         const classData = await classService.getClassById(classId, userId);
 
@@ -45,7 +45,7 @@ const getClassById = async (req, res, next) => {
  */
 const createClass = async (req, res, next) => {
     try {
-        const userId = req.body.userId || 'default';
+        const userId = req.user._id; // Use authenticated user's ID
         const classData = await classService.createClass(req.body, userId);
 
         res.status(201).json({
@@ -64,7 +64,7 @@ const createClass = async (req, res, next) => {
 const updateClass = async (req, res, next) => {
     try {
         const { classId } = req.params;
-        const userId = req.body.userId || 'default';
+        const userId = req.user._id; // Use authenticated user's ID
 
         const classData = await classService.updateClass(classId, req.body, userId);
 
@@ -84,7 +84,7 @@ const updateClass = async (req, res, next) => {
 const deleteClass = async (req, res, next) => {
     try {
         const { classId } = req.params;
-        const userId = req.query.userId || 'default';
+        const userId = req.user._id; // Use authenticated user's ID
 
         const result = await classService.deleteClass(classId, userId);
 
@@ -103,7 +103,7 @@ const deleteClass = async (req, res, next) => {
 const addStudent = async (req, res, next) => {
     try {
         const { classId } = req.params;
-        const userId = req.body.userId || 'default';
+        const userId = req.user._id; // Use authenticated user's ID
 
         const classData = await classService.addStudent(classId, req.body, userId);
 
@@ -123,7 +123,7 @@ const addStudent = async (req, res, next) => {
 const removeStudent = async (req, res, next) => {
     try {
         const { classId, mssv } = req.params;
-        const userId = req.query.userId || 'default';
+        const userId = req.user._id; // Use authenticated user's ID
 
         const classData = await classService.removeStudent(classId, mssv, userId);
 
@@ -143,7 +143,7 @@ const removeStudent = async (req, res, next) => {
 const updateStudent = async (req, res, next) => {
     try {
         const { classId, mssv } = req.params;
-        const userId = req.body.userId || 'default';
+        const userId = req.user._id; // Use authenticated user's ID
 
         const classData = await classService.updateStudent(classId, mssv, req.body, userId);
 
@@ -163,7 +163,8 @@ const updateStudent = async (req, res, next) => {
 const addStudentsBulk = async (req, res, next) => {
     try {
         const { classId } = req.params;
-        const { students, userId = 'default' } = req.body;
+        const { students } = req.body;
+        const userId = req.user._id; // Use authenticated user's ID
 
         if (!students || !Array.isArray(students)) {
             return res.status(400).json({
@@ -185,6 +186,46 @@ const addStudentsBulk = async (req, res, next) => {
     }
 };
 
+/**
+ * Lưu trữ lớp (Archive)
+ */
+const archiveClass = async (req, res, next) => {
+    try {
+        const { classId } = req.params;
+        const userId = req.user._id;
+
+        const classData = await classService.archiveClass(classId, userId);
+
+        res.json({
+            success: true,
+            data: classData,
+            message: 'Class archived successfully'
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Bỏ lưu trữ lớp (Unarchive)
+ */
+const unarchiveClass = async (req, res, next) => {
+    try {
+        const { classId } = req.params;
+        const userId = req.user._id;
+
+        const classData = await classService.unarchiveClass(classId, userId);
+
+        res.json({
+            success: true,
+            data: classData,
+            message: 'Class unarchived successfully'
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     getAllClasses,
     getClassById,
@@ -194,5 +235,7 @@ module.exports = {
     addStudent,
     removeStudent,
     updateStudent,
-    addStudentsBulk
+    addStudentsBulk,
+    archiveClass,
+    unarchiveClass
 };

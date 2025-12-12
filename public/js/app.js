@@ -47,7 +47,9 @@ function getValue(id, defaultValue = '') {
 const API = {
     // Profile APIs
     async getProfiles() {
-        const response = await fetch('/api/profiles');
+        const response = await fetch('/api/profiles', {
+            credentials: 'include'
+        });
         const data = await response.json();
         return data.success ? data.data : [];
     },
@@ -55,6 +57,7 @@ const API = {
     async createProfile(profileData) {
         const response = await fetch('/api/profiles', {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(profileData)
         });
@@ -65,6 +68,7 @@ const API = {
     async updateProfile(profileId, profileData) {
         const response = await fetch(`/api/profiles/${profileId}`, {
             method: 'PUT',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(profileData)
         });
@@ -74,7 +78,8 @@ const API = {
 
     async deleteProfile(profileId) {
         const response = await fetch(`/api/profiles/${profileId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            credentials: 'include'
         });
         const data = await response.json();
         return data;
@@ -82,7 +87,9 @@ const API = {
 
     // Class APIs
     async getClasses() {
-        const response = await fetch('/api/classes');
+        const response = await fetch('/api/classes', {
+            credentials: 'include'
+        });
         const data = await response.json();
         return data.success ? data.data : [];
     },
@@ -90,6 +97,7 @@ const API = {
     async createClass(classData) {
         const response = await fetch('/api/classes', {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(classData)
         });
@@ -100,6 +108,7 @@ const API = {
     async updateClass(classId, classData) {
         const response = await fetch(`/api/classes/${classId}`, {
             method: 'PUT',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(classData)
         });
@@ -109,7 +118,26 @@ const API = {
 
     async deleteClass(classId) {
         const response = await fetch(`/api/classes/${classId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        const data = await response.json();
+        return data;
+    },
+
+    async archiveClass(classId) {
+        const response = await fetch(`/api/classes/${classId}/archive`, {
+            method: 'PUT',
+            credentials: 'include'
+        });
+        const data = await response.json();
+        return data;
+    },
+
+    async unarchiveClass(classId) {
+        const response = await fetch(`/api/classes/${classId}/unarchive`, {
+            method: 'PUT',
+            credentials: 'include'
         });
         const data = await response.json();
         return data;
@@ -135,7 +163,12 @@ let classes = {};
 let currentClass = '';
 
 // Khởi tạo profiles mặc định
+// NOTE: This function is now a wrapper that will be replaced by init.js
+// The actual implementation is in modules/profiles.js with full reliability features
 async function initDefaultProfiles() {
+    // This will be overridden by init.js to use profileManager.init()
+    console.warn('initDefaultProfiles: Using legacy implementation. init.js should override this.');
+
     try {
         // Load profiles from MongoDB API
         const apiProfiles = await API.getProfiles();
@@ -178,22 +211,150 @@ async function saveProfiles() {
 }
 
 function loadProfile() {
-    const select = document.getElementById('profileSelect');
-    if (select && select.value) {
-        currentProfile = select.value;
-    }
+    // Use profileManager if available, otherwise use legacy code
+    if (window.profileManager && typeof window.profileManager.loadProfile === 'function') {
+        window.profileManager.loadProfile();
+    } else {
+        // Legacy fallback
+        const select = document.getElementById('profileSelect');
+        if (select && select.value) {
+            currentProfile = select.value;
+        }
 
-    const profile = profiles[currentProfile];
-    if (profile) {
-        weights = { ...profile.weights };
-        passThreshold = profile.passThreshold || 3;
-        localStorage.setItem('currentProfile', currentProfile);
-        updateWeightSummary();
+        const profile = profiles[currentProfile];
+        if (profile) {
+            weights = { ...profile.weights };
+            passThreshold = profile.passThreshold || 3;
+            localStorage.setItem('currentProfile', currentProfile);
+            updateWeightSummary();
+        }
+    }
+}
+
+function getProfileData() {
+    if (window.profileManager && window.profileManager.profiles) {
+        return window.profileManager.profiles;
+    }
+    return profiles;
+}
+
+function ensureProfileStore() {
+    if (!profiles || typeof profiles !== 'object') {
+        profiles = {};
+    }
+    if (window.profileManager && typeof window.profileManager.profiles !== 'object') {
+        window.profileManager.profiles = {};
+    }
+}
+
+function getCurrentProfileId() {
+    if (window.profileManager && window.profileManager.currentProfile) {
+        return window.profileManager.currentProfile;
+    }
+    return currentProfile;
+}
+
+function setCurrentProfileId(value) {
+    currentProfile = value || '';
+    if (window.profileManager) {
+        window.profileManager.currentProfile = currentProfile;
+    }
+}
+
+function getProfileById(profileId) {
+    const data = getProfileData();
+    return data ? data[profileId] : undefined;
+}
+
+function setProfileEntry(profileId, profileData) {
+    ensureProfileStore();
+    profiles[profileId] = profileData;
+    if (window.profileManager) {
+        window.profileManager.profiles[profileId] = profileData;
+    }
+}
+
+function removeProfileEntry(profileId) {
+    if (profiles && profiles[profileId]) {
+        delete profiles[profileId];
+    }
+    if (window.profileManager && window.profileManager.profiles) {
+        delete window.profileManager.profiles[profileId];
+    }
+}
+
+function getClassesData() {
+    if (window.classManager && window.classManager.classes) {
+        return window.classManager.classes;
+    }
+    return classes;
+}
+
+function ensureClassesStore() {
+    if (!classes || typeof classes !== 'object') {
+        classes = {};
+    }
+    if (window.classManager && typeof window.classManager.classes !== 'object') {
+        window.classManager.classes = {};
+    }
+}
+
+function getCurrentClassId() {
+    if (window.classManager && typeof window.classManager.currentClass !== 'undefined') {
+        return window.classManager.currentClass;
+    }
+    return currentClass;
+}
+
+function setCurrentClassId(value) {
+    currentClass = value || '';
+    if (window.classManager) {
+        window.classManager.currentClass = currentClass;
+    }
+}
+
+function getClassById(classId) {
+    const data = getClassesData();
+    return data ? data[classId] : undefined;
+}
+
+function setClassEntry(classId, classData) {
+    ensureClassesStore();
+    classes[classId] = classData;
+    if (window.classManager) {
+        window.classManager.classes[classId] = classData;
+    }
+}
+
+function removeClassEntry(classId) {
+    if (classes && classes[classId]) {
+        delete classes[classId];
+    }
+    if (window.classManager && window.classManager.classes) {
+        delete window.classManager.classes[classId];
+    }
+}
+
+function getClassListData() {
+    if (window.classManager && Array.isArray(window.classManager.classListData)) {
+        return window.classManager.classListData;
+    }
+    return classListData;
+}
+
+function setClassListData(list) {
+    classListData = Array.isArray(list) ? list : [];
+    if (window.classManager) {
+        window.classManager.classListData = classListData;
     }
 }
 
 function updateProfileSelect() {
-    // Update all profile select dropdowns in the interface
+    const profileData = getProfileData();
+    const selectedProfileId = getCurrentProfileId();
+
+    console.log('updateProfileSelect called, profileData:', profileData);
+
     const selects = [
         document.getElementById('profileSelect'),
         document.getElementById('gradeProfileSelect'),
@@ -203,17 +364,32 @@ function updateProfileSelect() {
     selects.forEach(select => {
         if (!select) return;
 
-        select.innerHTML = '';
-        for (const [key, profile] of Object.entries(profiles)) {
+        select.innerHTML = '<option value="">-- Chọn profile --</option>';
+
+        for (const [key, profile] of Object.entries(profileData || {})) {
             const option = document.createElement('option');
             option.value = key;
-            option.textContent = profile.name;
-            if (key === currentProfile) {
+            option.textContent = profile.name || 'Không tên';
+            if (key === selectedProfileId) {
                 option.selected = true;
             }
             select.appendChild(option);
         }
     });
+
+    // Populate class profile select separately (no default selection)
+    const classProfileSelect = document.getElementById('classProfileSelect');
+    console.log('classProfileSelect element:', classProfileSelect);
+    if (classProfileSelect) {
+        classProfileSelect.innerHTML = '<option value="">-- Chọn profile --</option>';
+        for (const [key, profile] of Object.entries(profileData || {})) {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = profile.name || 'Không tên';
+            classProfileSelect.appendChild(option);
+            console.log('Added profile option:', key, profile.name);
+        }
+    }
 }
 
 function updateWeightSummary() {
@@ -463,6 +639,7 @@ async function handleClassListUpload(event) {
     try {
         const response = await fetch('/api/upload-classlist', {
             method: 'POST',
+            credentials: 'include',
             body: formData
         });
 
@@ -480,7 +657,7 @@ async function handleClassListUpload(event) {
 function parseClassList(data) {
     if (data.length < 2) {
         alert('File không có dữ liệu hợp lệ!');
-        classListData = [];
+        setClassListData([]);
         document.getElementById('generateTemplateBtn').disabled = true;
         return;
     }
@@ -511,12 +688,12 @@ function parseClassList(data) {
     if (mssvIndex === -1 || nameIndex === -1) {
         const headerList = headers.filter(h => h).map((h, i) => `${i}: "${h}"`).join('\n');
         alert(`Không tìm thấy cột MSSV hoặc Họ tên!\n\nCác cột tìm thấy:\n${headerList}\n\nVui lòng đảm bảo file có:\n- Cột chứa "MSSV"\n- Cột chứa "Họ và tên"`);
-        classListData = [];
+        setClassListData([]);
         document.getElementById('generateTemplateBtn').disabled = true;
         return;
     }
 
-    classListData = [];
+    setClassListData([]);
     for (let i = 1; i < data.length; i++) {
         const row = data[i];
         if (!row || row.length === 0) continue;
@@ -540,17 +717,29 @@ function parseClassList(data) {
 }
 
 async function generateTemplate() {
-    const source = document.querySelector('input[name="templateSource"]:checked').value;
+    const sourceInput = document.querySelector('input[name="templateSource"]:checked');
+    if (!sourceInput) {
+        alert('Vui lòng chọn nguồn dữ liệu cho template!');
+        return;
+    }
+
+    const source = sourceInput.value;
+    const profilesData = getProfileData();
+    const profileId = getCurrentProfileId();
+    const profile = profileId ? profilesData[profileId] : null;
 
     let students = [];
     if (source === 'class') {
-        if (!currentClass || !classes[currentClass]) {
+        const selectedClassId = getCurrentClassId();
+        const classesData = getClassesData();
+
+        if (!selectedClassId || !classesData[selectedClassId]) {
             alert('Vui lòng chọn lớp trước!');
             return;
         }
-        students = classes[currentClass].students || [];
+        students = classesData[selectedClassId].students || [];
     } else {
-        students = classListData;
+        students = getClassListData();
     }
 
     if (students.length === 0) {
@@ -558,8 +747,7 @@ async function generateTemplate() {
         return;
     }
 
-    const profile = profiles[currentProfile];
-    if (!profile || Object.keys(profile.weights).length === 0) {
+    if (!profile || Object.keys(profile.weights || {}).length === 0) {
         alert('Profile hiện tại không có cột điểm nào!\nVui lòng chỉnh sửa profile và thêm các cột điểm.');
         return;
     }
@@ -567,13 +755,15 @@ async function generateTemplate() {
     try {
         const response = await fetch('/api/generate-template', {
             method: 'POST',
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                students: students,
+                students,
                 weights: profile.weights,
-                profileName: profile.name
+                profileName: profile.name,
+                passThreshold: profile.passThreshold || 3
             })
         });
 
@@ -597,7 +787,13 @@ async function generateTemplate() {
 }
 
 // Quản lý lớp học
+// Khởi tạo classes
+// NOTE: This function is now a wrapper that will be replaced by init.js
+// The actual implementation is in modules/classManager.js with full reliability features
 async function initClasses() {
+    // This will be overridden by init.js to use classManager.init()
+    console.warn('initClasses: Using legacy implementation. init.js should override this.');
+
     try {
         // Load classes from MongoDB API
         const apiClasses = await API.getClasses();
@@ -642,16 +838,19 @@ function updateClassSelect() {
         document.getElementById('templateClassSelect')
     ];
 
+    const classesData = getClassesData();
+    const selectedClassId = getCurrentClassId();
+
     selects.forEach(select => {
         if (!select) return;
 
         select.innerHTML = '<option value="">-- Chọn lớp --</option>';
 
-        for (const [key, classData] of Object.entries(classes)) {
+        for (const [key, classData] of Object.entries(classesData)) {
             const option = document.createElement('option');
             option.value = key;
             option.textContent = classData.name;
-            if (key === currentClass) {
+            if (key === selectedClassId) {
                 option.selected = true;
             }
             select.appendChild(option);
@@ -665,11 +864,13 @@ function loadClass() {
     const select = document.getElementById('classSelect');
     if (!select) return;
 
-    currentClass = select.value;
+    setCurrentClassId(select.value);
+    const selectedClassId = getCurrentClassId();
+    const classesData = getClassesData();
 
-    if (currentClass && classes[currentClass]) {
-        const classData = classes[currentClass];
-        classListData = classData.students || [];
+    if (selectedClassId && classesData[selectedClassId]) {
+        const classData = classesData[selectedClassId];
+        setClassListData(classData.students || []);
 
         const classInfo = document.getElementById('classInfo');
         const classDetails = document.getElementById('classDetails');
@@ -680,7 +881,7 @@ function loadClass() {
                 `${classData.name} - ${classData.description || ''} (${classListData.length} sinh viên)`;
         }
     } else {
-        classListData = [];
+        setClassListData([]);
         const classInfo = document.getElementById('classInfo');
         if (classInfo) classInfo.style.display = 'none';
     }
@@ -688,54 +889,121 @@ function loadClass() {
     updateGenerateButtonState();
 }
 
+// Flag to indicate if we are creating a new class
+let isCreatingClass = false;
+
 async function createNewClass() {
-    const name = prompt('Nhập tên lớp (VD: SE1801):');
-    if (!name) return;
+    isCreatingClass = true;
+    setCurrentClassId(''); // Clear current class
 
-    const id = 'class_' + Date.now();
-    const classData = {
-        classId: id,
-        name: name,
-        description: '',
-        students: []
-    };
+    // Reset modal fields
+    document.getElementById('className').value = '';
+    document.getElementById('classDescription').value = '';
+    document.getElementById('studentEditor').innerHTML = '';
+    document.getElementById('classStudentCount').textContent = '0';
 
-    try {
-        // Create in MongoDB via API
-        const result = await API.createClass(classData);
+    // Populate profile dropdown using multiple fallback sources
+    const classProfileSelect = document.getElementById('classProfileSelect');
+    if (classProfileSelect) {
+        classProfileSelect.innerHTML = '<option value="">-- Chọn profile --</option>';
 
-        if (result.success) {
-            // Update local cache
-            classes[id] = classData;
-            currentClass = id;
-            updateClassSelect();
-            editClass();
-        } else {
-            alert('Lỗi tạo lớp: ' + (result.message || 'Unknown error'));
+        let profilesList = [];
+
+        // Try multiple sources for profiles
+        // 1. From profileManager (if available)
+        if (window.profileManager && window.profileManager.profiles) {
+            profilesList = Object.entries(window.profileManager.profiles).map(([key, p]) => ({
+                profileId: key,
+                name: p.name
+            }));
         }
-    } catch (error) {
-        console.error('Error creating class:', error);
-        alert('Lỗi kết nối server: ' + error.message);
+        // 2. From global profiles variable
+        else if (typeof profiles === 'object' && Object.keys(profiles).length > 0) {
+            profilesList = Object.entries(profiles).map(([key, p]) => ({
+                profileId: key,
+                name: p.name
+            }));
+        }
+        // 3. From server-rendered data
+        else if (window.__INITIAL_SERVER_DATA__ && window.__INITIAL_SERVER_DATA__.profiles) {
+            const serverProfiles = window.__INITIAL_SERVER_DATA__.profiles;
+            if (Array.isArray(serverProfiles)) {
+                profilesList = serverProfiles;
+            } else {
+                profilesList = Object.entries(serverProfiles).map(([key, p]) => ({
+                    profileId: key,
+                    name: p.name
+                }));
+            }
+        }
+        // 4. Fetch from API as last resort
+        else {
+            try {
+                const apiProfiles = await API.getProfiles();
+                if (apiProfiles && apiProfiles.length > 0) {
+                    profilesList = apiProfiles;
+                }
+            } catch (error) {
+                console.error('Error loading profiles from API:', error);
+            }
+        }
+
+        // Populate the select dropdown
+        profilesList.forEach(profile => {
+            const option = document.createElement('option');
+            option.value = profile.profileId;
+            option.textContent = profile.name || 'Không tên';
+            classProfileSelect.appendChild(option);
+        });
+
+        console.log('Loaded profiles for dropdown:', profilesList.length);
+    }
+
+    // Show modal
+    const modalEl = document.getElementById('classModal');
+    if (modalEl) {
+        const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modalInstance.show();
     }
 }
 
 function editClass() {
-    if (!currentClass) {
+    const selectedClassId = getCurrentClassId();
+    if (!selectedClassId) {
         alert('Vui lòng chọn lớp trước!');
         return;
     }
 
-    const classData = classes[currentClass];
+    const classData = getClassById(selectedClassId);
+    if (!classData) {
+        alert('Không tìm thấy lớp!');
+        return;
+    }
+
+    isCreatingClass = false;
     document.getElementById('className').value = classData.name;
     document.getElementById('classDescription').value = classData.description || '';
 
+    // Set selected profile if class has one
+    const profileSelect = document.getElementById('classProfileSelect');
+    if (profileSelect) {
+        if (classData.grades && classData.grades.profileId) {
+            profileSelect.value = classData.grades.profileId;
+        } else {
+            profileSelect.value = '';
+        }
+    }
+
     renderStudentEditor(classData.students || []);
-    document.getElementById('classModal').classList.add('show');
+
+    const modalEl = document.getElementById('classModal');
+    if (modalEl) {
+        const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modalInstance.show();
+    }
 }
 
-function closeClassEditor() {
-    document.getElementById('classModal').classList.remove('show');
-}
+// Removed - use closeClassModal() instead
 
 function renderStudentEditor(students) {
     const editor = document.getElementById('studentEditor');
@@ -785,6 +1053,7 @@ async function handleClassStudentUpload(event) {
     try {
         const response = await fetch('/api/upload-classlist', {
             method: 'POST',
+            credentials: 'include',
             body: formData
         });
 
@@ -844,84 +1113,7 @@ function parseStudentList(data) {
     alert(`Đã tải ${document.querySelectorAll('#studentEditor .weight-row').length} sinh viên!`);
 }
 
-async function saveClass() {
-    if (!currentClass) return;
-
-    const name = document.getElementById('className').value.trim();
-    const description = document.getElementById('classDescription').value.trim();
-
-    if (!name) {
-        alert('Vui lòng nhập tên lớp!');
-        return;
-    }
-
-    const rows = document.querySelectorAll('#studentEditor .weight-row');
-    const students = [];
-    rows.forEach(row => {
-        const mssv = row.querySelector('.student-mssv').value.trim();
-        const studentName = row.querySelector('.student-name').value.trim();
-        if (mssv && studentName) {
-            students.push({ mssv, name: studentName });
-        }
-    });
-
-    const classData = {
-        classId: currentClass,
-        name: name,
-        description: description,
-        students: students
-    };
-
-    try {
-        // Save to MongoDB via API
-        const result = await API.updateClass(currentClass, classData);
-
-        if (result.success) {
-            // Update local cache
-            classes[currentClass] = classData;
-            updateClassSelect();
-            loadClass();
-            closeClassEditor();
-            alert(`Đã lưu lớp "${name}" với ${students.length} sinh viên vào MongoDB!`);
-        } else {
-            alert('Lỗi lưu lớp: ' + (result.message || 'Unknown error'));
-        }
-    } catch (error) {
-        console.error('Error saving class:', error);
-        alert('Lỗi kết nối server: ' + error.message);
-    }
-}
-
-async function deleteClass() {
-    if (!currentClass) {
-        alert('Vui lòng chọn lớp trước!');
-        return;
-    }
-
-    const classData = classes[currentClass];
-    if (confirm(`Bạn có chắc muốn xóa lớp "${classData.name}"?`)) {
-        try {
-            // Delete from MongoDB via API
-            const result = await API.deleteClass(currentClass);
-
-            if (result.success) {
-                // Update local cache
-                delete classes[currentClass];
-                currentClass = '';
-                classListData = [];
-                updateClassSelect();
-                const classInfo = document.getElementById('classInfo');
-                if (classInfo) classInfo.style.display = 'none';
-                alert('Đã xóa lớp khỏi MongoDB!');
-            } else {
-                alert('Lỗi xóa lớp: ' + (result.message || 'Unknown error'));
-            }
-        } catch (error) {
-            console.error('Error deleting class:', error);
-            alert('Lỗi kết nối server: ' + error.message);
-        }
-    }
-}
+// Duplicate functions removed - see line 1927 for saveClass and deleteClassById for delete
 
 function updateTemplateSource() {
     const source = document.querySelector('input[name="templateSource"]:checked').value;
@@ -937,31 +1129,15 @@ function updateTemplateSource() {
     updateGenerateButtonState();
 }
 
-function updateGenerateButtonState() {
-    const sourceEl = document.querySelector('input[name="templateSource"]:checked');
-    const btn = document.getElementById('generateTemplateBtn');
-
-    if (!sourceEl || !btn) return;
-
-    const source = sourceEl.value;
-
-    if (source === 'class') {
-        btn.disabled = !currentClass || !classes[currentClass] ||
-            !classes[currentClass].students ||
-            classes[currentClass].students.length === 0;
-    } else {
-        btn.disabled = classListData.length === 0;
-    }
-}
+// Moved to line 2100 - see TEMPLATE PAGE FUNCTIONS section
 
 // Khởi tạo khi load trang
+// NOTE: Initialization is now handled by init.js module
+// which provides better error handling, retry logic, and loading states
 window.addEventListener('DOMContentLoaded', () => {
-    try {
-        initDefaultProfiles();
-        initClasses();
-    } catch (error) {
-        console.error('Initialization error:', error);
-    }
+    // Legacy initialization removed - now handled by init.js
+    // The init.js module will call initDefaultProfiles() and initClasses()
+    // with proper error handling, retry logic, and user notifications
 });
 
 // Hàm loại bỏ dấu tiếng Việt
@@ -1055,6 +1231,7 @@ async function handleFile(event) {
     try {
         const response = await fetch('/api/upload-grades', {
             method: 'POST',
+            credentials: 'include',
             body: formData
         });
 
@@ -1240,6 +1417,7 @@ async function exportResults() {
     try {
         const response = await fetch('/api/export-results', {
             method: 'POST',
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -1270,27 +1448,33 @@ async function exportResults() {
 // ========================================
 
 async function renderProfilesList() {
-    const container = document.getElementById('profilesList');
+    const container =
+        document.getElementById('profiles-list') ||
+        document.getElementById('profilesList');
 
-    if (!container) return;
+    if (!container) {
+        console.warn('profiles-list container not found');
+        return;
+    }
 
     try {
-        container.innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">Đang tải danh sách profiles...</p>';
+        container.innerHTML = '<p style="color: #64748b; text-align: center; padding: 40px;">Đang tải danh sách profiles...</p>';
 
         const apiProfiles = await API.getProfiles();
 
         if (!apiProfiles || apiProfiles.length === 0) {
             container.innerHTML = `
-                <div style="text-align: center; padding: 40px; color: #666;">
-                    <p style="font-size: 1.2em; margin-bottom: 10px;">📋 Chưa có profile nào</p>
-                    <p>Nhấn "➕ Tạo Profile mới" để bắt đầu</p>
+                <div style="text-align: center; padding: 60px 40px; color: #64748b;">
+                    <i class="bi bi-sliders" style="font-size: 3rem; display: block; margin-bottom: 16px; opacity: 0.5;"></i>
+                    <p style="font-size: 1.1em; margin-bottom: 8px; color: #334155;">Chưa có profile nào</p>
+                    <p style="font-size: 0.9em;">Nhấn nút "Tạo Profile mới" để bắt đầu</p>
                 </div>
             `;
             return;
         }
 
-        // Render profiles as cards
-        let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px;">';
+        // Render profiles as cards with professional UI
+        let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 24px;">';
 
         apiProfiles.forEach(profile => {
             const totalWeight = Object.values(profile.weights).reduce((sum, w) => sum + w, 0);
@@ -1298,29 +1482,41 @@ async function renderProfilesList() {
             const isDefault = profile.profileId === 'default';
 
             html += `
-                <div class="profile-card" style="background: white; border: 2px solid ${isDefault ? '#667eea' : '#ddd'}; border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
-                        <div>
-                            <h3 style="margin: 0 0 5px 0; color: #333;">
-                                ${isDefault ? '⭐ ' : ''}${profile.name}
-                            </h3>
-                            <p style="margin: 0; color: #666; font-size: 0.9em;">
-                                ${weightCount} cột điểm • ${totalWeight.toFixed(1)}%
-                            </p>
+                <div class="profile-card" style="background: #ffffff; border: 1px solid ${isDefault ? '#2563EB' : '#e2e8f0'}; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); transition: all 200ms ease;">
+                    <!-- Card Header -->
+                    <div style="padding: 20px 20px 16px 20px; border-bottom: 1px solid #f1f5f9;">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;">
+                                <div style="width: 40px; height: 40px; background: ${isDefault ? '#2563EB15' : '#f1f5f9'}; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="bi bi-sliders" style="color: ${isDefault ? '#2563EB' : '#64748b'}; font-size: 1.2rem;"></i>
+                                </div>
+                                <div style="flex: 1; min-width: 0;">
+                                    <h3 style="margin: 0 0 2px 0; font-size: 1.1rem; font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        ${profile.name}
+                                    </h3>
+                                    <p style="margin: 0; color: #64748b; font-size: 0.85rem;">
+                                        ${weightCount} cột điểm • ${totalWeight.toFixed(1)}%
+                                    </p>
+                                </div>
+                            </div>
+                            ${isDefault ? '<span style="background: #2563EB; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; white-space: nowrap;">Mặc định</span>' : ''}
                         </div>
-                        ${isDefault ? '<span style="background: #667eea; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8em;">Mặc định</span>' : ''}
                     </div>
                     
-                    <div style="margin: 15px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-                        <p style="margin: 0; font-size: 0.9em; color: #666;">
-                            <strong>Ngưỡng qua môn:</strong> ≥ ${profile.passThreshold} điểm
-                        </p>
+                    <!-- Pass Threshold -->
+                    <div style="padding: 12px 20px; background: #f8fafc; border-bottom: 1px solid #f1f5f9;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.85rem; color: #64748b;">Ngưỡng qua môn</span>
+                            <span style="font-size: 0.95rem; font-weight: 600; color: #1e293b;">≥ ${profile.passThreshold} điểm</span>
+                        </div>
                     </div>
 
-                    <div style="margin: 15px 0;">
-                        <strong style="font-size: 0.9em; color: #666;">Trọng số:</strong>
-                        <div style="max-height: 150px; overflow-y: auto; margin-top: 8px; font-size: 0.85em;">
-                            ${Object.entries(profile.weights)
+                    <!-- Weights List -->
+                    <div style="padding: 12px 20px; max-height: 140px; overflow-y: auto;">
+                        <div style="font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+                            Trọng số
+                        </div>
+                        ${Object.entries(profile.weights)
                     .sort((a, b) => {
                         const getOrder = (key) => {
                             if (key.includes('Lab')) return 1;
@@ -1331,24 +1527,24 @@ async function renderProfilesList() {
                         return getOrder(a[0]) - getOrder(b[0]);
                     })
                     .map(([key, value]) => `
-                                    <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #eee;">
-                                        <span>${key}</span>
-                                        <span style="font-weight: bold;">${value}%</span>
-                                    </div>
-                                `).join('')}
-                        </div>
+                                <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem;">
+                                    <span style="color: #334155;">${key}</span>
+                                    <span style="font-weight: 600; color: #2563EB;">${value}%</span>
+                                </div>
+                            `).join('')}
                     </div>
 
-                    <div style="display: flex; gap: 10px; margin-top: 15px;">
-                        <button class="btn btn-primary" onclick="editProfile('${profile.profileId}')" style="flex: 1; padding: 8px;">
-                            ✏️ Chỉnh sửa
+                    <!-- Action Buttons -->
+                    <div style="display: flex; gap: 8px; padding: 16px 20px; border-top: 1px solid #f1f5f9; background: #ffffff;">
+                        <button onclick="editProfile('${profile.profileId}')" style="flex: 1; padding: 10px 16px; background: #2563EB; border: none; border-radius: 8px; color: #ffffff; font-size: 0.85rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 150ms ease;">
+                            <i class="bi bi-pencil"></i> Chỉnh sửa
                         </button>
-                        <button class="btn" onclick="duplicateProfile('${profile.profileId}')" style="flex: 1; padding: 8px; background: #17a2b8; color: white;">
-                            📋 Sao chép
+                        <button onclick="duplicateProfile('${profile.profileId}')" style="flex: 1; padding: 10px 16px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; color: #334155; font-size: 0.85rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 150ms ease;">
+                            <i class="bi bi-copy"></i> Sao chép
                         </button>
                         ${!isDefault ? `
-                            <button class="btn" onclick="deleteProfileById('${profile.profileId}')" style="padding: 8px; background: #dc3545; color: white;">
-                                🗑️
+                            <button onclick="deleteProfileById('${profile.profileId}')" style="padding: 10px 12px; background: #ffffff; border: 1px solid #fecaca; border-radius: 8px; color: #dc2626; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 150ms ease;">
+                                <i class="bi bi-trash"></i>
                             </button>
                         ` : ''}
                     </div>
@@ -1357,15 +1553,32 @@ async function renderProfilesList() {
         });
 
         html += '</div>';
+
+        // Add hover styles
+        html += `
+            <style>
+                .profile-card:hover {
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                    border-color: #cbd5e1;
+                }
+                .profile-card button:hover {
+                    opacity: 0.9;
+                }
+            </style>
+        `;
+
         container.innerHTML = html;
 
     } catch (error) {
         console.error('Error rendering profiles list:', error);
         container.innerHTML = `
-            <div style="text-align: center; padding: 40px; color: #dc3545;">
-                <p style="font-size: 1.2em; margin-bottom: 10px;">❌ Không thể tải danh sách profiles</p>
-                <p style="margin-bottom: 20px;">${error.message}</p>
-                <button class="btn btn-primary" onclick="renderProfilesList()">🔄 Thử lại</button>
+            <div style="text-align: center; padding: 60px 40px; color: #dc2626;">
+                <i class="bi bi-exclamation-circle" style="font-size: 2.5rem; display: block; margin-bottom: 16px;"></i>
+                <p style="font-size: 1.1em; margin-bottom: 8px; color: #1e293b;">Không thể tải danh sách profiles</p>
+                <p style="margin-bottom: 20px; color: #64748b;">${error.message}</p>
+                <button onclick="renderProfilesList()" style="padding: 10px 20px; background: #2563EB; border: none; border-radius: 8px; color: white; cursor: pointer;">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Thử lại
+                </button>
             </div>
         `;
     }
@@ -1375,99 +1588,205 @@ async function renderProfilesList() {
 // RENDER CLASSES LIST
 // ========================================
 
-async function renderClassesList() {
-    const container = document.getElementById('classesList');
+// Current filter state for classes
+let currentClassFilter = 'active';
 
-    if (!container) return;
+function filterClasses(filter) {
+    currentClassFilter = filter;
+    renderClassesList();
+}
+
+async function archiveClassById(classId) {
+    if (!confirm('Bạn có chắc muốn lưu trữ lớp này?')) return;
 
     try {
-        container.innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">Đang tải danh sách lớp học...</p>';
+        const result = await API.archiveClass(classId);
+        if (result.success) {
+            await renderClassesList();
+            alert('Đã lưu trữ lớp thành công!');
+        } else {
+            alert('Lỗi: ' + (result.message || 'Không thể lưu trữ lớp'));
+        }
+    } catch (error) {
+        console.error('Error archiving class:', error);
+        alert('Lỗi: ' + error.message);
+    }
+}
+
+async function unarchiveClassById(classId) {
+    try {
+        const result = await API.unarchiveClass(classId);
+        if (result.success) {
+            await renderClassesList();
+            alert('Đã khôi phục lớp thành công!');
+        } else {
+            alert('Lỗi: ' + (result.message || 'Không thể khôi phục lớp'));
+        }
+    } catch (error) {
+        console.error('Error unarchiving class:', error);
+        alert('Lỗi: ' + error.message);
+    }
+}
+
+async function renderClassesList() {
+    const container =
+        document.getElementById('classes-list') ||
+        document.getElementById('classesList');
+
+    if (!container) {
+        console.warn('classes-list container not found');
+        return;
+    }
+
+    try {
+        container.innerHTML = '<p style="color: #64748b; text-align: center; padding: 40px;">Đang tải danh sách lớp học...</p>';
 
         const apiClasses = await API.getClasses();
 
-        if (!apiClasses || apiClasses.length === 0) {
+        // Update counts
+        const activeClasses = apiClasses.filter(c => !c.isArchived);
+        const archivedClasses = apiClasses.filter(c => c.isArchived);
+
+        const activeCountEl = document.getElementById('activeClassCount');
+        const archivedCountEl = document.getElementById('archivedClassCount');
+        if (activeCountEl) activeCountEl.textContent = activeClasses.length;
+        if (archivedCountEl) archivedCountEl.textContent = archivedClasses.length;
+
+        // Filter based on current tab
+        const filteredClasses = currentClassFilter === 'archived' ? archivedClasses : activeClasses;
+
+        if (!filteredClasses || filteredClasses.length === 0) {
+            const emptyMessage = currentClassFilter === 'archived'
+                ? 'Chưa có lớp học nào được lưu trữ'
+                : 'Chưa có lớp học nào';
             container.innerHTML = `
-                <div style="text-align: center; padding: 40px; color: #666;">
-                    <p style="font-size: 1.2em; margin-bottom: 10px;">👥 Chưa có lớp học nào</p>
-                    <p>Nhấn "➕ Tạo lớp mới" để bắt đầu</p>
+                <div style="text-align: center; padding: 60px 40px; color: #64748b;">
+                    <i class="bi bi-${currentClassFilter === 'archived' ? 'archive' : 'people'}" style="font-size: 3rem; display: block; margin-bottom: 16px; opacity: 0.5;"></i>
+                    <p style="font-size: 1.1em; margin-bottom: 8px; color: #334155;">${emptyMessage}</p>
+                    ${currentClassFilter === 'active' ? '<p style="font-size: 0.9em;">Nhấn nút "Tạo Lớp mới" để bắt đầu</p>' : ''}
                 </div>
             `;
             return;
         }
 
-        // Render classes as cards
-        let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px;">';
+        // Render classes as cards with professional UI
+        let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 24px;">';
 
-        apiClasses.forEach(cls => {
+        filteredClasses.forEach(cls => {
             const studentCount = cls.students ? cls.students.length : 0;
+            const isArchived = cls.isArchived;
 
             html += `
-                <div class="class-card" style="background: white; border: 2px solid #ddd; border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                    <div style="margin-bottom: 15px;">
-                        <h3 style="margin: 0 0 5px 0; color: #333;">
-                            👥 ${cls.name}
-                        </h3>
-                        ${cls.description ? `
-                            <p style="margin: 5px 0; color: #666; font-size: 0.9em;">
-                                ${cls.description}
-                            </p>
-                        ` : ''}
+                <div class="class-card" style="background: #ffffff; border: 1px solid ${isArchived ? '#94a3b8' : '#e2e8f0'}; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); transition: all 200ms ease; ${isArchived ? 'opacity: 0.8;' : ''}">
+                    <!-- Card Header -->
+                    <div style="padding: 20px 20px 16px 20px; border-bottom: 1px solid #f1f5f9;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 40px; height: 40px; background: ${isArchived ? '#94a3b815' : '#2563EB15'}; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                <i class="bi bi-${isArchived ? 'archive' : 'people-fill'}" style="color: ${isArchived ? '#64748b' : '#2563EB'}; font-size: 1.2rem;"></i>
+                            </div>
+                            <div style="flex: 1; min-width: 0;">
+                                <h3 style="margin: 0 0 2px 0; font-size: 1.1rem; font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    ${cls.name}
+                                </h3>
+                                ${cls.description ? `
+                                    <p style="margin: 0; color: #64748b; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        ${cls.description}
+                                    </p>
+                                ` : ''}
+                            </div>
+                            ${isArchived ? '<span class="badge bg-secondary">Lưu trữ</span>' : ''}
+                        </div>
                     </div>
                     
-                    <div style="margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 5px; text-align: center;">
-                        <div style="font-size: 2em; font-weight: bold; color: #667eea; margin-bottom: 5px;">
+                    <!-- Student Count -->
+                    <div style="padding: 20px; text-align: center; background: #f8fafc;">
+                        <div style="font-size: 2.5rem; font-weight: 700; color: ${isArchived ? '#64748b' : '#2563EB'}; line-height: 1;">
                             ${studentCount}
                         </div>
-                        <div style="font-size: 0.9em; color: #666;">
+                        <div style="font-size: 0.85rem; color: #64748b; margin-top: 4px;">
                             sinh viên
                         </div>
                     </div>
 
+                    <!-- Student List Preview -->
                     ${studentCount > 0 ? `
-                        <div style="margin: 15px 0; max-height: 150px; overflow-y: auto; font-size: 0.85em; background: #f8f9fa; padding: 10px; border-radius: 5px;">
-                            <strong style="color: #666;">Danh sách sinh viên:</strong>
-                            ${cls.students.slice(0, 5).map(student => `
-                                <div style="padding: 4px 0; border-bottom: 1px solid #eee;">
-                                    ${student.mssv} - ${student.name}
+                        <div style="padding: 12px 20px; border-top: 1px solid #f1f5f9; max-height: 140px; overflow-y: auto;">
+                            <div style="font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+                                Danh sách sinh viên
+                            </div>
+                            ${cls.students.slice(0, 4).map(student => `
+                                <div style="padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; color: #334155;">
+                                    <span style="color: #64748b;">${student.mssv}</span> - ${student.name}
                                 </div>
                             `).join('')}
-                            ${studentCount > 5 ? `
-                                <div style="padding: 8px 0; color: #666; font-style: italic;">
-                                    ... và ${studentCount - 5} sinh viên khác
+                            ${studentCount > 4 ? `
+                                <div style="padding: 8px 0; color: #64748b; font-size: 0.8rem; font-style: italic;">
+                                    + ${studentCount - 4} sinh viên khác
                                 </div>
                             ` : ''}
                         </div>
                     ` : `
-                        <div style="margin: 15px 0; padding: 15px; background: #fff3cd; border-radius: 5px; text-align: center; color: #856404; font-size: 0.9em;">
-                            ⚠️ Lớp chưa có sinh viên
+                        <div style="padding: 16px 20px; border-top: 1px solid #f1f5f9; text-align: center; background: #fffbeb;">
+                            <i class="bi bi-exclamation-triangle" style="color: #d97706; margin-right: 6px;"></i>
+                            <span style="color: #92400e; font-size: 0.85rem;">Lớp chưa có sinh viên</span>
                         </div>
                     `}
 
-                    <div style="display: flex; gap: 10px; margin-top: 15px;">
-                        <button class="btn btn-primary" onclick="editClassById('${cls.classId}')" style="flex: 1; padding: 8px;">
-                            ✏️ Chỉnh sửa
-                        </button>
-                        <button class="btn" onclick="showClassDetailView('${cls.classId}')" style="flex: 1; padding: 8px; background: #17a2b8; color: white;">
-                            👁️ Xem chi tiết
-                        </button>
-                        <button class="btn" onclick="deleteClassById('${cls.classId}')" style="padding: 8px; background: #dc3545; color: white;">
-                            🗑️
-                        </button>
+                    <!-- Action Buttons -->
+                    <div style="display: flex; gap: 8px; padding: 16px 20px; border-top: 1px solid #f1f5f9; background: #ffffff;">
+                        ${isArchived ? `
+                            <button onclick="unarchiveClassById('${cls.classId}')" style="flex: 1; padding: 10px 16px; background: #2563EB; border: none; border-radius: 8px; color: #ffffff; font-size: 0.85rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 150ms ease;">
+                                <i class="bi bi-arrow-counterclockwise"></i> Khôi phục
+                            </button>
+                            <button onclick="deleteClassById('${cls.classId}')" style="padding: 10px 12px; background: #ffffff; border: 1px solid #fecaca; border-radius: 8px; color: #dc2626; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 150ms ease;">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        ` : `
+                            <button onclick="editClassById('${cls.classId}')" style="flex: 1; padding: 10px 16px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; color: #334155; font-size: 0.85rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 150ms ease;">
+                                <i class="bi bi-pencil"></i> Chỉnh sửa
+                            </button>
+                            <button onclick="viewClassDetails('${cls.classId}')" style="flex: 1; padding: 10px 16px; background: #2563EB; border: none; border-radius: 8px; color: #ffffff; font-size: 0.85rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 150ms ease;">
+                                <i class="bi bi-eye"></i> Xem chi tiết
+                            </button>
+                            <button onclick="archiveClassById('${cls.classId}')" title="Lưu trữ" style="padding: 10px 12px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; color: #64748b; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 150ms ease;">
+                                <i class="bi bi-archive"></i>
+                            </button>
+                            <button onclick="deleteClassById('${cls.classId}')" style="padding: 10px 12px; background: #ffffff; border: 1px solid #fecaca; border-radius: 8px; color: #dc2626; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 150ms ease;">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        `}
                     </div>
                 </div>
             `;
         });
 
         html += '</div>';
+
+        // Add hover styles
+        html += `
+            <style>
+                .class-card:hover {
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                    border-color: #cbd5e1;
+                }
+                .class-card button:hover {
+                    opacity: 0.9;
+                }
+            </style>
+        `;
+
         container.innerHTML = html;
 
     } catch (error) {
         console.error('Error rendering classes list:', error);
         container.innerHTML = `
-            <div style="text-align: center; padding: 40px; color: #dc3545;">
-                <p style="font-size: 1.2em; margin-bottom: 10px;">❌ Không thể tải danh sách lớp học</p>
-                <p style="margin-bottom: 20px;">${error.message}</p>
-                <button class="btn btn-primary" onclick="renderClassesList()">🔄 Thử lại</button>
+            <div style="text-align: center; padding: 60px 40px; color: #dc2626;">
+                <i class="bi bi-exclamation-circle" style="font-size: 2.5rem; display: block; margin-bottom: 16px;"></i>
+                <p style="font-size: 1.1em; margin-bottom: 8px; color: #1e293b;">Không thể tải danh sách lớp học</p>
+                <p style="margin-bottom: 20px; color: #64748b;">${error.message}</p>
+                <button onclick="renderClassesList()" style="padding: 10px 20px; background: #2563EB; border: none; border-radius: 8px; color: white; cursor: pointer;">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Thử lại
+                </button>
             </div>
         `;
     }
@@ -1479,13 +1798,14 @@ async function renderClassesList() {
 
 async function editProfile(profileId) {
     try {
-        const profile = profiles[profileId];
+        const profilesData = getProfileData();
+        const profile = profilesData ? profilesData[profileId] : null;
         if (!profile) {
             alert('Không tìm thấy profile!');
             return;
         }
 
-        currentProfile = profileId;
+        setCurrentProfileId(profileId);
 
         document.getElementById('profileName').value = profile.name;
         document.getElementById('passThreshold').value = profile.passThreshold || 3;
@@ -1515,7 +1835,7 @@ async function editProfile(profileId) {
 
 async function duplicateProfile(profileId) {
     try {
-        const sourceProfile = profiles[profileId];
+        const sourceProfile = getProfileById(profileId);
         if (!sourceProfile) {
             alert('Không tìm thấy profile!');
             return;
@@ -1534,7 +1854,8 @@ async function duplicateProfile(profileId) {
         const result = await API.createProfile(newProfileData);
 
         if (result.success) {
-            profiles[newProfileData.profileId] = newProfileData;
+            setProfileEntry(newProfileData.profileId, newProfileData);
+            setCurrentProfileId(newProfileData.profileId);
             updateProfileSelect();
             await renderProfilesList();
             alert(`Đã tạo bản sao "${newName}"!`);
@@ -1553,7 +1874,7 @@ async function deleteProfileById(profileId) {
         return;
     }
 
-    const profile = profiles[profileId];
+    const profile = getProfileById(profileId);
     if (!profile) {
         alert('Không tìm thấy profile!');
         return;
@@ -1567,10 +1888,10 @@ async function deleteProfileById(profileId) {
         const result = await API.deleteProfile(profileId);
 
         if (result.success) {
-            delete profiles[profileId];
+            removeProfileEntry(profileId);
 
-            if (currentProfile === profileId) {
-                currentProfile = 'default';
+            if (getCurrentProfileId() === profileId) {
+                setCurrentProfileId('default');
             }
 
             updateProfileSelect();
@@ -1605,17 +1926,17 @@ async function saveProfile() {
     });
 
     const profileData = {
-        profileId: currentProfile,
+        profileId: getCurrentProfileId(),
         name: name,
         passThreshold: threshold,
         weights: newWeights
     };
 
     try {
-        const result = await API.updateProfile(currentProfile, profileData);
+        const result = await API.updateProfile(profileData.profileId, profileData);
 
         if (result.success) {
-            profiles[currentProfile] = profileData;
+            setProfileEntry(profileData.profileId, profileData);
             loadProfile();
             updateProfileSelect();
             await renderProfilesList();
@@ -1635,9 +1956,51 @@ function closeProfileModal() {
     if (modal) modal.hide();
 }
 
+async function deleteCurrentProfile() {
+    const selectedProfileId = getCurrentProfileId();
+
+    if (!selectedProfileId) {
+        alert('Không có profile nào được chọn!');
+        return;
+    }
+
+    if (selectedProfileId === 'default') {
+        alert('Không thể xóa profile mặc định!');
+        return;
+    }
+
+    const profile = getProfileById(selectedProfileId);
+    if (!profile) {
+        alert('Không tìm thấy profile!');
+        return;
+    }
+
+    if (!confirm(`Bạn có chắc muốn xóa profile "${profile.name}"?`)) {
+        return;
+    }
+
+    try {
+        const result = await API.deleteProfile(selectedProfileId);
+
+        if (result.success) {
+            removeProfileEntry(selectedProfileId);
+            setCurrentProfileId('default');
+            updateProfileSelect();
+            await renderProfilesList();
+            closeProfileModal();
+            alert('Đã xóa profile!');
+        } else {
+            alert('Lỗi xóa profile: ' + (result.message || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error deleting profile:', error);
+        alert('Lỗi: ' + error.message);
+    }
+}
+
 async function exportAllProfiles() {
     try {
-        const data = JSON.stringify(profiles, null, 2);
+        const data = JSON.stringify(getProfileData(), null, 2);
         const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -1648,6 +2011,42 @@ async function exportAllProfiles() {
     } catch (error) {
         console.error('Error exporting profiles:', error);
         alert('Lỗi: ' + error.message);
+    }
+}
+
+async function createDefaultProfileQuick() {
+    try {
+        const response = await fetch('/api/profiles/default', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || 'Không thể tạo profile mặc định');
+        }
+
+        const profileData = result.data;
+        setProfileEntry(profileData.profileId, {
+            profileId: profileData.profileId,
+            name: profileData.name,
+            passThreshold: profileData.passThreshold,
+            weights: profileData.weights,
+            isDefault: profileData.isDefault
+        });
+
+        setCurrentProfileId(profileData.profileId);
+        loadProfile();
+        updateProfileSelect();
+        await renderProfilesList();
+
+        alert(result.message || 'Đã tạo profile mặc định!');
+    } catch (error) {
+        console.error('Error creating default profile:', error);
+        alert('Lỗi tạo profile mặc định: ' + error.message);
     }
 }
 
@@ -1687,13 +2086,13 @@ async function importProfiles(event) {
 
 async function editClassById(classId) {
     try {
-        const classData = classes[classId];
+        const classData = getClassById(classId);
         if (!classData) {
             alert('Không tìm thấy lớp!');
             return;
         }
 
-        currentClass = classId;
+        setCurrentClassId(classId);
 
         document.getElementById('className').value = classData.name;
         document.getElementById('classDescription').value = classData.description || '';
@@ -1709,8 +2108,11 @@ async function editClassById(classId) {
 
         updateStudentCount();
 
-        const modal = new bootstrap.Modal(document.getElementById('classModal'));
-        modal.show();
+        const modalEl = document.getElementById('classModal');
+        if (modalEl) {
+            const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            modal.show();
+        }
     } catch (error) {
         console.error('Error editing class:', error);
         alert('Lỗi: ' + error.message);
@@ -1718,121 +2120,21 @@ async function editClassById(classId) {
 }
 
 async function viewClassDetails(classId) {
-    try {
-        const classData = classes[classId];
-        if (!classData) {
-            alert('Không tìm thấy lớp!');
-            return;
-        }
-
-        const studentCount = classData.students ? classData.students.length : 0;
-
-        // Build detailed HTML content
-        let html = `
-            <div style="padding: 20px;">
-                <!-- Header Section -->
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px;">
-                    <h2 style="margin: 0 0 10px 0; font-size: 2em;">👥 ${classData.name}</h2>
-                    ${classData.description ? `
-                        <p style="margin: 0; font-size: 1.1em; opacity: 0.9;">
-                            ${classData.description}
-                        </p>
-                    ` : ''}
-                </div>
-
-                <!-- Stats Section -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
-                    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; text-align: center; border-left: 4px solid #667eea;">
-                        <div style="font-size: 2.5em; font-weight: bold; color: #667eea; margin-bottom: 5px;">
-                            ${studentCount}
-                        </div>
-                        <div style="color: #666; font-size: 0.9em;">
-                            Tổng số sinh viên
-                        </div>
-                    </div>
-                    
-                    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; text-align: center; border-left: 4px solid #28a745;">
-                        <div style="font-size: 2.5em; font-weight: bold; color: #28a745; margin-bottom: 5px;">
-                            ${classData.classId ? '✓' : '-'}
-                        </div>
-                        <div style="color: #666; font-size: 0.9em;">
-                            Đã lưu trên server
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Student List Section -->
-                <div style="background: white; border: 2px solid #ddd; border-radius: 10px; overflow: hidden;">
-                    <div style="background: #f8f9fa; padding: 15px; border-bottom: 2px solid #ddd;">
-                        <h3 style="margin: 0; color: #333;">
-                            📋 Danh sách sinh viên
-                        </h3>
-                    </div>
-                    
-                    ${studentCount > 0 ? `
-                        <div style="max-height: 400px; overflow-y: auto;">
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <thead style="background: #667eea; color: white; position: sticky; top: 0;">
-                                    <tr>
-                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">STT</th>
-                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">MSSV</th>
-                                        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Họ và tên</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${classData.students.map((student, index) => `
-                                        <tr style="border-bottom: 1px solid #eee; ${index % 2 === 0 ? 'background: #f8f9fa;' : ''}">
-                                            <td style="padding: 12px;">${index + 1}</td>
-                                            <td style="padding: 12px; font-weight: bold; color: #667eea;">${student.mssv}</td>
-                                            <td style="padding: 12px;">${student.name}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    ` : `
-                        <div style="padding: 40px; text-align: center; color: #666;">
-                            <div style="font-size: 3em; margin-bottom: 10px;">📭</div>
-                            <p style="font-size: 1.1em; margin: 0;">Lớp chưa có sinh viên nào</p>
-                            <p style="font-size: 0.9em; margin: 10px 0 0 0; color: #999;">
-                                Nhấn "✏️ Chỉnh sửa" để thêm sinh viên
-                            </p>
-                        </div>
-                    `}
-                </div>
-
-                <!-- Action Buttons -->
-                <div style="display: flex; gap: 15px; margin-top: 30px; justify-content: center;">
-                    <button class="btn btn-primary" onclick="editClassById('${classId}'); closeClassDetailsModal();" style="padding: 12px 30px; font-size: 1em;">
-                        ✏️ Chỉnh sửa lớp
-                    </button>
-                    <button class="btn" onclick="exportClassToExcel('${classId}')" style="background: #28a745; color: white; padding: 12px 30px; font-size: 1em;">
-                        📥 Xuất danh sách Excel
-                    </button>
-                    <button class="btn" onclick="closeClassDetailsModal()" style="background: #6c757d; color: white; padding: 12px 30px; font-size: 1em;">
-                        Đóng
-                    </button>
-                </div>
-            </div>
-        `;
-
-        // Update modal content and show
-        document.getElementById('classDetailsContent').innerHTML = html;
-        document.getElementById('classDetailsModal').classList.add('show');
-
-    } catch (error) {
-        console.error('Error viewing class details:', error);
-        alert('Lỗi: ' + error.message);
-    }
+    if (!classId) return;
+    window.location.href = `/classes/${classId}`;
 }
 
 function closeClassDetailsModal() {
-    document.getElementById('classDetailsModal').classList.remove('show');
+    const modalElement = document.getElementById('classDetailsModal');
+    const modal = bootstrap.Modal.getInstance(modalElement);
+    if (modal) {
+        modal.hide();
+    }
 }
 
 async function exportClassToExcel(classId) {
     try {
-        const classData = classes[classId];
+        const classData = getClassById(classId);
         if (!classData || !classData.students || classData.students.length === 0) {
             alert('Lớp không có sinh viên để xuất!');
             return;
@@ -1871,7 +2173,7 @@ async function exportClassToExcel(classId) {
 }
 
 async function deleteClassById(classId) {
-    const classData = classes[classId];
+    const classData = getClassById(classId);
     if (!classData) {
         alert('Không tìm thấy lớp!');
         return;
@@ -1885,10 +2187,10 @@ async function deleteClassById(classId) {
         const result = await API.deleteClass(classId);
 
         if (result.success) {
-            delete classes[classId];
+            removeClassEntry(classId);
 
-            if (currentClass === classId) {
-                currentClass = '';
+            if (getCurrentClassId() === classId) {
+                setCurrentClassId('');
             }
 
             updateClassSelect();
@@ -1904,10 +2206,9 @@ async function deleteClassById(classId) {
 }
 
 async function saveClass() {
-    if (!currentClass) return;
-
     const name = document.getElementById('className').value.trim();
     const description = document.getElementById('classDescription').value.trim();
+    const profileId = document.getElementById('classProfileSelect').value;
 
     if (!name) {
         alert('Vui lòng nhập tên lớp!');
@@ -1924,25 +2225,56 @@ async function saveClass() {
         }
     });
 
-    const classData = {
-        classId: currentClass,
-        name: name,
-        description: description,
-        students: students
-    };
-
     try {
-        const result = await API.updateClass(currentClass, classData);
+        if (isCreatingClass) {
+            // Create new class
+            const id = 'class_' + Date.now();
+            const classData = {
+                classId: id,
+                name: name,
+                description: description,
+                students: students,
+                grades: profileId ? { profileId: profileId } : null
+            };
 
-        if (result.success) {
-            classes[currentClass] = classData;
-            updateClassSelect();
-            await renderClassesList();
-            closeClassModal();
-            alert(`Đã lưu lớp "${name}" với ${students.length} sinh viên!`);
+            const result = await API.createClass(classData);
+
+            if (result.success) {
+                setClassEntry(id, classData);
+                await renderClassesList(); // Refresh list to show new class
+                closeClassModal();
+                alert(`Đã tạo lớp "${name}" thành công!`);
+            } else {
+                alert('Lỗi tạo lớp: ' + (result.message || 'Unknown error'));
+            }
         } else {
-            alert('Lỗi lưu lớp: ' + (result.message || 'Unknown error'));
+            // Update existing class
+            const selectedClassId = getCurrentClassId();
+            if (!selectedClassId) return;
+
+            const classData = {
+                classId: selectedClassId,
+                name: name,
+                description: description,
+                students: students,
+                grades: profileId ? { profileId: profileId } : null
+            };
+
+            const result = await API.updateClass(selectedClassId, classData);
+
+            if (result.success) {
+                setClassEntry(selectedClassId, classData);
+                await renderClassesList();
+                closeClassModal();
+                alert(`Đã lưu cập nhật lớp "${name}"!`);
+            } else {
+                alert('Lỗi lưu lớp: ' + (result.message || 'Unknown error'));
+            }
         }
+
+        // Update selects in other tabs
+        updateClassSelect();
+
     } catch (error) {
         console.error('Error saving class:', error);
         alert('Lỗi: ' + error.message);
@@ -1988,12 +2320,12 @@ function switchTab(tabName) {
             navItem.classList.add('active');
         }
     }
-    
+
     // Update mobile nav
     if (typeof updateMobileNav === 'function') {
         updateMobileNav(tabName);
     }
-    
+
     // Close sidebar on mobile after selecting
     const sidebar = document.getElementById('sidebar');
     const isMobile = window.innerWidth < 768;
@@ -2018,6 +2350,128 @@ function switchTab(tabName) {
     }
 }
 
+
+// ========================================
+// TEMPLATE PAGE FUNCTIONS
+// ========================================
+
+// Update template profile info
+function updateTemplateProfile() {
+    const select = document.getElementById('templateProfileSelect');
+    if (!select) return;
+
+    const profileId = select.value;
+    const profilesData = getProfileData();
+    const profile = profileId ? profilesData[profileId] : null;
+    const infoDiv = document.getElementById('templateProfileInfo');
+
+    if (!profile) {
+        if (infoDiv) {
+            infoDiv.className = 'alert alert-warning mt-3 mb-0';
+            infoDiv.textContent = 'Chưa chọn profile';
+        }
+        setCurrentProfileId('');
+        weights = {};
+        passThreshold = 3;
+        document.getElementById('generateTemplateBtn').disabled = true;
+        updateGenerateButtonState();
+        return;
+    }
+
+    setCurrentProfileId(profileId);
+
+    if (infoDiv) {
+        infoDiv.className = 'alert alert-success mt-3 mb-0';
+        const weightsList = Object.entries(profile.weights)
+            .map(([key, value]) => `${key}: ${value}%`)
+            .join(', ');
+        infoDiv.innerHTML = `
+            <strong>${profile.name}</strong><br>
+            Ngưỡng qua môn: ≥${profile.passThreshold} điểm<br>
+            Trọng số: ${weightsList}
+        `;
+    }
+
+    weights = { ...profile.weights };
+    passThreshold = profile.passThreshold || 3;
+    if (window.profileManager) {
+        window.profileManager.weights = { ...profile.weights };
+        window.profileManager.passThreshold = passThreshold;
+    }
+
+    updateGenerateButtonState();
+}
+
+// Update template class info
+function updateTemplateClass() {
+    const select = document.getElementById('templateClassSelect');
+    if (!select) return;
+
+    const classId = select.value;
+    const classesData = getClassesData();
+    const classData = classId ? classesData[classId] : null;
+    const infoDiv = document.getElementById('templateClassInfo');
+
+    if (!classData) {
+        if (infoDiv) {
+            infoDiv.className = 'alert alert-info mt-2 mb-0';
+            infoDiv.textContent = 'Chưa chọn lớp';
+        }
+        setCurrentClassId('');
+        setClassListData([]);
+        document.getElementById('generateTemplateBtn').disabled = true;
+        updateGenerateButtonState();
+        return;
+    }
+
+    setCurrentClassId(classId);
+    setClassListData(classData.students || []);
+
+    if (infoDiv) {
+        infoDiv.className = 'alert alert-success mt-2 mb-0';
+        infoDiv.innerHTML = `
+            <strong>${classData.name}</strong><br>
+            ${classData.description || ''}<br>
+            Số sinh viên: ${classListData.length}
+        `;
+    }
+
+    updateGenerateButtonState();
+}
+
+// Update generate button state
+function updateGenerateButtonState() {
+    const btn = document.getElementById('generateTemplateBtn');
+    if (!btn) return;
+
+    const sourceEl = document.querySelector('input[name="templateSource"]:checked');
+    if (!sourceEl) {
+        btn.disabled = true;
+        return;
+    }
+
+    const source = sourceEl.value;
+    const profilesData = getProfileData();
+    const selectedProfileId = getCurrentProfileId();
+    const hasProfile = Boolean(
+        selectedProfileId &&
+        profilesData[selectedProfileId] &&
+        Object.keys(profilesData[selectedProfileId].weights || {}).length
+    );
+
+    let hasStudents = false;
+    if (source === 'class') {
+        const classesData = getClassesData();
+        const selectedClassId = getCurrentClassId();
+        const classData = selectedClassId ? classesData[selectedClassId] : null;
+        hasStudents = Boolean(classData && classData.students && classData.students.length > 0);
+    } else if (source === 'upload') {
+        const uploadedStudents = getClassListData();
+        hasStudents = uploadedStudents && uploadedStudents.length > 0;
+    }
+
+    btn.disabled = !(hasProfile && hasStudents);
+}
 
 // ========================================
 // CLASS DETAIL VIEW - Now handled by ClassesModule

@@ -1,0 +1,137 @@
+<!-- Classes List View -->
+<div id="classes-list-view">
+    <h2 class="page-title mb-4">
+        <i class="bi bi-people text-primary"></i> Quản lý Lớp học
+    </h2>
+
+    <div class="mb-4">
+        <button class="btn btn-primary" onclick="createNewClass()">
+            <i class="bi bi-plus-circle"></i> Tạo lớp mới
+        </button>
+    </div>
+
+    <div id="classesList" class="row g-3">
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Đang tải...</span>
+            </div>
+            <p class="mt-3 text-muted">Đang tải danh sách lớp học...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Class Detail View -->
+<div id="class-detail-view" style="display: none;">
+    <div class="d-flex align-items-center mb-3 p-3 bg-white rounded-3 shadow-sm border">
+        <button class="btn btn-outline-primary btn-sm me-3" onclick="showClassesList()" style="border-radius: 8px;">
+            <i class="bi bi-arrow-left me-1"></i> Quay lại
+        </button>
+        <div class="flex-grow-1">
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <div class="d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; background: linear-gradient(135deg, var(--fpt-orange) 0%, var(--fpt-orange-dark) 100%); border-radius: 8px;">
+                    <i class="bi bi-people text-white" style="font-size: 1rem;"></i>
+                </div>
+                <h2 class="page-title mb-0" id="classDetailName">Tên lớp</h2>
+            </div>
+            <p class="text-muted mb-0 ms-5 ps-1" style="font-size: 0.875rem;" id="classDetailDescription">Mô tả lớp học</p>
+        </div>
+        <div>
+            <label class="form-label fw-semibold text-muted mb-1" style="font-size: 0.75rem;">
+                <i class="bi bi-sliders me-1"></i> Profile điểm
+            </label>
+            <select id="classProfileSelect" class="form-select" onchange="ClassesModule.changeProfile()" style="min-width: 220px; border-radius: 8px;">
+                <option value="">-- Chọn profile điểm --</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="row g-2 mb-3">
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <h3 id="classDetailStudentCount">0</h3>
+                <p>Tổng sinh viên</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-icon bg-success bg-opacity-10 text-success">
+                    <i class="bi bi-calendar-check"></i>
+                </div>
+                <h3 id="classDetailCreatedDate">-</h3>
+                <p>Ngày tạo</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-icon bg-info bg-opacity-10 text-info">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                <h3 id="classDetailUpdatedDate">-</h3>
+                <p>Cập nhật</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grades Table -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-2 px-3">
+            <h6 class="mb-0 d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 6px;">
+                    <i class="bi bi-table text-white" style="font-size: 0.875rem;"></i>
+                </div>
+                <span class="fw-semibold">Bảng điểm</span>
+            </h6>
+            <div class="d-flex gap-2">
+                <a href="student.html" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-share me-1"></i> share điểm
+                </a>
+                <input type="file" id="uploadGradesFile" accept=".xlsx, .xls" style="display: none;" onchange="ClassesModule.uploadGrades(event)">
+                <label for="uploadGradesFile" class="btn btn-sm btn-outline-success mb-0" style="border-radius: 6px;">
+                    <i class="bi bi-upload me-1"></i> Upload
+                </label>
+                <button class="btn btn-sm btn-outline-primary" onclick="ClassesModule.exportGrades()" style="border-radius: 6px;">
+                    <i class="bi bi-download me-1"></i> Xuất Excel
+                </button>
+                <button class="btn btn-sm btn-success" onclick="ClassesModule.saveGrades()" style="border-radius: 6px;">
+                    <i class="bi bi-save me-1"></i> Lưu
+                </button>
+                <button class="btn btn-sm btn-primary" onclick="editCurrentClass()" style="border-radius: 6px;">
+                    <i class="bi bi-pencil me-1"></i> Sửa
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                <table class="table table-hover mb-0" id="gradesTable">
+                    <thead class="sticky-top">
+                        <tr id="gradesTableHeader">
+                            <th style="width: 60px;" class="text-center">STT</th>
+                            <th style="width: 120px;">MSSV</th>
+                            <th style="min-width: 200px;">Họ và tên</th>
+                            <!-- Dynamic columns will be added here -->
+                            <th style="width: 100px;" class="text-center">Tổng</th>
+                            <th style="width: 120px;" class="text-center">Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gradesTableBody">
+                        <tr>
+                            <td colspan="5" class="text-center py-5">
+                                <div class="text-muted">
+                                    <div class="d-flex align-items-center justify-content-center mb-3">
+                                        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                            <i class="bi bi-info-circle" style="font-size: 2.5rem; color: #9ca3af;"></i>
+                                        </div>
+                                    </div>
+                                    <p class="fw-semibold" style="color: #6b7280;">Vui lòng chọn profile điểm để hiển thị bảng điểm</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+</div>
+</div>

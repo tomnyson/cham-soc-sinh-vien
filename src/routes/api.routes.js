@@ -10,6 +10,11 @@ const classController = require('../controllers/class.controller');
 const { uploadSingle, cleanupFile } = require('../middleware/upload.middleware');
 const { validateGenerateTemplate, validateExportResults } = require('../middleware/validation.middleware');
 const { asyncHandler } = require('../middleware/error.middleware');
+const { authenticate } = require('../middleware/auth.middleware');
+
+// Auth routes
+const authRoutes = require('./auth.routes');
+router.use('/auth', authRoutes);
 
 // Health check
 router.get('/health', (req, res) => {
@@ -20,9 +25,10 @@ router.get('/health', (req, res) => {
     });
 });
 
-// Upload routes
+// Upload routes (Protected)
 router.post(
     '/upload-grades',
+    authenticate,
     uploadSingle('gradeFile'),
     asyncHandler(gradeController.uploadGrades),
     cleanupFile
@@ -30,46 +36,54 @@ router.post(
 
 router.post(
     '/upload-classlist',
+    authenticate,
     uploadSingle('classListFile'),
     asyncHandler(classlistController.uploadClassList),
     cleanupFile
 );
 
-// Template routes
+// Template routes (Protected)
 router.post(
     '/generate-template',
+    authenticate,
     validateGenerateTemplate,
     asyncHandler(templateController.generateTemplate)
 );
 
 router.post(
     '/export-results',
+    authenticate,
     validateExportResults,
     asyncHandler(templateController.exportResults)
 );
 
-// ===== Profile Routes =====
-router.get('/profiles', asyncHandler(profileController.getAllProfiles));
-router.get('/profiles/default', asyncHandler(profileController.getDefaultProfile));
-router.get('/profiles/:profileId', asyncHandler(profileController.getProfileById));
-router.post('/profiles', asyncHandler(profileController.createProfile));
-router.put('/profiles/:profileId', asyncHandler(profileController.updateProfile));
-router.delete('/profiles/:profileId', asyncHandler(profileController.deleteProfile));
-router.post('/profiles/:profileId/duplicate', asyncHandler(profileController.duplicateProfile));
-router.post('/profiles/import', asyncHandler(profileController.importProfiles));
-router.get('/profiles/export/all', asyncHandler(profileController.exportProfiles));
+// ===== Profile Routes (Protected) =====
+router.get('/profiles', authenticate, asyncHandler(profileController.getAllProfiles));
+router.get('/profiles/default', authenticate, asyncHandler(profileController.getDefaultProfile));
+router.post('/profiles/default', authenticate, asyncHandler(profileController.createDefaultProfile));
+router.get('/profiles/:profileId', authenticate, asyncHandler(profileController.getProfileById));
+router.post('/profiles', authenticate, asyncHandler(profileController.createProfile));
+router.put('/profiles/:profileId', authenticate, asyncHandler(profileController.updateProfile));
+router.delete('/profiles/:profileId', authenticate, asyncHandler(profileController.deleteProfile));
+router.post('/profiles/:profileId/duplicate', authenticate, asyncHandler(profileController.duplicateProfile));
+router.post('/profiles/import', authenticate, asyncHandler(profileController.importProfiles));
+router.get('/profiles/export/all', authenticate, asyncHandler(profileController.exportProfiles));
 
-// ===== Class Routes =====
-router.get('/classes', asyncHandler(classController.getAllClasses));
-router.get('/classes/:classId', asyncHandler(classController.getClassById));
-router.post('/classes', asyncHandler(classController.createClass));
-router.put('/classes/:classId', asyncHandler(classController.updateClass));
-router.delete('/classes/:classId', asyncHandler(classController.deleteClass));
+// ===== Class Routes (Protected) =====
+router.get('/classes', authenticate, asyncHandler(classController.getAllClasses));
+router.get('/classes/:classId', authenticate, asyncHandler(classController.getClassById));
+router.post('/classes', authenticate, asyncHandler(classController.createClass));
+router.put('/classes/:classId', authenticate, asyncHandler(classController.updateClass));
+router.delete('/classes/:classId', authenticate, asyncHandler(classController.deleteClass));
 
-// Student management within a class
-router.post('/classes/:classId/students', asyncHandler(classController.addStudent));
-router.post('/classes/:classId/students/bulk', asyncHandler(classController.addStudentsBulk));
-router.delete('/classes/:classId/students/:mssv', asyncHandler(classController.removeStudent));
-router.put('/classes/:classId/students/:mssv', asyncHandler(classController.updateStudent));
+// Student management within a class (Protected)
+router.post('/classes/:classId/students', authenticate, asyncHandler(classController.addStudent));
+router.post('/classes/:classId/students/bulk', authenticate, asyncHandler(classController.addStudentsBulk));
+router.delete('/classes/:classId/students/:mssv', authenticate, asyncHandler(classController.removeStudent));
+router.put('/classes/:classId/students/:mssv', authenticate, asyncHandler(classController.updateStudent));
+
+// Class archive management (Protected)
+router.put('/classes/:classId/archive', authenticate, asyncHandler(classController.archiveClass));
+router.put('/classes/:classId/unarchive', authenticate, asyncHandler(classController.unarchiveClass));
 
 module.exports = router;

@@ -5,8 +5,13 @@
 function initializeRoutes() {
     // Home / Grade Check
     router.register('/', {
+        partial: '/partials/grade-check.html',
         handler: () => {
-            GradeCheckModule.show();
+            // Wait for DOM to be ready, then populate
+            setTimeout(() => {
+                if (typeof updateProfileSelect === 'function') updateProfileSelect();
+                GradeCheckModule.show();
+            }, 50);
         },
         cleanup: () => {
             GradeCheckModule.cleanup();
@@ -14,8 +19,12 @@ function initializeRoutes() {
     });
 
     router.register('/grade-check', {
+        partial: '/partials/grade-check.html',
         handler: () => {
-            GradeCheckModule.show();
+            setTimeout(() => {
+                if (typeof updateProfileSelect === 'function') updateProfileSelect();
+                GradeCheckModule.show();
+            }, 50);
         },
         cleanup: () => {
             GradeCheckModule.cleanup();
@@ -24,6 +33,7 @@ function initializeRoutes() {
 
     // Profiles
     router.register('/profiles', {
+        partial: '/partials/profiles.html',
         handler: () => {
             ProfilesModule.show();
         },
@@ -34,6 +44,7 @@ function initializeRoutes() {
 
     // Classes List
     router.register('/classes', {
+        partial: '/partials/classes.html',
         handler: () => {
             ClassesModule.showList();
         },
@@ -44,6 +55,7 @@ function initializeRoutes() {
 
     // Class Detail
     router.register('/classes/detail', {
+        partial: '/partials/classes.html',
         handler: (params) => {
             if (params.classId) {
                 ClassesModule.showDetail(params.classId);
@@ -58,15 +70,23 @@ function initializeRoutes() {
 
     // Template
     router.register('/template', {
+        partial: '/partials/template.html',
         handler: () => {
-            TemplateModule.show();
+            setTimeout(() => {
+                if (typeof updateProfileSelect === 'function') updateProfileSelect();
+                if (typeof updateClassSelect === 'function') updateClassSelect();
+                if (typeof TemplateModule !== 'undefined') {
+                    TemplateModule.show();
+                }
+            }, 50);
         },
         cleanup: () => {
-            TemplateModule.cleanup();
+            if (typeof TemplateModule !== 'undefined') {
+                TemplateModule.cleanup();
+            }
         }
     });
 
-    // Initialize router
     router.init();
 }
 

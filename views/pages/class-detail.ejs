@@ -1,0 +1,676 @@
+<div class="container-fluid py-4" id="classDetailPage" data-class-id="<%= classData.classId %>">
+    <div class="row align-items-center mb-4">
+        <div class="col-md-8">
+            <p class="text-muted mb-1">
+                <a href="/classes" class="text-decoration-none">
+                    <i class="bi bi-arrow-left me-1"></i> Quay lại danh sách lớp
+                </a>
+            </p>
+            <h1 class="h3 mb-1 d-flex align-items-center gap-2">
+                <i class="bi bi-people-fill text-primary"></i>
+                <span id="classDetailName">
+                    <%= classData.name %>
+                </span>
+            </h1>
+            <p class="text-muted mb-0" id="classDetailDescription">
+                <%= classData.description || 'Chưa có mô tả cho lớp học này.' %>
+            </p>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <div class="card shadow-sm border-0">
+                <div class="card-body py-3">
+                    <div class="small text-muted">Cập nhật lần cuối</div>
+                    <div class="fw-semibold" id="classDetailUpdatedAt">
+                        <% if (classData.updatedAt) { %>
+                            <%= new Date(classData.updatedAt).toLocaleString('vi-VN') %>
+                                <% } else { %>
+                                    -
+                                    <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                    <i class="bi bi-people"></i>
+                </div>
+                <h3 id="classDetailStudentCount">
+                    <%= classData.students.length %>
+                </h3>
+                <p>Tổng sinh viên</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-success bg-opacity-10 text-success">
+                    <i class="bi bi-clipboard-check"></i>
+                </div>
+                <h3 id="classDetailProfileName">
+                    <% if (selectedProfileId) { %>
+                        <%= (profiles.find(p=> p.profileId === selectedProfileId) || {}).name || 'Profile' %>
+                            <% } else { %>
+                                Chưa chọn
+                                <% } %>
+                </h3>
+                <p>Profile điểm đang áp dụng</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                    <i class="bi bi-bar-chart-line"></i>
+                </div>
+                <h3 id="classDetailPassRate">0%</h3>
+                <p>Tỷ lệ đạt</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tools Row -->
+    <div class="row g-3 mb-4">
+        <!-- Lucky Wheel Button -->
+        <div class="col-md-6">
+            <div class="card h-100 border-0 shadow-sm" style="cursor: pointer;" data-bs-toggle="modal"
+                data-bs-target="#luckyWheelModal">
+                <div class="card-body d-flex align-items-center">
+                    <div>
+                        <h5 class="mb-1"><i class="bi bi-arrow-repeat me-1"></i> Vòng Quay</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Team Grouping Button -->
+        <div class="col-md-6">
+            <div class="card h-100 border-0 shadow-sm" style="cursor: pointer;" data-bs-toggle="modal"
+                data-bs-target="#teamGroupModal">
+                <div class="card-body d-flex align-items-center">
+                    <div>
+                        <h5 class="mb-1"><i class="bi bi-diagram-3 me-1"></i> Chia Nhóm</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-lg-6">
+                    <label class="form-label fw-semibold text-muted">
+                        <i class="bi bi-sliders me-1"></i> Chọn profile điểm cho lớp
+                    </label>
+                    <select id="classDetailProfileSelect" class="form-select">
+                        <option value="">-- Chọn profile --</option>
+                        <% profiles.forEach(profile=> { %>
+                            <option value="<%= profile.profileId %>" <%=profile.profileId===selectedProfileId
+                                ? 'selected' : '' %>>
+                                <%= profile.name %>
+                                    <% if (profile.isDefault) { %>
+                                        (mặc định)
+                                        <% } %>
+                            </option>
+                            <% }) %>
+                    </select>
+                    <small class="text-muted d-block mt-1">
+                        Áp dụng profile điểm để xem và chỉnh sửa điểm thành phần của từng sinh viên.
+                    </small>
+                </div>
+                <div class="col-lg-6 text-lg-end">
+                    <button class="btn btn-outline-secondary me-2" onclick="window.location.href='/classes'">
+                        <i class="bi bi-arrow-left-short me-1"></i> Quay lại danh sách
+                    </button>
+                    <!-- Share Link Button -->
+                    <div class="btn-group me-2">
+                        <button class="btn btn-outline-success" id="shareGradesBtn"
+                            title="Chia sẻ link tra cứu điểm cho sinh viên">
+                            <i class="bi bi-share me-1"></i> Share điểm
+                        </button>
+                        <button type="button" class="btn btn-outline-success dropdown-toggle dropdown-toggle-split"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="visually-hidden">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="#" id="copyShareLinkBtn">
+                                    <i class="bi bi-clipboard me-2"></i> Copy link
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#" id="openShareLinkBtn">
+                                    <i class="bi bi-box-arrow-up-right me-2"></i> Mở trang tra cứu
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    <button class="btn btn-primary" id="classDetailSaveBtn" disabled>
+                        <i class="bi bi-save me-1"></i> Lưu thay đổi
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h5 class="mb-0 d-flex align-items-center gap-2">
+                <i class="bi bi-table text-primary"></i>
+                Bảng điểm thành phần
+            </h5>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-primary-subtle text-primary" id="classDetailProfileSummary">-</span>
+                <!-- Column Visibility Toggle -->
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button"
+                        id="columnVisibilityDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                        aria-expanded="false" title="Ẩn/Hiện cột">
+                        <i class="bi bi-eye me-1"></i> Cột hiển thị
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end p-2" id="columnVisibilityMenu"
+                        style="min-width: 200px;">
+                        <div class="dropdown-header small fw-semibold text-muted">Chọn cột hiển thị:</div>
+                        <div id="columnVisibilityOptions">
+                            <!-- Options will be populated dynamically -->
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary flex-grow-1" id="showAllColumnsBtn">
+                                <i class="bi bi-eye me-1"></i> Hiện tất cả
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary flex-grow-1" id="hideAllColumnsBtn">
+                                <i class="bi bi-eye-slash me-1"></i> Ẩn tất cả
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div id="classDetailEmptyState" class="text-center py-5 text-muted" style="display: none;">
+                <i class="bi bi-info-circle fs-1 d-block mb-3"></i>
+                Vui lòng chọn profile điểm để hiển thị bảng điểm và chỉnh sửa.
+            </div>
+            <div class="table-responsive" id="classDetailTableWrapper">
+                <table class="table table-hover mb-0">
+                    <thead id="classDetailTableHeader"></thead>
+                    <tbody id="classDetailTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-white d-flex justify-content-between flex-wrap gap-2">
+            <div class="text-muted small">
+                <i class="bi bi-info-circle me-1"></i>
+                Điểm nhập trong khoảng 0 - 100. Tổng điểm sẽ tự động cập nhật.
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <input type="file" id="classDetailImportInput" accept=".xlsx,.xls" class="d-none" />
+                    <button class="btn btn-outline-success btn-sm" id="classDetailImportBtn">
+                        <i class="bi bi-upload me-1"></i> Nhập điểm Excel
+                    </button>
+                </div>
+                <!-- Multi-Quiz Import Button -->
+                <div class="d-flex align-items-center gap-2">
+                    <input type="file" id="multiQuizImportInput" accept=".xlsx,.xls" class="d-none" />
+                    <button class="btn btn-success btn-sm" id="multiQuizImportBtn"
+                        title="Nhập điểm từ file có nhiều sheet Quiz/Lab">
+                        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Nhập Quiz/Lab (Nhiều sheet)
+                    </button>
+                </div>
+                <button class="btn btn-outline-primary btn-sm" id="classDetailResetBtn">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Hoàn tác thay đổi
+                </button>
+            </div>
+        </div>
+        <div class="px-3 pb-3">
+            <div id="classDetailImportStatus" class="text-muted small"></div>
+        </div>
+
+        <!-- Quick Import Section -->
+        <div class="card-footer bg-white border-top">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <h6 class="mb-0 d-flex align-items-center gap-2">
+                    <i class="bi bi-lightning-charge text-warning"></i>
+                    Nhập điểm nhanh
+                </h6>
+                <button class="btn btn-link btn-sm p-0" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#quickImportSection">
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+            </div>
+            <div class="collapse" id="quickImportSection">
+                <div class="row g-3">
+                    <div class="col-lg-4">
+                        <label class="form-label small fw-semibold">Chọn cột điểm:</label>
+                        <select id="quickImportColumn" class="form-select form-select-sm">
+                            <option value="">-- Chọn cột --</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-8">
+                        <label class="form-label small fw-semibold">
+                            Nhập điểm (mỗi dòng: <code>MSSV điểm</code>):
+                        </label>
+                        <textarea id="quickImportText" class="form-control form-control-sm font-monospace" rows="4"
+                            placeholder="VD:&#10;PK02986 7.5&#10;PK02987 8.0&#10;PK02988 9.5"></textarea>
+                        <div class="text-muted small mt-1">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Hỗ trợ định dạng: <code>MSSV điểm</code> hoặc <code>MSSV, điểm</code> hoặc
+                            <code>MSSV    điểm</code>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div id="quickImportStatus" class="text-muted small"></div>
+                            <button class="btn btn-warning btn-sm" id="quickImportBtn">
+                                <i class="bi bi-lightning-charge me-1"></i> Áp dụng điểm
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lucky Wheel Modal -->
+<div class="modal fade" id="luckyWheelModal" tabindex="-1" aria-labelledby="luckyWheelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header text-white" style="background-color: #E65100;">
+                <h5 class="modal-title" id="luckyWheelModalLabel">
+                    <i class="bi bi-bullseye me-2"></i> Vòng Quay May Mắn
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-lg-7 text-center">
+                        <!-- Wheel Container -->
+                        <div class="wheel-container position-relative mb-3" style="display: inline-block;">
+                            <canvas id="wheelCanvas" width="350" height="350"></canvas>
+                            <!-- Pointer -->
+                            <div class="wheel-pointer"
+                                style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); font-size: 1.8rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
+                                ▼
+                            </div>
+                            <!-- Spin Button -->
+                            <button id="spinWheelBtn" class="btn position-absolute"
+                                style="top: 50%; left: 50%; transform: translate(-50%, -50%); border-radius: 50%; width: 70px; height: 70px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.3); background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%); border: 3px solid #ddd; color: #333; font-size: 11px; line-height: 1.2;">
+                                Click<br>to spin
+                            </button>
+                        </div>
+
+                        <!-- Winner Display -->
+                        <div id="wheelWinner" class="alert alert-success d-none" style="animation: pulse 1s infinite;">
+                            <h4 class="mb-0"><i class="bi bi-trophy-fill text-success me-2"></i><span
+                                    id="winnerName"></span></h4>
+                            <small id="winnerMssv" class="text-muted"></small>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-5">
+                        <!-- Shuffle Button -->
+                        <div class="mb-3">
+                            <button id="shuffleWheelBtn" class="btn btn-primary w-100">
+                                <i class="bi bi-shuffle me-1"></i> Xáo trộn danh sách
+                            </button>
+                        </div>
+
+                        <!-- Shuffled List View -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-list-ol me-1"></i> Danh sách đã xáo trộn:</span>
+                                <span class="badge bg-primary" id="shuffledCount">0</span>
+                            </label>
+                            <div id="shuffledStudentsList" class="list-group list-group-flush border rounded"
+                                style="max-height: 280px; overflow-y: auto;">
+                                <div class="text-muted small text-center py-3">
+                                    Nhấn "Xáo trộn" để random thứ tự
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- History -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold d-flex justify-content-between">
+                                <span>Lịch sử quay:</span>
+                                <button id="clearHistoryBtn" class="btn btn-link btn-sm p-0 text-danger">Xóa</button>
+                            </label>
+                            <div id="wheelHistory" class="list-group list-group-flush"
+                                style="max-height: 120px; overflow-y: auto;">
+                                <div class="text-muted small text-center py-2">Chưa có lịch sử</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <span class="text-muted small">
+                    <i class="bi bi-people me-1"></i>
+                    Tổng: <strong id="wheelTotalStudents">
+                        <%= classData.students.length %>
+                    </strong> sinh viên
+                </span>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Team Grouping Modal -->
+<div class="modal fade" id="teamGroupModal" tabindex="-1" aria-labelledby="teamGroupModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header text-white" style="background-color: #2E7D32;">
+                <h5 class="modal-title" id="teamGroupModalLabel">
+                    <i class="bi bi-people-fill me-2"></i> Chia Nhóm Ngẫu Nhiên
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <!-- Controller -->
+                    <div class="col-lg-4 border-end">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-sliders me-1"></i> Cài đặt</h6>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Số lượng nhóm:</label>
+                            <input type="number" class="form-control" id="teamGroupCount" min="2" max="20" value="4">
+                            <small class="text-muted">Chia thành bao nhiêu nhóm</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Hoặc: Số người mỗi nhóm:</label>
+                            <input type="number" class="form-control" id="teamMemberCount" min="2" max="10"
+                                placeholder="Để trống để dùng số nhóm">
+                            <small class="text-muted">Tối đa bao nhiêu người/nhóm</small>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="teamPickLeader">
+                            <label class="form-check-label" for="teamPickLeader">Chọn nhóm trưởng</label>
+                        </div>
+
+                        <button id="generateTeamsBtn" class="btn btn-success w-100 btn-lg">
+                            <i class="bi bi-shuffle me-2"></i> TẠO NHÓM
+                        </button>
+
+                        <hr>
+
+                        <div class="text-muted small">
+                            <i class="bi bi-people me-1"></i>
+                            Tổng: <strong>
+                                <%= classData.students.length %>
+                            </strong> sinh viên
+                        </div>
+                    </div>
+
+                    <!-- Results -->
+                    <div class="col-lg-8">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-grid-3x3 me-1"></i> Kết quả chia nhóm</h6>
+
+                        <div id="teamGroupResults" class="row g-3">
+                            <div class="col-12 text-center text-muted py-5">
+                                <i class="bi bi-arrow-left-circle display-4 d-block mb-2"></i>
+                                Nhấn "TẠO NHÓM" để chia nhóm ngẫu nhiên
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-primary" id="copyTeamsBtn" disabled>
+                    <i class="bi bi-clipboard me-1"></i> Copy kết quả
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Score Chart Modal -->
+<div class="modal fade" id="scoreChartModal" tabindex="-1" aria-labelledby="scoreChartModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header text-white" style="background: linear-gradient(135deg, #FF6C00 0%, #E65100 100%);">
+                <h5 class="modal-title" id="scoreChartModalLabel">
+                    <i class="bi bi-graph-up me-2"></i> Biểu đồ điểm: <span id="chartColumnName">-</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Chart Type Selector -->
+                <div class="d-flex justify-content-center gap-2 mb-3">
+                    <div class="btn-group" role="group" aria-label="Chart type">
+                        <input type="radio" class="btn-check" name="chartType" id="chartTypeBar" value="bar" checked>
+                        <label class="btn btn-outline-primary" for="chartTypeBar">
+                            <i class="bi bi-bar-chart-fill me-1"></i> Cột
+                        </label>
+                        <input type="radio" class="btn-check" name="chartType" id="chartTypeLine" value="line">
+                        <label class="btn btn-outline-primary" for="chartTypeLine">
+                            <i class="bi bi-graph-up me-1"></i> Đường
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Chart Container -->
+                <div class="chart-container" style="position: relative; height: 400px;">
+                    <canvas id="scoreChart"></canvas>
+                </div>
+
+                <!-- Statistics Summary -->
+                <div class="row g-3 mt-3">
+                    <div class="col-md-3 text-center">
+                        <div class="bg-light rounded p-2">
+                            <div class="text-muted small">Điểm cao nhất</div>
+                            <div class="fw-bold text-success fs-5" id="chartMax">-</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="bg-light rounded p-2">
+                            <div class="text-muted small">Điểm thấp nhất</div>
+                            <div class="fw-bold text-danger fs-5" id="chartMin">-</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="bg-light rounded p-2">
+                            <div class="text-muted small">Điểm trung bình</div>
+                            <div class="fw-bold text-primary fs-5" id="chartAvg">-</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="bg-light rounded p-2">
+                            <div class="text-muted small">Số sinh viên</div>
+                            <div class="fw-bold text-secondary fs-5" id="chartCount">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="btn btn-success" id="exportChartBtn">
+                    <i class="bi bi-download me-1"></i> Tải ảnh (PNG)
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes pulse {
+
+        0%,
+        100% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(1.02);
+        }
+    }
+
+    .wheel-container canvas {
+        transition: transform 0.1s ease-out;
+    }
+
+    .wheel-container.spinning canvas {
+        animation: none;
+    }
+
+    #wheelWinner {
+        transition: all 0.3s ease;
+    }
+
+    #spinWheelBtn:hover:not(:disabled) {
+        transform: translate(-50%, -50%) scale(1.1);
+    }
+
+    #spinWheelBtn:disabled {
+        opacity: 0.7;
+    }
+
+    /* Copy column button styles */
+    .copy-column-btn,
+    .chart-column-btn {
+        color: #6c757d;
+        transition: color 0.2s ease;
+    }
+
+    .copy-column-btn:hover {
+        color: #0d6efd;
+    }
+
+    .chart-column-btn:hover {
+        color: #764ba2;
+    }
+
+    /* Toast animations */
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+
+    /* Sticky columns for grade table scroll */
+    #classDetailTableWrapper {
+        overflow-x: auto;
+    }
+
+    #classDetailTableWrapper table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    /* Sticky header row - keep original styling, just add sticky behavior */
+    #classDetailTableHeader th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+    /* Sticky first 3 columns - STT, MSSV, HỌ VÀ TÊN */
+    #classDetailTableHeader th:nth-child(1),
+    #classDetailTableHeader th:nth-child(2),
+    #classDetailTableHeader th:nth-child(3) {
+        position: sticky;
+        z-index: 3;
+    }
+
+    #classDetailTableHeader th:nth-child(1) {
+        left: 0;
+    }
+
+    #classDetailTableHeader th:nth-child(2) {
+        left: 50px;
+    }
+
+    #classDetailTableHeader th:nth-child(3) {
+        left: 130px;
+    }
+
+    #classDetailTableBody td:nth-child(1),
+    #classDetailTableBody td:nth-child(2),
+    #classDetailTableBody td:nth-child(3) {
+        position: sticky;
+        z-index: 1;
+        background: white;
+    }
+
+    #classDetailTableBody td:nth-child(1) {
+        left: 0;
+    }
+
+    #classDetailTableBody td:nth-child(2) {
+        left: 50px;
+    }
+
+    #classDetailTableBody td:nth-child(3) {
+        left: 130px;
+    }
+
+    /* Shadow effect for sticky columns */
+    #classDetailTableHeader th:nth-child(3)::after,
+    #classDetailTableBody td:nth-child(3)::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: -10px;
+        bottom: 0;
+        width: 10px;
+        background: linear-gradient(to right, rgba(0, 0, 0, 0.1), transparent);
+        pointer-events: none;
+    }
+
+    #classDetailTableHeader th:nth-child(3),
+    #classDetailTableBody td:nth-child(3) {
+        position: sticky;
+        z-index: 1;
+        border-right: 2px solid #dee2e6;
+    }
+
+    /* Alternating row colors for sticky cells */
+    #classDetailTableBody tr:nth-child(even) td:nth-child(1),
+    #classDetailTableBody tr:nth-child(even) td:nth-child(2),
+    #classDetailTableBody tr:nth-child(even) td:nth-child(3) {
+        background: #f9fafb;
+    }
+
+    /* Pass/fail colors override for sticky cells */
+    #classDetailTableBody tr.pass td:nth-child(1),
+    #classDetailTableBody tr.pass td:nth-child(2),
+    #classDetailTableBody tr.pass td:nth-child(3) {
+        background: linear-gradient(135deg, #d1fae5 0%, rgba(209, 250, 229, 0.7) 100%);
+    }
+
+    #classDetailTableBody tr.fail td:nth-child(1),
+    #classDetailTableBody tr.fail td:nth-child(2),
+    #classDetailTableBody tr.fail td:nth-child(3) {
+        background: linear-gradient(135deg, #fee2e2 0%, rgba(254, 226, 226, 0.7) 100%);
+    }
+</style>
+
+<script type="module" src="/js/pages/class-detail.js"></script>

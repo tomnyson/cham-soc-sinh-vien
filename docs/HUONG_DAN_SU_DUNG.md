@@ -7,6 +7,8 @@
 - ✅ Tích hợp MongoDB Atlas
 - ✅ RESTful API đầy đủ
 - ✅ Lưu trữ dữ liệu vĩnh viễn
+- ✅ **Xác thực Google OAuth** - Bảo mật tài khoản
+- ✅ **Phân quyền truy cập** - Chỉ user đã đăng nhập mới quản lý được lớp và điểm
 
 ## 🚀 Khởi động ứng dụng
 
@@ -16,7 +18,15 @@
 npm install
 ```
 
-### Bước 2: Cấu hình MongoDB
+### Bước 2: Cấu hình Google OAuth
+
+**QUAN TRỌNG:** Ứng dụng yêu cầu đăng nhập với Google để sử dụng.
+
+1. Xem hướng dẫn chi tiết tại: [GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md)
+2. Tạo Google OAuth credentials tại [Google Cloud Console](https://console.cloud.google.com/)
+3. Cập nhật file `.env` với `GOOGLE_CLIENT_ID` và `GOOGLE_CLIENT_SECRET`
+
+### Bước 3: Cấu hình MongoDB
 
 File `.env` đã được cấu hình với MongoDB Atlas:
 
@@ -24,7 +34,7 @@ File `.env` đã được cấu hình với MongoDB Atlas:
 MONGODB_URI=mongodb+srv://admin:jT9nhQ3TPsVmwfBq@cluster0.x7ehwnm.mongodb.net/?appName=Cluster0
 ```
 
-### Bước 3: Chạy server
+### Bước 4: Chạy server
 
 ```bash
 # Development mode (auto-reload)
@@ -34,9 +44,19 @@ npm run dev
 npm start
 ```
 
-### Bước 4: Truy cập ứng dụng
+### Bước 5: Đăng nhập
 
-Mở trình duyệt: **http://localhost:3000**
+1. Mở trình duyệt: **http://localhost:3000**
+2. Bạn sẽ thấy màn hình đăng nhập
+3. Click nút **"Đăng nhập với Google"**
+4. Chọn tài khoản Google của bạn
+5. Cho phép quyền truy cập
+6. Sau khi đăng nhập thành công, bạn sẽ vào trang chủ
+
+**Lưu ý:** Chỉ có user đã đăng nhập mới có thể:
+- Quản lý Profile điểm
+- Quản lý Lớp học
+- Upload và kiểm tra điểm sinh viên
 
 ## 📱 Giao diện Tab
 

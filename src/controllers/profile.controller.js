@@ -9,7 +9,7 @@ const profileService = require('../services/profile.service');
  */
 const getAllProfiles = async (req, res, next) => {
     try {
-        const userId = req.query.userId || 'default';
+        const userId = req.user._id; // Use authenticated user's ID
         const profiles = await profileService.getAllProfiles(userId);
 
         // Convert Map to Object cho JSON response
@@ -38,7 +38,7 @@ const getAllProfiles = async (req, res, next) => {
 const getProfileById = async (req, res, next) => {
     try {
         const { profileId } = req.params;
-        const userId = req.query.userId || 'default';
+        const userId = req.user._id; // Use authenticated user's ID
 
         const profile = await profileService.getProfileById(profileId, userId);
 
@@ -62,7 +62,7 @@ const getProfileById = async (req, res, next) => {
  */
 const getDefaultProfile = async (req, res, next) => {
     try {
-        const userId = req.query.userId || 'default';
+        const userId = req.user._id; // Use authenticated user's ID
         const profile = await profileService.getDefaultProfile(userId);
 
         if (!profile) {
@@ -92,7 +92,7 @@ const getDefaultProfile = async (req, res, next) => {
  */
 const createProfile = async (req, res, next) => {
     try {
-        const userId = req.body.userId || 'default';
+        const userId = req.user._id; // Use authenticated user's ID
         const profile = await profileService.createProfile(req.body, userId);
 
         res.status(201).json({
@@ -112,12 +112,38 @@ const createProfile = async (req, res, next) => {
 };
 
 /**
+ * Tạo nhanh profile mặc định cho user hiện tại
+ */
+const createDefaultProfile = async (req, res, next) => {
+    try {
+        const userId = req.user._id;
+        const { profile, created } = await profileService.ensureDefaultProfile(userId);
+
+        res.status(created ? 201 : 200).json({
+            success: true,
+            data: {
+                profileId: profile.profileId,
+                name: profile.name,
+                passThreshold: profile.passThreshold,
+                weights: Object.fromEntries(profile.weights),
+                isDefault: profile.isDefault
+            },
+            message: created
+                ? 'Default profile created successfully'
+                : 'Default profile already exists'
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
  * Cập nhật profile
  */
 const updateProfile = async (req, res, next) => {
     try {
         const { profileId } = req.params;
-        const userId = req.body.userId || 'default';
+        const userId = req.user._id; // Use authenticated user's ID
 
         const profile = await profileService.updateProfile(profileId, req.body, userId);
 
@@ -143,7 +169,7 @@ const updateProfile = async (req, res, next) => {
 const deleteProfile = async (req, res, next) => {
     try {
         const { profileId } = req.params;
-        const userId = req.query.userId || 'default';
+        const userId = req.user._id; // Use authenticated user's ID
 
         const result = await profileService.deleteProfile(profileId, userId);
 
@@ -162,7 +188,7 @@ const deleteProfile = async (req, res, next) => {
 const duplicateProfile = async (req, res, next) => {
     try {
         const { profileId } = req.params;
-        const userId = req.body.userId || 'default';
+        const userId = req.user._id; // Use authenticated user's ID
 
         const profile = await profileService.duplicateProfile(profileId, req.body, userId);
 
@@ -188,7 +214,7 @@ const duplicateProfile = async (req, res, next) => {
 const importProfiles = async (req, res, next) => {
     try {
         const { profiles } = req.body;
-        const userId = req.body.userId || 'default';
+        const userId = req.user._id; // Use authenticated user's ID
 
         if (!profiles || typeof profiles !== 'object') {
             return res.status(400).json({
@@ -214,7 +240,7 @@ const importProfiles = async (req, res, next) => {
  */
 const exportProfiles = async (req, res, next) => {
     try {
-        const userId = req.query.userId || 'default';
+        const userId = req.user._id; // Use authenticated user's ID
         const profiles = await profileService.exportProfiles(userId);
 
         res.json({
@@ -235,5 +261,6 @@ module.exports = {
     deleteProfile,
     duplicateProfile,
     importProfiles,
-    exportProfiles
+    exportProfiles,
+    createDefaultProfile
 };
