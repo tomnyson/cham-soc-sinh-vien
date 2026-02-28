@@ -14,25 +14,23 @@
         </div>
     </div>
 
-    <!-- Tab Navigation -->
-    <ul class="nav nav-tabs mb-4" id="classTabNav" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-classes"
-                type="button" role="tab" aria-controls="active-classes" aria-selected="true"
-                onclick="filterClasses('active')">
-                <i class="bi bi-book me-1"></i> Đang học
-                <span class="badge bg-primary ms-1" id="activeClassCount">0</span>
+    <!-- Tab Navigation - Modern Style -->
+    <div class="class-tabs-container mb-4">
+        <div class="class-tabs" role="tablist">
+            <button class="class-tab active" id="active-tab" role="tab" aria-selected="true"
+                onclick="filterClasses('active'); switchTab(this)">
+                <i class="bi bi-book-half"></i>
+                <span class="tab-label">Đang học</span>
+                <span class="tab-count" id="activeClassCount">0</span>
             </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="archived-tab" data-bs-toggle="tab" data-bs-target="#archived-classes"
-                type="button" role="tab" aria-controls="archived-classes" aria-selected="false"
-                onclick="filterClasses('archived')">
-                <i class="bi bi-archive me-1"></i> Lưu trữ
-                <span class="badge bg-secondary ms-1" id="archivedClassCount">0</span>
+            <button class="class-tab" id="archived-tab" role="tab" aria-selected="false"
+                onclick="filterClasses('archived'); switchTab(this)">
+                <i class="bi bi-archive"></i>
+                <span class="tab-label">Lưu trữ</span>
+                <span class="tab-count archived" id="archivedClassCount">0</span>
             </button>
-        </li>
-    </ul>
+        </div>
+    </div>
 
     <!-- Classes List View -->
     <div id="classes-list-view">
@@ -47,7 +45,80 @@
     </div>
 </div>
 
+<style>
+    .class-tabs-container {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 6px;
+        display: inline-flex;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+
+    .class-tabs {
+        display: flex;
+        gap: 4px;
+    }
+
+    .class-tab {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        border: none;
+        background: transparent;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 200ms ease;
+    }
+
+    .class-tab:hover {
+        background: #e2e8f0;
+        color: #334155;
+    }
+
+    .class-tab.active {
+        background: #ffffff;
+        color: #2563EB;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .class-tab i {
+        font-size: 1rem;
+    }
+
+    .tab-count {
+        background: #2563EB;
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 12px;
+        min-width: 24px;
+        text-align: center;
+    }
+
+    .tab-count.archived {
+        background: #94a3b8;
+    }
+
+    .class-tab.active .tab-count {
+        background: #2563EB;
+    }
+
+    .class-tab.active .tab-count.archived {
+        background: #64748b;
+    }
+</style>
+
 <script>
+    function switchTab(tabEl) {
+        document.querySelectorAll('.class-tab').forEach(t => t.classList.remove('active'));
+        tabEl.classList.add('active');
+    }
+
     // Load classes when data is ready
     window.addEventListener('app-data-ready', function () {
         if (typeof renderClassesList === 'function') {

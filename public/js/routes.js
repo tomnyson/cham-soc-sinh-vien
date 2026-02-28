@@ -87,6 +87,22 @@ function initializeRoutes() {
         }
     });
 
+    // Timer
+    router.register('/timer', {
+        partial: '/partials/timer.html',
+        handler: () => {
+            setTimeout(() => {
+                if (typeof TimerModule !== 'undefined') {
+                    TimerModule.init();
+                    TimerModule.updateUI();
+                }
+            }, 50);
+        },
+        cleanup: () => {
+            // Timer continues running in background
+        }
+    });
+
     router.init();
 }
 
@@ -101,7 +117,8 @@ function switchTab(tabName) {
         'grade-check': '/grade-check',
         'profiles': '/profiles',
         'classes': '/classes',
-        'template': '/template'
+        'template': '/template',
+        'timer': '/timer'
     };
 
     const route = routeMap[tabName] || '/';

@@ -225,41 +225,47 @@ export const classManager = {
      * Create new class
      */
     async createNew() {
-        const name = prompt('Nhập tên lớp (VD: SE1801):');
-        if (!name) return;
+        // We defer to the global createNewClass function in app.js which handles the modal UI
+        if (typeof window.createNewClassLegacy === 'function') {
+            window.createNewClassLegacy();
+        } else {
+            console.error("createNewClassLegacy not found, falling back to basic prompt");
+            const name = prompt('Nhập tên lớp (VD: SE1801):');
+            if (!name) return;
 
-        const id = 'class_' + Date.now();
-        const classData = {
-            classId: id,
-            name: name,
-            description: '',
-            students: []
-        };
+            const id = 'class_' + Date.now();
+            const classData = {
+                classId: id,
+                name: name,
+                description: '',
+                students: []
+            };
 
-        try {
-            const result = await apiClient.createClass(classData);
+            try {
+                const result = await apiClient.createClass(classData);
 
-            if (result.success) {
-                this.classes[id] = classData;
-                this.currentClass = id;
-                storage.saveClasses(this.classes);
-                this.updateClassSelect();
-                
-                uiState.showNotification(`Đã tạo lớp "${name}"`, 'success');
-                
-                // Open editor if available
-                if (typeof editClass === 'function') {
-                    editClass();
+                if (result.success) {
+                    this.classes[id] = classData;
+                    this.currentClass = id;
+                    storage.saveClasses(this.classes);
+                    this.updateClassSelect();
+                    
+                    uiState.showNotification(`Đã tạo lớp "${name}"`, 'success');
+                    
+                    // Open editor if available
+                    if (typeof window.editClass === 'function') {
+                        window.editClass();
+                    }
+                } else {
+                    uiState.showNotification(
+                        'Lỗi tạo lớp: ' + (result.message || 'Unknown error'),
+                        'error'
+                    );
                 }
-            } else {
-                uiState.showNotification(
-                    'Lỗi tạo lớp: ' + (result.message || 'Unknown error'),
-                    'error'
-                );
+            } catch (error) {
+                logger.logError(error, 'classManager.createNew');
+                uiState.showNotification('Lỗi kết nối server: ' + error.message, 'error');
             }
-        } catch (error) {
-            logger.logError(error, 'classManager.createNew');
-            uiState.showNotification('Lỗi kết nối server: ' + error.message, 'error');
         }
     },
 

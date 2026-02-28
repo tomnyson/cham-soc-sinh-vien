@@ -2,6 +2,31 @@
  * Class Detail Page logic
  */
 
+// Prevent duplicate alerts triggered back-to-back.
+(function installAlertDeduper() {
+    if (window.__alertDeduperInstalled) {
+        return;
+    }
+    window.__alertDeduperInstalled = true;
+
+    const originalAlert = window.alert.bind(window);
+    const dedupeWindowMs = 1000;
+    let lastMessage = null;
+    let lastClosedAt = 0;
+
+    window.alert = function (message) {
+        const text = String(message);
+        const now = Date.now();
+        if (text === lastMessage && (now - lastClosedAt) < dedupeWindowMs) {
+            return;
+        }
+        const result = originalAlert(message);
+        lastMessage = text;
+        lastClosedAt = Date.now();
+        return result;
+    };
+})();
+
 const serverData = window.__INITIAL_SERVER_DATA__ || {};
 const classData = JSON.parse(JSON.stringify(serverData.classDetail || {}));
 const profiles = serverData.profiles || {};
@@ -30,6 +55,13 @@ const state = {
         allShuffled: [],
         // Wheelofnames.com style colors
         colors: ['#E53935', '#1E88E5', '#43A047', '#FDD835', '#FB8C00', '#E53935', '#1E88E5', '#43A047', '#FDD835', '#FB8C00', '#E53935', '#1E88E5']
+    },
+    // Timer state
+    timer: {
+        intervalInfo: null,
+        remainingSeconds: 0,
+        isRunning: false,
+        isPaused: false
     }
 };
 
@@ -64,6 +96,13 @@ const elements = {
     shareGradesBtn: document.getElementById('shareGradesBtn'),
     copyShareLinkBtn: document.getElementById('copyShareLinkBtn'),
     openShareLinkBtn: document.getElementById('openShareLinkBtn'),
+    // Share QR Modal elements
+    shareQrModal: document.getElementById('shareQrModal'),
+    shareQrImage: document.getElementById('shareQrImage'),
+    shareQrLinkInput: document.getElementById('shareQrLinkInput'),
+    copyShareLinkFromModalBtn: document.getElementById('copyShareLinkFromModalBtn'),
+    copyQrImageBtn: document.getElementById('copyQrImageBtn'),
+    downloadQrBtn: document.getElementById('downloadQrBtn'),
     // Lucky wheel elements
     wheelCanvas: document.getElementById('wheelCanvas'),
     spinWheelBtn: document.getElementById('spinWheelBtn'),
@@ -81,7 +120,22 @@ const elements = {
     teamPickLeader: document.getElementById('teamPickLeader'),
     generateTeamsBtn: document.getElementById('generateTeamsBtn'),
     teamGroupResults: document.getElementById('teamGroupResults'),
-    copyTeamsBtn: document.getElementById('copyTeamsBtn')
+    copyTeamsBtn: document.getElementById('copyTeamsBtn'),
+    // Random student element
+    randomStudentBtn: document.getElementById('randomStudentBtn'),
+    // Timer elements
+    timerMin: document.getElementById('timerMin'),
+    timerSec: document.getElementById('timerSec'),
+    timerCustomMin: document.getElementById('timerCustomMin'),
+    timerCustomSec: document.getElementById('timerCustomSec'),
+    timerSetCustomBtn: document.getElementById('timerSetCustomBtn'),
+    timerStartPauseBtn: document.getElementById('timerStartPauseBtn'),
+    timerResetBtn: document.getElementById('timerResetBtn'),
+    timerSoundToggle: document.getElementById('timerSoundToggle'),
+    timerAudioAlarm: document.getElementById('timerAudioAlarm'),
+    // Search and Filter elements
+    gradeSearchInput: document.getElementById('gradeSearchInput'),
+    gradeStatusFilter: document.getElementById('gradeStatusFilter')
 };
 
 function init() {
@@ -90,7 +144,7 @@ function init() {
         return;
     }
 
-    if (!classData || !classData.classId) {
+    if (!classData || (!classData.classId && !classData._id && !classData.id)) {
         // Data not available (possibly auth issue or wrong page)
         return;
     }
@@ -99,6 +153,7 @@ function init() {
     ensureProfileSelection();
     renderGradesTable();
     updateSummary();
+    initializeChartListeners();
 }
 
 function bindEvents() {
@@ -108,6 +163,9 @@ function bindEvents() {
 
     if (elements.tableBody) {
         elements.tableBody.addEventListener('input', handleGradeInput);
+        // Handle extra fields (bonus, dates, note)
+        elements.tableBody.addEventListener('input', handleExtraInput);
+        elements.tableBody.addEventListener('change', handleExtraInput);
     }
 
     // Copy column scores binding (event delegation on table header)
@@ -162,10 +220,17 @@ function bindEvents() {
         elements.hideAllColumnsBtn.addEventListener('click', hideAllColumns);
     }
 
-    // Share link bindings
-    if (elements.shareGradesBtn) {
-        elements.shareGradesBtn.addEventListener('click', copyShareLink);
+    // Search & Filter bindings
+    const gradeSearchInput = document.getElementById('gradeSearchInput');
+    const gradeStatusFilter = document.getElementById('gradeStatusFilter');
+    if (gradeSearchInput) {
+        gradeSearchInput.addEventListener('input', filterGradesTable);
     }
+    if (gradeStatusFilter) {
+        gradeStatusFilter.addEventListener('change', filterGradesTable);
+    }
+
+    // Share link bindings
     if (elements.copyShareLinkBtn) {
         elements.copyShareLinkBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -177,6 +242,30 @@ function bindEvents() {
             e.preventDefault();
             openSharePage();
         });
+    }
+
+    // Share QR Modal bindings
+    if (elements.shareQrModal) {
+        elements.shareQrModal.addEventListener('show.bs.modal', function () {
+            const studentUrl = getShareLink(); // For QR Code
+            const adminUrl = getAdminLink();   // For text input
+
+            if (elements.shareQrImage && studentUrl) {
+                elements.shareQrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(studentUrl)}`;
+            }
+            if (elements.shareQrLinkInput) {
+                elements.shareQrLinkInput.value = adminUrl;
+            }
+        });
+    }
+    if (elements.copyShareLinkFromModalBtn) {
+        elements.copyShareLinkFromModalBtn.addEventListener('click', copyShareLink);
+    }
+    if (elements.copyQrImageBtn) {
+        elements.copyQrImageBtn.addEventListener('click', copyQrImageToClipboard);
+    }
+    if (elements.downloadQrBtn) {
+        elements.downloadQrBtn.addEventListener('click', downloadQrCode);
     }
 
     // Lucky wheel bindings
@@ -202,6 +291,56 @@ function bindEvents() {
     }
     if (elements.copyTeamsBtn) {
         elements.copyTeamsBtn.addEventListener('click', copyTeamsResult);
+    }
+
+    // Random student binding
+    if (elements.randomStudentBtn) {
+        elements.randomStudentBtn.addEventListener('click', pickRandomStudent);
+    }
+
+    // Timer bindings
+    document.querySelectorAll('.timer-quick-set').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const mins = parseInt(e.target.dataset.minutes, 10);
+            setTimer(mins * 60);
+        });
+    });
+    if (elements.timerSetCustomBtn) {
+        elements.timerSetCustomBtn.addEventListener('click', () => {
+            const m = parseInt(elements.timerCustomMin.value || 0, 10);
+            const s = parseInt(elements.timerCustomSec.value || 0, 10);
+            setTimer((Math.max(0, m) * 60) + Math.max(0, s));
+        });
+    }
+    if (elements.timerStartPauseBtn) {
+        elements.timerStartPauseBtn.addEventListener('click', toggleTimer);
+    }
+    if (elements.timerResetBtn) {
+        elements.timerResetBtn.addEventListener('click', resetTimer);
+    }
+
+    // Set reliable notification sound for timer
+    if (elements.timerAudioAlarm) {
+        elements.timerAudioAlarm.src = "https://actions.google.com/sounds/v1/alarms/beep_short.ogg";
+    }
+
+    const timerModal = document.getElementById('timerModal');
+    if (timerModal) {
+        timerModal.addEventListener('hidden.bs.modal', () => {
+            // Stop alarm sound if modal is closed
+            if (elements.timerAudioAlarm) {
+                elements.timerAudioAlarm.pause();
+                elements.timerAudioAlarm.currentTime = 0;
+            }
+        });
+    }
+
+    // Search and Filter bindings
+    if (elements.gradeSearchInput) {
+        elements.gradeSearchInput.addEventListener('input', filterGradesTable);
+    }
+    if (elements.gradeStatusFilter) {
+        elements.gradeStatusFilter.addEventListener('change', filterGradesTable);
     }
 }
 
@@ -255,6 +394,59 @@ function ensureStudentGrade(mssv) {
     }
 }
 
+/**
+ * Handle input for extra fields (bonus, dates, note)
+ * These fields don't count towards the main total
+ */
+function handleExtraInput(event) {
+    const target = event.target;
+    if (!target.classList.contains('extra-input')) return;
+
+    const mssv = target.dataset.mssv;
+    const field = target.dataset.field;
+    if (!mssv || !field) return;
+
+    let value;
+    if (field === '_bonus') {
+        value = parseFloat(target.value);
+        if (Number.isNaN(value)) {
+            value = '';
+        } else {
+            value = Math.min(Math.max(value, 0), 2); // Bonus max 2 points
+        }
+        target.value = value === '' ? '' : value;
+    } else {
+        value = target.value;
+    }
+
+    ensureStudentGrade(mssv);
+    state.grades[mssv][field] = value === '' ? undefined : value;
+    markDirty();
+
+    // Update final total if bonus changed
+    if (field === '_bonus') {
+        updateFinalTotal(mssv);
+    }
+}
+
+/**
+ * Update the final total (with bonus) for a student
+ */
+function updateFinalTotal(mssv) {
+    const profile = getCurrentProfile();
+    if (!profile) return;
+
+    const studentGrades = state.grades[mssv] || {};
+    const total = calculateTotal(studentGrades, profile.weights);
+    const bonus = parseFloat(studentGrades._bonus) || 0;
+    const finalTotal = Math.min(total + bonus, 10);
+
+    const finalEl = document.querySelector(`[data-final-mssv="${mssv}"]`);
+    if (finalEl) {
+        finalEl.innerHTML = `<span class="${finalTotal > total ? 'text-success' : ''}">${finalTotal.toFixed(2)}</span>`;
+    }
+}
+
 function sortColumns(profile) {
     if (!profile || !profile.weights) return [];
     return Object.keys(profile.weights).sort((a, b) => {
@@ -293,31 +485,43 @@ function renderGradesTable() {
 
     elements.tableHeader.innerHTML = `
         <tr>
-            <th style="width:60px;" class="text-center">STT</th>
-            <th style="width:120px;">MSSV</th>
-            <th style="min-width:200px;">Họ và tên</th>
+            <th class="text-center sticky-col-1">STT</th>
+            <th class="sticky-col-2">MSSV</th>
+            <th class="sticky-col-3">HỌ VÀ TÊN</th>
             ${visibleColumns.map(col => `
                 <th class="text-center align-middle" data-column="${col}">
-                    <div class="d-flex align-items-center justify-content-center gap-1">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
                         <span>${col}</span>
                         <button class="btn btn-link btn-sm p-0 copy-column-btn" 
                                 data-column="${col}" 
-                                title="Copy điểm (MSSV điểm)"
-                                style="font-size: 0.75rem; line-height: 1;">
+                                title="Copy điểm"
+                                style="font-size: 0.7rem; line-height: 1; color: #9ca3af;">
                             <i class="bi bi-clipboard"></i>
                         </button>
                         <button class="btn btn-link btn-sm p-0 chart-column-btn" 
                                 data-column="${col}" 
-                                title="Xem biểu đồ điểm"
-                                style="font-size: 0.75rem; line-height: 1;">
+                                title="Xem biểu đồ"
+                                style="font-size: 0.7rem; line-height: 1; color: #9ca3af;">
                             <i class="bi bi-bar-chart"></i>
                         </button>
                     </div>
-                    <div class="text-muted small">${profile.weights[col]}%</div>
+                    <div style="font-size: 0.75rem; color: #9ca3af; font-weight: 400; margin-top: 2px;">${profile.weights[col]}%</div>
                 </th>
             `).join('')}
-            <th style="width:120px;" class="text-center">Tổng</th>
-            <th style="width:140px;" class="text-center">Trạng thái</th>
+            <th class="text-center">Tổng</th>
+            <th class="text-center">Trạng thái</th>
+            <th class="text-center" style="background: #fef3c7 !important; border-left: 2px solid #f59e0b;">
+                <div><i class="bi bi-star-fill text-warning"></i> Bonus</div>
+                <div style="font-size: 0.7rem; color: #9ca3af;">Điểm cộng</div>
+            </th>
+            <th class="text-center" style="background: #dcfce7 !important;">
+                <div><i class="bi bi-trophy text-success"></i> Tổng cuối</div>
+                <div style="font-size: 0.7rem; color: #9ca3af;">Có bonus</div>
+            </th>
+            <th class="text-center" style="min-width: 150px; background: #f3e8ff !important;">
+                <div><i class="bi bi-journal-text text-purple"></i> Ghi chú</div>
+                <div style="font-size: 0.7rem; color: #9ca3af;">Đánh giá GV</div>
+            </th>
         </tr>
     `;
 
@@ -326,12 +530,14 @@ function renderGradesTable() {
         const studentGrades = state.grades[student.mssv];
         const total = calculateTotal(studentGrades, profile.weights);
         const passed = total >= (profile.passThreshold || 0);
+        const bonus = parseFloat(studentGrades._bonus) || 0;
+        const finalTotal = Math.min(total + bonus, 10); // Cap at 10
 
         return `
-            <tr>
-                <td class="text-center">${index + 1}</td>
-                <td><span class="badge bg-primary">${student.mssv}</span></td>
-                <td>${student.name}</td>
+            <tr class="${passed ? 'pass' : 'fail'}">
+                <td class="text-center sticky-col-1">${index + 1}</td>
+                <td class="sticky-col-2"><span class="badge bg-primary">${student.mssv}</span></td>
+                <td class="sticky-col-3">${student.name}</td>
                 ${visibleColumns.map(column => `
                     <td class="text-center" data-column="${column}">
                         <input
@@ -355,6 +561,34 @@ function renderGradesTable() {
                         ${passed ? '✓ Đạt' : '✗ Chưa đạt'}
                     </span>
                 </td>
+                <td class="text-center" style="background: #fffbeb;">
+                    <input
+                        type="number"
+                        class="form-control form-control-sm extra-input"
+                        data-mssv="${student.mssv}"
+                        data-field="_bonus"
+                        min="0"
+                        max="2"
+                        step="0.1"
+                        value="${studentGrades._bonus ?? ''}"
+                        placeholder="0"
+                        style="width: 70px; margin: auto; text-align: center;"
+                    />
+                </td>
+                <td class="text-center fw-bold" style="background: #f0fdf4;" data-final-mssv="${student.mssv}">
+                    <span class="${finalTotal > total ? 'text-success' : ''}">${finalTotal.toFixed(2)}</span>
+                </td>
+                <td class="text-center" style="background: #faf5ff;">
+                    <input
+                        type="text"
+                        class="form-control form-control-sm extra-input"
+                        data-mssv="${student.mssv}"
+                        data-field="_note"
+                        value="${studentGrades._note ?? ''}"
+                        placeholder="Ghi chú..."
+                        style="min-width: 120px;"
+                    />
+                </td>
             </tr>
         `;
     }).join('');
@@ -363,6 +597,7 @@ function renderGradesTable() {
     updateQuickImportColumns();
     updateColumnVisibilityOptions(allColumns);
 }
+
 
 function showEmptyState(show, message) {
     if (!elements.emptyState || !elements.tableWrapper) return;
@@ -407,6 +642,8 @@ function updateRowSummary(mssv) {
         `;
     }
 
+    // Also update final total (with bonus)
+    updateFinalTotal(mssv);
     updateSummary();
 }
 
@@ -767,28 +1004,35 @@ function hideAllColumns() {
 // ========================================
 
 /**
- * Get share link URL for student grade lookup
+ * Get share link URL for student grade lookup (QR code)
  */
 function getShareLink() {
-    const classId = classData?.classId || '';
+    const classId = classData?.classId || classData?._id || classData?.id || '';
     if (!classId) return '';
     return `${window.location.origin}/student.html?class=${classId}`;
 }
 
 /**
- * Copy share link to clipboard
+ * Get the link for the class detail admin page
+ */
+function getAdminLink() {
+    return window.location.href;
+}
+
+/**
+ * Copy admin link to clipboard
  */
 function copyShareLink() {
-    const shareUrl = getShareLink();
+    const shareUrl = getAdminLink();
 
     if (!shareUrl) {
-        alert('Không tìm thấy mã lớp!');
+        alert('Không tìm thấy link lớp!');
         return;
     }
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(shareUrl).then(() => {
-            alert(`Đã copy link tra cứu điểm!\n\nLink: ${shareUrl}\n\nSinh viên nhập MSSV để xem điểm.`);
+            alert(`Đã copy link quản lý lớp!\n\nLink: ${shareUrl}`);
         }).catch(() => {
             fallbackCopyToClipboard(shareUrl);
         });
@@ -809,23 +1053,102 @@ function fallbackCopyToClipboard(text) {
     textArea.select();
     try {
         document.execCommand('copy');
-        alert(`Đã copy link tra cứu điểm!\n\nLink: ${text}\n\nSinh viên nhập MSSV để xem điểm.`);
+        alert(`Đã copy link quản lý lớp!\n\nLink: ${text}`);
     } catch (err) {
-        alert(`Link tra cứu điểm:\n\n${text}`);
+        alert(`Link quản lý lớp:\n\n${text}`);
     }
     document.body.removeChild(textArea);
 }
 
 /**
- * Open share page in new tab
+ * Download the generated QR Code
+ */
+function downloadQrCode() {
+    const shareUrl = getShareLink();
+    if (!shareUrl) return;
+
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(shareUrl)}`;
+
+    // Fallback visually so user knows it's doing something
+    const btn = elements.downloadQrBtn;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang tải...';
+    btn.disabled = true;
+
+    fetch(qrUrl)
+        .then(response => response.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `QR_TraCuuDiem_${classData.classId || 'Lop'}.png`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        })
+        .catch(err => {
+            console.error('Lỗi tải QR:', err);
+            // Fallback: open in new tab
+            window.open(qrUrl, '_blank');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+}
+
+/**
+ * Copy the generated QR Code Image to clipboard
+ */
+async function copyQrImageToClipboard() {
+    const imgEl = elements.shareQrImage;
+    if (!imgEl || !imgEl.src) return;
+
+    const btn = elements.copyQrImageBtn;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang copy...';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch(imgEl.src);
+        const blob = await response.blob();
+
+        // Some browsers strictly require png blob type for clipboard
+        if (!navigator.clipboard || !navigator.clipboard.write) {
+            throw new Error('Clipboard API not fully supported');
+        }
+
+        const data = [new ClipboardItem({ [blob.type]: blob })];
+        await navigator.clipboard.write(data);
+
+        btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Đã copy Ảnh';
+        btn.classList.replace('btn-outline-success', 'btn-success');
+
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.classList.replace('btn-success', 'btn-outline-success');
+            btn.disabled = false;
+        }, 2000);
+
+    } catch (err) {
+        console.error('Lỗi copy ảnh QR:', err);
+        alert('Trình duyệt không hỗ trợ copy ảnh trực tiếp, vui lòng bấm Tải Ảnh hoặc chuột phải chọn Copy Image.');
+
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+/**
+ * Open admin share page in new tab
  */
 function openSharePage() {
-    const shareUrl = getShareLink();
-    if (!shareUrl) {
-        alert('Không tìm thấy mã lớp!');
-        return;
+    const shareUrl = getAdminLink();
+    if (shareUrl) {
+        window.open(shareUrl, '_blank');
     }
-    window.open(shareUrl, '_blank');
 }
 
 // ========================================
@@ -852,6 +1175,7 @@ function handleCopyColumnClick(event) {
 /**
  * Copy all scores for a specific column in "MSSV score" format
  * Example output: PK04071 8
+ * If "Điền 0 khi thiếu điểm" checkbox is checked, missing scores will be filled with 0
  */
 function copyColumnScores(column) {
     if (!classData.students || classData.students.length === 0) {
@@ -859,15 +1183,24 @@ function copyColumnScores(column) {
         return;
     }
 
+    // Check if "fill zero on copy" option is enabled
+    const fillZeroCheckbox = document.getElementById('fillZeroOnCopy');
+    const fillZeroOnCopy = fillZeroCheckbox ? fillZeroCheckbox.checked : false;
+
     const lines = [];
+    let filledZeroCount = 0;
 
     classData.students.forEach(student => {
         const studentGrades = state.grades[student.mssv] || {};
         const score = studentGrades[column];
 
-        // Only include students who have a score for this column
+        // Check if student has a score for this column
         if (score !== undefined && score !== null && score !== '') {
             lines.push(`${student.mssv} ${score}`);
+        } else if (fillZeroOnCopy) {
+            // Fill with 0 if option is enabled
+            lines.push(`${student.mssv} 0`);
+            filledZeroCount++;
         }
     });
 
@@ -880,19 +1213,19 @@ function copyColumnScores(column) {
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(() => {
-            showCopySuccess(column, lines.length);
+            showCopySuccess(column, lines.length, filledZeroCount);
         }).catch(() => {
-            fallbackCopyColumnScores(text, column, lines.length);
+            fallbackCopyColumnScores(text, column, lines.length, filledZeroCount);
         });
     } else {
-        fallbackCopyColumnScores(text, column, lines.length);
+        fallbackCopyColumnScores(text, column, lines.length, filledZeroCount);
     }
 }
 
 /**
  * Fallback copy method for column scores
  */
-function fallbackCopyColumnScores(text, column, count) {
+function fallbackCopyColumnScores(text, column, count, zeroCount = 0) {
     const textArea = document.createElement('textarea');
     textArea.value = text;
     textArea.style.position = 'fixed';
@@ -901,7 +1234,7 @@ function fallbackCopyColumnScores(text, column, count) {
     textArea.select();
     try {
         document.execCommand('copy');
-        showCopySuccess(column, count);
+        showCopySuccess(column, count, zeroCount);
     } catch (err) {
         alert(`Không thể copy. Dữ liệu:\n\n${text}`);
     }
@@ -911,11 +1244,17 @@ function fallbackCopyColumnScores(text, column, count) {
 /**
  * Show success message after copying column scores
  */
-function showCopySuccess(column, count) {
+function showCopySuccess(column, count, zeroCount = 0) {
     // Create a toast-like notification
     const toast = document.createElement('div');
     toast.className = 'copy-toast';
-    toast.innerHTML = `<i class="bi bi-check-circle me-1"></i> Đã copy ${count} điểm ${column}`;
+
+    let message = `<i class="bi bi-check-circle me-1"></i> Đã copy ${count} điểm ${column}`;
+    if (zeroCount > 0) {
+        message += ` <span class="badge bg-warning text-dark ms-1">${zeroCount} điểm điền 0</span>`;
+    }
+
+    toast.innerHTML = message;
     toast.style.cssText = `
         position: fixed;
         bottom: 20px;
@@ -1241,7 +1580,7 @@ function drawWheel() {
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 13px Inter, Arial, sans-serif';
+        ctx.font = 'bold 13px "Space Grotesk", "Manrope", sans-serif';
 
         // Text shadow for better readability
         ctx.shadowColor = 'rgba(0,0,0,0.4)';
@@ -1937,6 +2276,511 @@ function updateSaveButtonState(isSaving = false) {
     elements.saveBtn.innerHTML = isSaving
         ? '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Đang lưu...'
         : '<i class="bi bi-save me-1"></i> Lưu thay đổi';
+}
+
+// ========================================
+// RANDOM STUDENT FUNCTION
+// ========================================
+
+/**
+ * Randomly pick a student, highlight their row, and scroll to it
+ */
+function pickRandomStudent() {
+    if (!classData.students || classData.students.length === 0) {
+        alert('Lớp chưa có sinh viên để random.');
+        return;
+    }
+
+    // Remove any existing highlights
+    document.querySelectorAll('#classDetailTableBody tr').forEach(row => {
+        row.style.transition = 'background-color 0.5s ease';
+        row.style.backgroundColor = '';
+        row.classList.remove('table-warning');
+
+        // Reset sticky cols background
+        row.querySelectorAll('td.sticky-col-1, td.sticky-col-2, td.sticky-col-3').forEach(td => {
+            td.style.backgroundColor = '';
+        });
+    });
+
+    // Random index
+    const randomIndex = Math.floor(Math.random() * classData.students.length);
+    const student = classData.students[randomIndex];
+
+    // Find the row
+    const mssvCell = document.querySelector(`#classDetailTableBody td [data-mssv="${student.mssv}"]`);
+    if (!mssvCell) return;
+
+    const row = mssvCell.closest('tr');
+    if (!row) return;
+
+    // Scroll to the row
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Highlight animation
+    setTimeout(() => {
+        row.classList.add('table-warning');
+
+        // Target sticky columns explicitly to ensure they highlight too
+        row.querySelectorAll('td.sticky-col-1, td.sticky-col-2, td.sticky-col-3').forEach(td => {
+            td.style.backgroundColor = '#fff3cd'; // Bootstrap table-warning color
+        });
+
+        // Flash effect
+        setTimeout(() => {
+            row.classList.remove('table-warning');
+            row.style.backgroundColor = '#ffeb3b';
+            row.querySelectorAll('td.sticky-col-1, td.sticky-col-2, td.sticky-col-3').forEach(td => {
+                td.style.backgroundColor = '#ffeb3b';
+            });
+
+            setTimeout(() => {
+                row.style.backgroundColor = '';
+                row.classList.add('table-warning');
+                row.querySelectorAll('td.sticky-col-1, td.sticky-col-2, td.sticky-col-3').forEach(td => {
+                    td.style.backgroundColor = '#fff3cd';
+                });
+
+                // Keep it highlighted for a bit, then remove
+                setTimeout(() => {
+                    row.classList.remove('table-warning');
+                    row.querySelectorAll('td.sticky-col-1, td.sticky-col-2, td.sticky-col-3').forEach(td => {
+                        td.style.backgroundColor = '';
+                    });
+                }, 3000);
+            }, 300);
+        }, 300);
+    }, 500);
+
+    // Show a small toast/alert indicating who was picked (optional, but good UX)
+    setImportStatus(`🎲 Đã chọn ngẫu nhiên: ${student.name} (${student.mssv})`, 'success');
+}
+
+// ========================================
+// FILTER & SEARCH FUNCTIONS
+// ========================================
+
+/**
+ * Filter the grades table based on search input and status dropdown
+ */
+function filterGradesTable() {
+    if (!elements.tableBody) return;
+
+    const searchText = (elements.gradeSearchInput?.value || '').trim().toLowerCase();
+    const statusFilter = elements.gradeStatusFilter?.value || 'all';
+
+    const rows = elements.tableBody.querySelectorAll('tr');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+        // Search text check (check MSSV in col-2 and Name in col-3)
+        let matchesSearch = true;
+        if (searchText) {
+            const mssvBadge = row.querySelector('.sticky-col-2 .badge');
+            const nameCell = row.querySelector('.sticky-col-3');
+
+            // Normalize with removeVietnameseTones
+            const mssv = mssvBadge ? removeVietnameseTones(mssvBadge.textContent.toLowerCase()) : '';
+            const name = nameCell ? removeVietnameseTones(nameCell.textContent.toLowerCase()) : '';
+            const searchNormalized = removeVietnameseTones(searchText);
+
+            matchesSearch = mssv.includes(searchNormalized) || name.includes(searchNormalized);
+        }
+
+        // Status filter check
+        let matchesStatus = true;
+        if (statusFilter !== 'all') {
+            if (statusFilter === 'pass') {
+                matchesStatus = row.classList.contains('pass');
+            } else if (statusFilter === 'fail') {
+                matchesStatus = row.classList.contains('fail');
+            }
+        }
+
+        // Apply display
+        if (matchesSearch && matchesStatus) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    // Handle empty state if filtering results in no rows
+    const tableWrapper = document.getElementById('classDetailTableWrapper');
+    let noResultsMsg = document.getElementById('filterNoResultsMsg');
+
+    if (visibleCount === 0 && classData.students && classData.students.length > 0) {
+        if (!noResultsMsg) {
+            noResultsMsg = document.createElement('div');
+            noResultsMsg.id = 'filterNoResultsMsg';
+            noResultsMsg.className = 'text-center py-4 text-muted border-bottom';
+            noResultsMsg.innerHTML = '<i class="bi bi-search d-block fs-3 mb-2"></i>Không tìm thấy sinh viên nào phù hợp.';
+            elements.tableBody.parentNode.insertBefore(noResultsMsg, elements.tableBody.nextSibling);
+        }
+        noResultsMsg.style.display = 'block';
+    } else if (noResultsMsg) {
+        noResultsMsg.style.display = 'none';
+    }
+}
+
+// ========================================
+// TIMER FUNCTIONS
+// ========================================
+
+/**
+ * Set the timer to a specific amount of seconds
+ */
+function setTimer(totalSeconds) {
+    if (state.timer.isRunning) {
+        toggleTimer(); // Pause it first
+    }
+    state.timer.remainingSeconds = totalSeconds;
+    updateTimerDisplay();
+}
+
+/**
+ * Update the UI display for the timer
+ */
+function updateTimerDisplay() {
+    if (!elements.timerMin || !elements.timerSec) return;
+
+    const m = Math.floor(state.timer.remainingSeconds / 60);
+    const s = state.timer.remainingSeconds % 60;
+
+    elements.timerMin.textContent = m.toString().padStart(2, '0');
+    elements.timerSec.textContent = s.toString().padStart(2, '0');
+
+    // Visual indicator when time is low (under 10s)
+    const displayElement = document.querySelector('.timer-display');
+    if (displayElement) {
+        if (state.timer.remainingSeconds <= 10 && state.timer.remainingSeconds > 0) {
+            displayElement.style.color = '#ef4444'; // Red
+            if (state.timer.isRunning) {
+                displayElement.style.animation = 'pulse 1s infinite';
+            }
+        } else {
+            displayElement.style.color = '#1e293b'; // Default dark
+            displayElement.style.animation = 'none';
+        }
+    }
+}
+
+/**
+ * Start or pause the countdown
+ */
+function toggleTimer() {
+    if (state.timer.remainingSeconds <= 0) return;
+
+    if (state.timer.isRunning) {
+        // Pause
+        clearInterval(state.timer.intervalInfo);
+        state.timer.isRunning = false;
+        elements.timerStartPauseBtn.innerHTML = '<i class="bi bi-play-fill me-1"></i> Tiếp tục';
+        elements.timerStartPauseBtn.classList.replace('btn-warning', 'btn-primary');
+
+        // Stop animation
+        const displayElement = document.querySelector('.timer-display');
+        if (displayElement) displayElement.style.animation = 'none';
+    } else {
+        // Start
+        state.timer.isRunning = true;
+        elements.timerStartPauseBtn.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Tạm dừng';
+        elements.timerStartPauseBtn.classList.replace('btn-primary', 'btn-warning');
+
+        // Stop any currently playing alarm
+        if (elements.timerAudioAlarm) {
+            elements.timerAudioAlarm.pause();
+            elements.timerAudioAlarm.currentTime = 0;
+        }
+
+        state.timer.intervalInfo = setInterval(() => {
+            state.timer.remainingSeconds--;
+            updateTimerDisplay();
+
+            if (state.timer.remainingSeconds <= 0) {
+                timerFinished();
+            }
+        }, 1000);
+    }
+}
+
+/**
+ * Reset the timer to 0
+ */
+function resetTimer() {
+    clearInterval(state.timer.intervalInfo);
+    state.timer.isRunning = false;
+    state.timer.remainingSeconds = 0;
+    updateTimerDisplay();
+
+    if (elements.timerStartPauseBtn) {
+        elements.timerStartPauseBtn.innerHTML = '<i class="bi bi-play-fill me-1"></i> Bắt đầu';
+        elements.timerStartPauseBtn.classList.replace('btn-warning', 'btn-primary');
+    }
+
+    if (elements.timerAudioAlarm) {
+        elements.timerAudioAlarm.pause();
+        elements.timerAudioAlarm.currentTime = 0;
+    }
+}
+
+/**
+ * Handle timer reaching 0
+ */
+function timerFinished() {
+    clearInterval(state.timer.intervalInfo);
+    state.timer.isRunning = false;
+
+    if (elements.timerStartPauseBtn) {
+        elements.timerStartPauseBtn.innerHTML = '<i class="bi bi-play-fill me-1"></i> Bắt đầu';
+        elements.timerStartPauseBtn.classList.replace('btn-warning', 'btn-primary');
+    }
+
+    const displayElement = document.querySelector('.timer-display');
+    if (displayElement) {
+        displayElement.style.color = '#ef4444';
+        displayElement.style.animation = 'pulse 0.5s 6'; // Fast pulse
+    }
+
+    // Play sound if enabled
+    if (elements.timerSoundToggle && elements.timerSoundToggle.checked && elements.timerAudioAlarm) {
+        elements.timerAudioAlarm.play().catch(e => console.warn('Audio play prevented by browser:', e));
+    }
+}
+
+// ========================================
+// CHART & STATISTICS FUNCTIONS
+// ========================================
+
+let gradeChartInstance = null;
+
+function renderChart() {
+    const chartCanvas = document.getElementById('gradeChartCanvas');
+    if (!chartCanvas) return;
+
+    if (!classData.students || classData.students.length === 0) {
+        if (gradeChartInstance) {
+            gradeChartInstance.destroy();
+            gradeChartInstance = null;
+        }
+        return;
+    }
+
+    const componentSelect = document.getElementById('chartComponentSelect');
+    const selectedComponent = componentSelect ? componentSelect.value : 'TOTAL';
+
+    const profile = getCurrentProfile();
+    if (!profile) return;
+
+    // Define bins — each bin holds the list of {student, score} objects
+    const binKeys = ['0-4 (Kém)', '4-6 (Yếu/TB)', '6-8 (Khá)', '8-10 (Giỏi)'];
+    const binStudents = {
+        '0-4 (Kém)': [],
+        '4-6 (Yếu/TB)': [],
+        '6-8 (Khá)': [],
+        '8-10 (Giỏi)': []
+    };
+
+    let totalStudents = 0;
+    let sumScores = 0;
+    let passCount = 0;
+    const passThreshold = profile.passThreshold || 5;
+
+    // Calculate distributions
+    // Total weight as a fraction (e.g. 0.6 for 60%)
+    const totalWeight = Object.values(profile.weights).reduce((s, w) => s + w, 0) / 100;
+
+    classData.students.forEach(student => {
+        const studentGrades = state.grades[student.mssv] || {};
+        let score = 0;
+
+        if (selectedComponent === 'TOTAL') {
+            const base = calculateTotal(studentGrades, profile.weights);
+            const bonus = parseFloat(studentGrades._bonus) || 0;
+            const raw = Math.min(base + bonus, 10);
+            // Normalize raw weighted score (max = totalWeight * 10) to 0-10 scale
+            score = totalWeight > 0 ? Math.min(raw / totalWeight, 10) : raw;
+        } else {
+            score = parseFloat(studentGrades[selectedComponent]) || 0;
+        }
+
+        totalStudents++;
+        sumScores += score;
+
+        // Categorize on 0-10 scale
+        const entry = { student, score: parseFloat(score.toFixed(2)) };
+        if (score < 4) binStudents['0-4 (Kém)'].push(entry);
+        else if (score < 6) binStudents['4-6 (Yếu/TB)'].push(entry);
+        else if (score < 8) binStudents['6-8 (Khá)'].push(entry);
+        else binStudents['8-10 (Giỏi)'].push(entry);
+
+        // For TOTAL, compare normalized score against passThreshold normalized similarly
+        const effectiveThreshold = selectedComponent === 'TOTAL'
+            ? (totalWeight > 0 ? (passThreshold / totalWeight) : passThreshold)
+            : passThreshold;
+        if (score >= effectiveThreshold) passCount++;
+    });
+
+    const avgScore = totalStudents > 0 ? (sumScores / totalStudents).toFixed(2) : 0;
+    const passRate = totalStudents > 0 ? ((passCount / totalStudents) * 100).toFixed(1) : 0;
+    const failRate = totalStudents > 0 ? (100 - passRate).toFixed(1) : 0;
+
+    // Update Summary UI
+    document.getElementById('statTotalStudents').textContent = totalStudents;
+    document.getElementById('statAverageScore').textContent = avgScore;
+    document.getElementById('statPassRate').textContent = `${passRate}%`;
+    document.getElementById('statFailRate').textContent = `${failRate}%`;
+
+    // Render Chart
+    const ctx = chartCanvas.getContext('2d');
+    const labels = binKeys;
+    const data = binKeys.map(k => binStudents[k].length);
+
+    if (gradeChartInstance) {
+        gradeChartInstance.data.labels = labels;
+        gradeChartInstance.data.datasets[0].data = data;
+        gradeChartInstance.data.datasets[0].label = selectedComponent === 'TOTAL' ? 'Tổng điểm' : profile.weights[selectedComponent]?.name || selectedComponent;
+        gradeChartInstance.update();
+    } else {
+        gradeChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: selectedComponent === 'TOTAL' ? 'Tổng điểm' : selectedComponent,
+                    data: data,
+                    backgroundColor: [
+                        'rgba(239, 68, 68, 0.7)',   // Red for < 4
+                        'rgba(245, 158, 11, 0.7)',  // Orange/Yellow for 4-6
+                        'rgba(59, 130, 246, 0.7)',  // Blue for 6-8
+                        'rgba(16, 185, 129, 0.7)'   // Green for 8-10
+                    ],
+                    borderColor: [
+                        'rgb(239, 68, 68)',
+                        'rgb(245, 158, 11)',
+                        'rgb(59, 130, 246)',
+                        'rgb(16, 185, 129)'
+                    ],
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return `${context.raw} sinh viên`;
+                            }
+                        }
+                    }
+                },
+                onClick: function (evt, elements) {
+                    if (elements.length === 0) return;
+                    const idx = elements[0].index;
+                    const binKey = binKeys[idx];
+                    showStudentsInBin(binKey, binStudents[binKey], selectedComponent);
+                }
+            }
+        });
+    }
+}
+
+/**
+ * Show a modal listing all students in a given score bin.
+ */
+function showStudentsInBin(binKey, students, component) {
+    const modalEl = document.getElementById('chartStudentListModal');
+    if (!modalEl) return;
+
+    document.getElementById('chartBinTitle').textContent = binKey;
+    document.getElementById('chartBinCount').textContent = `${students.length} sinh viên`;
+
+    const tbody = document.getElementById('chartStudentListBody');
+    const emptyEl = document.getElementById('chartStudentListEmpty');
+
+    if (!students || students.length === 0) {
+        tbody.innerHTML = '';
+        emptyEl.classList.remove('d-none');
+    } else {
+        emptyEl.classList.add('d-none');
+        const profile = getCurrentProfile();
+        const passThreshold = profile ? (profile.passThreshold || 5) : 5;
+        const totalWeight = profile
+            ? Object.values(profile.weights).reduce((s, w) => s + w, 0) / 100
+            : 1;
+        const effectiveThreshold = component === 'TOTAL'
+            ? (totalWeight > 0 ? passThreshold / totalWeight : passThreshold)
+            : passThreshold;
+
+        tbody.innerHTML = students
+            .slice()
+            .sort((a, b) => b.score - a.score)
+            .map((entry, i) => {
+                const passed = entry.score >= effectiveThreshold;
+                return `
+                    <tr class="${passed ? 'table-success' : 'table-danger'}">
+                        <td class="text-center">${i + 1}</td>
+                        <td>${entry.student.name}</td>
+                        <td class="text-center"><span class="badge bg-primary">${entry.student.mssv}</span></td>
+                        <td class="text-center fw-bold">${entry.score.toFixed(2)}</td>
+                        <td class="text-center">
+                            <span class="badge ${passed ? 'bg-success' : 'bg-danger'}">
+                                ${passed ? '✓ Đạt' : '✗ Chưa đạt'}
+                            </span>
+                        </td>
+                    </tr>`;
+            }).join('');
+    }
+
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+}
+
+function updateChartComponentSelect() {
+    const select = document.getElementById('chartComponentSelect');
+    if (!select) return;
+
+    const profile = getCurrentProfile();
+    if (!profile) return;
+
+    // Preserve selection if possible
+    const currentVal = select.value;
+
+    select.innerHTML = '<option value="TOTAL">Tổng điểm</option>';
+
+    if (profile.weights) {
+        Object.entries(profile.weights).forEach(([key, weight]) => {
+            const opt = document.createElement('option');
+            opt.value = key;
+            opt.textContent = `${key} (${weight}%)`;
+            select.appendChild(opt);
+        });
+    }
+
+    if (Array.from(select.options).some(opt => opt.value === currentVal)) {
+        select.value = currentVal;
+    }
+}
+
+function initializeChartListeners() {
+    updateChartComponentSelect();
+    renderChart();
+
+    const chartComponentSelect = document.getElementById('chartComponentSelect');
+    if (chartComponentSelect) {
+        chartComponentSelect.addEventListener('change', renderChart);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', init);

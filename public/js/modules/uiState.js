@@ -6,6 +6,9 @@
 export const uiState = {
     loadingStates: {},
     slowConnectionTimers: {},
+    notificationCache: new Map(),
+    lastNotification: { key: '', at: 0 },
+    notificationDedupMs: 1000,
 
     /**
      * Show loading indicator for a section
@@ -138,17 +141,37 @@ export const uiState = {
      */
     showNotification(message, type = 'info', duration = 5000) {
         const toastContainer = this.getOrCreateToastContainer();
+        const text = String(message);
+        const key = `${type}|${text}`;
+        const now = Date.now();
+
+        const existingToast = this.notificationCache.get(key);
+        if (existingToast && existingToast.isConnected) {
+            const existingInstance = bootstrap.Toast.getInstance(existingToast);
+            if (existingInstance) {
+                existingInstance.show();
+            }
+            return;
+        }
+        if (existingToast && !existingToast.isConnected) {
+            this.notificationCache.delete(key);
+        }
+        if (this.lastNotification.key === key && (now - this.lastNotification.at) < this.notificationDedupMs) {
+            return;
+        }
         
         const toast = document.createElement('div');
         toast.className = `toast align-items-center text-white bg-${this.getBootstrapColor(type)} border-0`;
         toast.setAttribute('role', 'alert');
         toast.setAttribute('aria-live', 'assertive');
         toast.setAttribute('aria-atomic', 'true');
+        this.notificationCache.set(key, toast);
+        this.lastNotification = { key, at: now };
         
         toast.innerHTML = `
             <div class="d-flex">
                 <div class="toast-body">
-                    ${this.getIcon(type)} ${message}
+                    ${this.getIcon(type)} ${text}
                 </div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>
@@ -165,6 +188,7 @@ export const uiState = {
         
         // Remove from DOM after hidden
         toast.addEventListener('hidden.bs.toast', () => {
+            this.notificationCache.delete(key);
             toast.remove();
         });
     },

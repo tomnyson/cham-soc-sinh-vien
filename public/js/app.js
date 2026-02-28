@@ -1,4 +1,61 @@
 // ========================================
+// ALERT DEDUPE
+// ========================================
+// Prevent duplicate alerts triggered back-to-back.
+(function installAlertDeduper() {
+    if (window.__alertDeduperInstalled) {
+        return;
+    }
+    window.__alertDeduperInstalled = true;
+
+    const originalAlert = window.alert.bind(window);
+    const dedupeWindowMs = 1000;
+    let lastMessage = null;
+    let lastClosedAt = 0;
+
+    window.alert = function (message) {
+        const text = String(message);
+        const now = Date.now();
+        if (text === lastMessage && (now - lastClosedAt) < dedupeWindowMs) {
+            return;
+        }
+        const result = originalAlert(message);
+        lastMessage = text;
+        lastClosedAt = Date.now();
+        return result;
+    };
+})();
+
+// ========================================
+// SIDEBAR TOGGLE
+// ========================================
+(function initSidebarToggle() {
+    const SIDEBAR_KEY = 'sidebar_collapsed';
+
+    function applySidebarState() {
+        const sidebar = document.getElementById('sidebar');
+        if (!sidebar) return;
+        const isCollapsed = localStorage.getItem(SIDEBAR_KEY) === 'true';
+        sidebar.classList.toggle('collapsed', isCollapsed);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        applySidebarState();
+
+        const toggleBtn = document.getElementById('toggleSidebar');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                const sidebar = document.getElementById('sidebar');
+                if (!sidebar) return;
+                const nowCollapsed = !sidebar.classList.contains('collapsed');
+                sidebar.classList.toggle('collapsed', nowCollapsed);
+                localStorage.setItem(SIDEBAR_KEY, nowCollapsed);
+            });
+        }
+    });
+})();
+
+// ========================================
 // TAB MANAGEMENT
 // ========================================
 // Note: switchTab function is now defined at the end of the file with data loading
@@ -1677,81 +1734,81 @@ async function renderClassesList() {
             const isArchived = cls.isArchived;
 
             html += `
-                <div class="class-card" style="background: #ffffff; border: 1px solid ${isArchived ? '#94a3b8' : '#e2e8f0'}; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); transition: all 200ms ease; ${isArchived ? 'opacity: 0.8;' : ''}">
+                <div class="class-card" style="background: #ffffff; border: 1px solid ${isArchived ? '#e2e8f0' : '#f1f5f9'}; border-radius: 12px; overflow: hidden; ${isArchived ? 'opacity: 0.8;' : ''}">
                     <!-- Card Header -->
-                    <div style="padding: 20px 20px 16px 20px; border-bottom: 1px solid #f1f5f9;">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <div style="width: 40px; height: 40px; background: ${isArchived ? '#94a3b815' : '#2563EB15'}; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                                <i class="bi bi-${isArchived ? 'archive' : 'people-fill'}" style="color: ${isArchived ? '#64748b' : '#2563EB'}; font-size: 1.2rem;"></i>
+                    <div style="padding: 24px 24px 16px 24px;">
+                        <div style="display: flex; align-items: flex-start; gap: 16px;">
+                            <div style="width: 48px; height: 48px; background: ${isArchived ? '#f1f5f9' : '#eff6ff'}; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <i class="bi bi-${isArchived ? 'archive' : 'people-fill'}" style="color: ${isArchived ? '#64748b' : '#3b82f6'}; font-size: 1.5rem;"></i>
                             </div>
                             <div style="flex: 1; min-width: 0;">
-                                <h3 style="margin: 0 0 2px 0; font-size: 1.1rem; font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                <h3 style="margin: 0 0 4px 0; font-size: 1.125rem; font-weight: 700; color: #1e293b; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                     ${cls.name}
                                 </h3>
                                 ${cls.description ? `
-                                    <p style="margin: 0; color: #64748b; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    <p style="margin: 0; color: #64748b; font-size: 0.875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase;">
                                         ${cls.description}
                                     </p>
                                 ` : ''}
                             </div>
-                            ${isArchived ? '<span class="badge bg-secondary">Lưu trữ</span>' : ''}
+                            ${isArchived ? '<span class="badge bg-secondary" style="font-weight: 500; padding: 6px 10px;">Lưu trữ</span>' : ''}
                         </div>
                     </div>
                     
                     <!-- Student Count -->
-                    <div style="padding: 20px; text-align: center; background: #f8fafc;">
-                        <div style="font-size: 2.5rem; font-weight: 700; color: ${isArchived ? '#64748b' : '#2563EB'}; line-height: 1;">
+                    <div style="padding: 32px 24px; text-align: center; background: #f8fafc; margin: 0 24px 16px 24px; border-radius: 8px;">
+                        <div style="font-size: 3rem; font-weight: 700; color: ${isArchived ? '#64748b' : '#3b82f6'}; line-height: 1; margin-bottom: 8px;">
                             ${studentCount}
                         </div>
-                        <div style="font-size: 0.85rem; color: #64748b; margin-top: 4px;">
+                        <div style="font-size: 0.95rem; color: #64748b; font-weight: 500;">
                             sinh viên
                         </div>
                     </div>
 
                     <!-- Student List Preview -->
                     ${studentCount > 0 ? `
-                        <div style="padding: 12px 20px; border-top: 1px solid #f1f5f9; max-height: 140px; overflow-y: auto;">
-                            <div style="font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
-                                Danh sách sinh viên
-                            </div>
-                            ${cls.students.slice(0, 4).map(student => `
-                                <div style="padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; color: #334155;">
-                                    <span style="color: #64748b;">${student.mssv}</span> - ${student.name}
+                        <div style="padding: 0 24px 24px 24px; border-bottom: 1px solid #f1f5f9; min-height: 160px;">
+                            ${cls.students.slice(0, 3).map(student => `
+                                <div style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.95rem; color: #475569; display: flex; align-items: center; gap: 8px;">
+                                    <span style="color: #64748b; font-weight: 500;">${student.mssv}</span> - <span>${student.name}</span>
                                 </div>
                             `).join('')}
-                            ${studentCount > 4 ? `
-                                <div style="padding: 8px 0; color: #64748b; font-size: 0.8rem; font-style: italic;">
-                                    + ${studentCount - 4} sinh viên khác
+                            ${studentCount > 3 ? `
+                                <div style="padding: 12px 0 0 0; color: #64748b; font-size: 0.9rem; font-style: italic;">
+                                    + ${studentCount - 3} sinh viên khác
                                 </div>
                             ` : ''}
                         </div>
                     ` : `
-                        <div style="padding: 16px 20px; border-top: 1px solid #f1f5f9; text-align: center; background: #fffbeb;">
-                            <i class="bi bi-exclamation-triangle" style="color: #d97706; margin-right: 6px;"></i>
-                            <span style="color: #92400e; font-size: 0.85rem;">Lớp chưa có sinh viên</span>
+                        <div style="padding: 0 24px 24px 24px; border-bottom: 1px solid #f1f5f9; text-align: center; min-height: 160px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                            <i class="bi bi-inbox" style="color: #cbd5e1; font-size: 2rem; margin-bottom: 12px;"></i>
+                            <span style="color: #94a3b8; font-size: 0.9rem;">Chưa có sinh viên</span>
                         </div>
                     `}
 
                     <!-- Action Buttons -->
-                    <div style="display: flex; gap: 8px; padding: 16px 20px; border-top: 1px solid #f1f5f9; background: #ffffff;">
+                    <div style="display: flex; gap: 12px; padding: 24px; background: #ffffff;">
                         ${isArchived ? `
-                            <button onclick="unarchiveClassById('${cls.classId}')" style="flex: 1; padding: 10px 16px; background: #2563EB; border: none; border-radius: 8px; color: #ffffff; font-size: 0.85rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 150ms ease;">
-                                <i class="bi bi-arrow-counterclockwise"></i> Khôi phục
+                            <button onclick="unarchiveClassById('${cls.classId}')" style="flex: 1; padding: 12px; background: #3b82f6; border: none; border-radius: 8px; color: #ffffff; font-size: 0.95rem; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transition: background-color 200ms ease;">
+                                <i class="bi bi-arrow-counterclockwise" style="font-size: 1.1rem;"></i>
+                                <span>Khôi phục</span>
                             </button>
-                            <button onclick="deleteClassById('${cls.classId}')" style="padding: 10px 12px; background: #ffffff; border: 1px solid #fecaca; border-radius: 8px; color: #dc2626; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 150ms ease;">
+                            <button onclick="deleteClassById('${cls.classId}')" style="width: 54px; background: #ffffff; border: 1px solid #fecaca; border-radius: 8px; color: #ef4444; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 200ms ease;">
                                 <i class="bi bi-trash"></i>
                             </button>
                         ` : `
-                            <button onclick="editClassById('${cls.classId}')" style="flex: 1; padding: 10px 16px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; color: #334155; font-size: 0.85rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 150ms ease;">
-                                <i class="bi bi-pencil"></i> Chỉnh sửa
+                            <button onclick="editClassById('${cls.classId}')" style="flex: 1; min-width: 80px; padding: 12px 8px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; color: #475569; font-size: 0.95rem; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; transition: all 200ms ease;">
+                                <i class="bi bi-pencil" style="font-size: 1.1rem;"></i>
+                                <span>Chỉnh sửa</span>
                             </button>
-                            <button onclick="viewClassDetails('${cls.classId}')" style="flex: 1; padding: 10px 16px; background: #2563EB; border: none; border-radius: 8px; color: #ffffff; font-size: 0.85rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 150ms ease;">
-                                <i class="bi bi-eye"></i> Xem chi tiết
+                            <button onclick="viewClassDetails('${cls.classId}')" style="flex: 1.2; min-width: 90px; padding: 12px 8px; background: #2563eb; border: none; border-radius: 8px; color: #ffffff; font-size: 0.95rem; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; transition: background-color 200ms ease; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2), 0 2px 4px -1px rgba(37, 99, 235, 0.1);">
+                                <i class="bi bi-eye" style="font-size: 1.1rem;"></i>
+                                <span style="text-align: center; line-height: 1.2;">Xem<br>chi tiết</span>
                             </button>
-                            <button onclick="archiveClassById('${cls.classId}')" title="Lưu trữ" style="padding: 10px 12px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; color: #64748b; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 150ms ease;">
+                            <button onclick="archiveClassById('${cls.classId}')" title="Lưu trữ" style="width: 50px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; color: #64748b; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 200ms ease; flex-shrink: 0;">
                                 <i class="bi bi-archive"></i>
                             </button>
-                            <button onclick="deleteClassById('${cls.classId}')" style="padding: 10px 12px; background: #ffffff; border: 1px solid #fecaca; border-radius: 8px; color: #dc2626; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 150ms ease;">
+                            <button onclick="deleteClassById('${cls.classId}')" title="Xóa" style="width: 50px; background: #ffffff; border: 1px solid #fecaca; border-radius: 8px; color: #ef4444; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 200ms ease; flex-shrink: 0;">
                                 <i class="bi bi-trash"></i>
                             </button>
                         `}
@@ -1765,12 +1822,31 @@ async function renderClassesList() {
         // Add hover styles
         html += `
             <style>
+                .class-card {
+                    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+                    transition: box-shadow 0.2s ease, transform 0.2s ease;
+                }
                 .class-card:hover {
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-                    border-color: #cbd5e1;
+                    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+                    transform: translateY(-2px);
                 }
                 .class-card button:hover {
                     opacity: 0.9;
+                }
+                .class-card button[onclick^="deleteClassById"]:hover {
+                    background: #fef2f2 !important;
+                    border-color: #fca5a5 !important;
+                }
+                .class-card button[onclick^="archiveClassById"]:hover {
+                    background: #f8fafc !important;
+                    border-color: #cbd5e1 !important;
+                }
+                .class-card button[onclick^="editClassById"]:hover {
+                    background: #f8fafc !important;
+                    border-color: #cbd5e1 !important;
+                }
+                .class-card button[onclick^="viewClassDetails"]:hover {
+                    background: #1d4ed8 !important;
                 }
             </style>
         `;

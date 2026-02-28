@@ -188,6 +188,24 @@
                 </div>
             </div>
         </div>
+        <!-- Search & Filter Bar -->
+        <div class="border-bottom bg-light px-3 py-2">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <div class="input-group input-group-sm flex-grow-1" style="max-width: 280px;">
+                    <span class="input-group-text bg-white border-end-0">
+                        <i class="bi bi-search text-muted"></i>
+                    </span>
+                    <input type="text" class="form-control border-start-0 shadow-none" id="gradeSearchInput"
+                        placeholder="Tìm theo tên hoặc MSSV...">
+                </div>
+                <select class="form-select form-select-sm shadow-none" id="gradeStatusFilter" style="max-width: 160px;">
+                    <option value="all">Tất cả trạng thái</option>
+                    <option value="pass">✓ Đạt</option>
+                    <option value="fail">✗ Chưa đạt</option>
+                </select>
+                <span class="small text-muted ms-auto" id="gradeFilterCount"></span>
+            </div>
+        </div>
         <div class="card-body p-0">
             <div id="classDetailEmptyState" class="text-center py-5 text-muted" style="display: none;">
                 <i class="bi bi-info-circle fs-1 d-block mb-3"></i>
@@ -267,6 +285,59 @@
                             <button class="btn btn-warning btn-sm" id="quickImportBtn">
                                 <i class="bi bi-lightning-charge me-1"></i> Áp dụng điểm
                             </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Statistics Chart Card -->
+    <div class="card shadow-sm border-0 mt-4" id="statsChartCard">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h5 class="mb-0 d-flex align-items-center gap-2">
+                <i class="bi bi-bar-chart-fill text-primary"></i>
+                Thống kê phổ điểm
+            </h5>
+            <div class="d-flex align-items-center gap-2">
+                <label class="small text-muted mb-0 text-nowrap fw-semibold">Xem theo:</label>
+                <select class="form-select form-select-sm shadow-none border" id="chartComponentSelect"
+                    style="width: auto; min-width: 180px;">
+                    <option value="TOTAL">Tổng điểm (có bonus)</option>
+                </select>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row g-4 align-items-center">
+                <div class="col-12 col-lg-8">
+                    <div style="position: relative; height: 320px;">
+                        <canvas id="gradeChartCanvas"></canvas>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-4">
+                    <div class="row g-3">
+                        <div class="col-6 col-lg-12">
+                            <div class="border rounded p-3 text-center">
+                                <div class="text-muted small mb-1">Tổng sinh viên</div>
+                                <div class="fw-bold fs-4 text-primary" id="statTotalStudents">—</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-12">
+                            <div class="border rounded p-3 text-center">
+                                <div class="text-muted small mb-1">Điểm trung bình</div>
+                                <div class="fw-bold fs-4 text-info" id="statAverageScore">—</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-12">
+                            <div class="border rounded p-3 text-center">
+                                <div class="text-muted small mb-1">Tỷ lệ Đạt</div>
+                                <div class="fw-bold fs-4 text-success" id="statPassRate">—</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-12">
+                            <div class="border rounded p-3 text-center">
+                                <div class="text-muted small mb-1">Tỷ lệ Trượt</div>
+                                <div class="fw-bold fs-4 text-danger" id="statFailRate">—</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -578,6 +649,8 @@
     /* Sticky columns for grade table scroll */
     #classDetailTableWrapper {
         overflow-x: auto;
+        overflow-y: auto;
+        max-height: 60vh;
     }
 
     #classDetailTableWrapper table {
@@ -590,6 +663,8 @@
         position: sticky;
         top: 0;
         z-index: 2;
+        background-color: #f8f9fa;
+        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
     }
 
     /* Sticky first 3 columns - STT, MSSV, HỌ VÀ TÊN */
@@ -597,7 +672,9 @@
     #classDetailTableHeader th:nth-child(2),
     #classDetailTableHeader th:nth-child(3) {
         position: sticky;
-        z-index: 3;
+        z-index: 4;
+        /* highest: sticky on both axes */
+        background-color: #f8f9fa;
     }
 
     #classDetailTableHeader th:nth-child(1) {
@@ -647,8 +724,6 @@
 
     #classDetailTableHeader th:nth-child(3),
     #classDetailTableBody td:nth-child(3) {
-        position: sticky;
-        z-index: 1;
         border-right: 2px solid #dee2e6;
     }
 
@@ -672,5 +747,43 @@
         background: linear-gradient(135deg, #fee2e2 0%, rgba(254, 226, 226, 0.7) 100%);
     }
 </style>
+
+<!-- Chart Bin Student List Modal -->
+<div class="modal fade" id="chartStudentListModal" tabindex="-1" aria-labelledby="chartStudentListModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="chartStudentListModalLabel">
+                    <i class="bi bi-people-fill me-2 text-primary"></i>
+                    Danh sách sinh viên — <span id="chartBinTitle"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th class="text-center" style="width:50px">STT</th>
+                            <th>Họ và Tên</th>
+                            <th class="text-center">MSSV</th>
+                            <th class="text-center">Điểm</th>
+                            <th class="text-center">Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody id="chartStudentListBody">
+                    </tbody>
+                </table>
+                <div id="chartStudentListEmpty" class="text-center py-4 text-muted d-none">
+                    <i class="bi bi-inbox fs-3 d-block mb-2"></i> Không có sinh viên nào.
+                </div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <span class="text-muted small" id="chartBinCount"></span>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script type="module" src="/js/pages/class-detail.js"></script>

@@ -98,51 +98,56 @@ async function initializeApp() {
 /**
  * Legacy function wrappers for backward compatibility
  */
-window.initDefaultProfiles = async function() {
+window.initDefaultProfiles = async function () {
     await profileManager.init();
 };
 
-window.initClasses = async function() {
+window.initClasses = async function () {
     await classManager.init();
 };
 
-window.loadProfile = function() {
+window.loadProfile = function () {
     profileManager.loadProfile();
 };
 
-window.updateProfileSelect = function() {
+window.updateProfileSelect = function () {
     profileManager.updateProfileSelect();
 };
 
-window.updateWeightSummary = function() {
+window.updateWeightSummary = function () {
     profileManager.updateWeightSummary();
 };
 
-window.loadClass = function() {
+window.loadClass = function () {
     classManager.loadClass();
 };
 
-window.updateClassSelect = function() {
+window.updateClassSelect = function () {
     classManager.updateClassSelect();
 };
 
-window.createNewProfile = async function() {
+window.createNewProfile = async function () {
     await profileManager.createNew();
 };
 
-window.duplicateCurrentProfile = async function() {
+window.duplicateCurrentProfile = async function () {
     await profileManager.duplicate();
 };
 
-window.deleteProfileById = async function(profileId) {
+window.deleteProfileById = async function (profileId) {
     await profileManager.deleteById(profileId);
 };
 
-window.createNewClass = async function() {
+// Expose legacy createNewClass function for classManager to call (from app.js)
+if (typeof window.createNewClass === 'function') {
+    window.createNewClassLegacy = window.createNewClass;
+}
+
+window.createNewClass = async function () {
     await classManager.createNew();
 };
 
-window.deleteClassById = async function(classId) {
+window.deleteClassById = async function (classId) {
     await classManager.deleteById(classId);
 };
 
