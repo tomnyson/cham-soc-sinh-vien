@@ -351,3 +351,5 @@ Developed with Node.js Express following professional best practices.
 
 **Version:** 2.0.0  
 **Last Updated:** November 3, 2025
+email sync
+google-chamsocsv@b2bvegestable.iam.gserviceaccount.com

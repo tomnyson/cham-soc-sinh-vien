@@ -6,11 +6,12 @@ const classlistController = require('../controllers/classlist.controller');
 const templateController = require('../controllers/template.controller');
 const profileController = require('../controllers/profile.controller');
 const classController = require('../controllers/class.controller');
+const brandingController = require('../controllers/branding.controller');
 
 const { uploadSingle, cleanupFile } = require('../middleware/upload.middleware');
 const { validateGenerateTemplate, validateExportResults } = require('../middleware/validation.middleware');
 const { asyncHandler } = require('../middleware/error.middleware');
-const { authenticate } = require('../middleware/auth.middleware');
+const { authenticate, requireAdmin } = require('../middleware/auth.middleware');
 
 // Auth routes
 const authRoutes = require('./auth.routes');
@@ -24,6 +25,10 @@ router.get('/health', (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
+
+// ===== Public Student Grade Lookup (No Login Required) =====
+router.get('/public/student-grade', asyncHandler(classController.getPublicStudentGrade));
+router.get('/public/branding', asyncHandler(brandingController.getPublicBranding));
 
 // Upload routes (Protected)
 router.post(
@@ -74,6 +79,7 @@ router.get('/classes', authenticate, asyncHandler(classController.getAllClasses)
 router.get('/classes/:classId', authenticate, asyncHandler(classController.getClassById));
 router.post('/classes', authenticate, asyncHandler(classController.createClass));
 router.put('/classes/:classId', authenticate, asyncHandler(classController.updateClass));
+router.post('/classes/:classId/sync-google-sheet', authenticate, asyncHandler(classController.syncGradesToGoogleSheet));
 router.delete('/classes/:classId', authenticate, asyncHandler(classController.deleteClass));
 
 // Student management within a class (Protected)
@@ -85,5 +91,10 @@ router.put('/classes/:classId/students/:mssv', authenticate, asyncHandler(classC
 // Class archive management (Protected)
 router.put('/classes/:classId/archive', authenticate, asyncHandler(classController.archiveClass));
 router.put('/classes/:classId/unarchive', authenticate, asyncHandler(classController.unarchiveClass));
+
+// ===== Global Branding (Admin Only) =====
+router.get('/branding', authenticate, requireAdmin, asyncHandler(brandingController.getBranding));
+router.put('/branding', authenticate, requireAdmin, asyncHandler(brandingController.updateBranding));
+router.post('/branding/reset', authenticate, requireAdmin, asyncHandler(brandingController.resetBranding));
 
 module.exports = router;

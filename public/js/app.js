@@ -1685,6 +1685,30 @@ async function unarchiveClassById(classId) {
     }
 }
 
+// ========================================
+// CLASS VIEW MODE (grid / table)
+// ========================================
+let classViewMode = localStorage.getItem('classViewMode') || 'grid';
+
+function setClassViewMode(mode) {
+    classViewMode = mode;
+    localStorage.setItem('classViewMode', mode);
+
+    const gridBtn = document.getElementById('gridViewBtn');
+    const tableBtn = document.getElementById('tableViewBtn');
+    if (gridBtn) gridBtn.classList.toggle('active', mode === 'grid');
+    if (tableBtn) tableBtn.classList.toggle('active', mode === 'table');
+
+    renderClassesList();
+}
+
+function initClassViewToggle() {
+    const gridBtn = document.getElementById('gridViewBtn');
+    const tableBtn = document.getElementById('tableViewBtn');
+    if (gridBtn) gridBtn.classList.toggle('active', classViewMode === 'grid');
+    if (tableBtn) tableBtn.classList.toggle('active', classViewMode === 'table');
+}
+
 async function renderClassesList() {
     const container =
         document.getElementById('classes-list') ||
@@ -1726,8 +1750,69 @@ async function renderClassesList() {
             return;
         }
 
-        // Render classes as cards with professional UI
-        let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 24px;">';
+        // Sync toggle button states
+        initClassViewToggle();
+
+        // TABLE VIEW mode
+        if (classViewMode === 'table') {
+            let tableHtml = `
+                <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 border rounded shadow-sm" style="background:#fff">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:40px" class="text-center">#</th>
+                            <th>Tên lớp</th>
+                            <th>Mô tả</th>
+                            <th class="text-center">Sinh viên</th>
+                            <th class="text-center" style="width:160px">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+            filteredClasses.forEach((cls, idx) => {
+                const studentCount = cls.students ? cls.students.length : 0;
+                const isArchived = cls.isArchived;
+                tableHtml += `
+                    <tr>
+                        <td class="text-center text-muted">${idx + 1}</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div style="width:36px;height:36px;background:${isArchived ? '#f1f5f9' : '#eff6ff'};border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                    <i class="bi bi-${isArchived ? 'archive' : 'people-fill'}" style="color:${isArchived ? '#64748b' : '#3b82f6'}"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-semibold text-uppercase">${cls.name}</div>
+                                    ${isArchived ? '<span class="badge bg-secondary" style="font-size:0.7rem">Lưu trữ</span>' : ''}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-muted small">${cls.description || '—'}</td>
+                        <td class="text-center">
+                            <span class="badge bg-primary-subtle text-primary fw-semibold">${studentCount} SV</span>
+                        </td>
+                        <td class="text-center">
+                            <div class="class-table-actions d-flex gap-1 justify-content-center flex-wrap">
+                                ${isArchived ? `
+                                    <button class="btn btn-sm btn-outline-primary" onclick="unarchiveClassById('${cls.classId}')" title="Khôi phục"><i class="bi bi-arrow-counterclockwise"></i></button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteClassById('${cls.classId}')" title="Xóa"><i class="bi bi-trash"></i></button>
+                                ` : `
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="editClassById('${cls.classId}')" title="Chỉnh sửa"><i class="bi bi-pencil"></i></button>
+                                    <button class="btn btn-sm btn-primary" onclick="viewClassDetails('${cls.classId}')" title="Xem chi tiết"><i class="bi bi-eye"></i></button>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="archiveClassById('${cls.classId}')" title="Lưu trữ"><i class="bi bi-archive"></i></button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteClassById('${cls.classId}')" title="Xóa"><i class="bi bi-trash"></i></button>
+                                `}
+                            </div>
+                        </td>
+                    </tr>`;
+            });
+
+            tableHtml += `</tbody></table></div>`;
+            container.innerHTML = tableHtml;
+            return;
+        }
+
+        // GRID VIEW mode (existing)
+        let html = '<div class="classes-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 16px;">';
 
         filteredClasses.forEach(cls => {
             const studentCount = cls.students ? cls.students.length : 0;
@@ -1736,7 +1821,7 @@ async function renderClassesList() {
             html += `
                 <div class="class-card" style="background: #ffffff; border: 1px solid ${isArchived ? '#e2e8f0' : '#f1f5f9'}; border-radius: 12px; overflow: hidden; ${isArchived ? 'opacity: 0.8;' : ''}">
                     <!-- Card Header -->
-                    <div style="padding: 24px 24px 16px 24px;">
+                    <div data-role="card-header" style="padding: 24px 24px 16px 24px;">
                         <div style="display: flex; align-items: flex-start; gap: 16px;">
                             <div style="width: 48px; height: 48px; background: ${isArchived ? '#f1f5f9' : '#eff6ff'}; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                 <i class="bi bi-${isArchived ? 'archive' : 'people-fill'}" style="color: ${isArchived ? '#64748b' : '#3b82f6'}; font-size: 1.5rem;"></i>
@@ -1756,7 +1841,7 @@ async function renderClassesList() {
                     </div>
                     
                     <!-- Student Count -->
-                    <div style="padding: 32px 24px; text-align: center; background: #f8fafc; margin: 0 24px 16px 24px; border-radius: 8px;">
+                    <div data-role="student-count" style="padding: 32px 24px; text-align: center; background: #f8fafc; margin: 0 24px 16px 24px; border-radius: 8px;">
                         <div style="font-size: 3rem; font-weight: 700; color: ${isArchived ? '#64748b' : '#3b82f6'}; line-height: 1; margin-bottom: 8px;">
                             ${studentCount}
                         </div>
@@ -1767,7 +1852,7 @@ async function renderClassesList() {
 
                     <!-- Student List Preview -->
                     ${studentCount > 0 ? `
-                        <div style="padding: 0 24px 24px 24px; border-bottom: 1px solid #f1f5f9; min-height: 160px;">
+                        <div data-role="student-preview" style="padding: 0 24px 24px 24px; border-bottom: 1px solid #f1f5f9; min-height: 160px;">
                             ${cls.students.slice(0, 3).map(student => `
                                 <div style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.95rem; color: #475569; display: flex; align-items: center; gap: 8px;">
                                     <span style="color: #64748b; font-weight: 500;">${student.mssv}</span> - <span>${student.name}</span>
@@ -1780,35 +1865,33 @@ async function renderClassesList() {
                             ` : ''}
                         </div>
                     ` : `
-                        <div style="padding: 0 24px 24px 24px; border-bottom: 1px solid #f1f5f9; text-align: center; min-height: 160px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                        <div data-role="student-preview" style="padding: 0 24px 24px 24px; border-bottom: 1px solid #f1f5f9; text-align: center; min-height: 160px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
                             <i class="bi bi-inbox" style="color: #cbd5e1; font-size: 2rem; margin-bottom: 12px;"></i>
                             <span style="color: #94a3b8; font-size: 0.9rem;">Chưa có sinh viên</span>
                         </div>
                     `}
 
                     <!-- Action Buttons -->
-                    <div style="display: flex; gap: 12px; padding: 24px; background: #ffffff;">
+                    <div data-role="card-actions" style="display: flex; flex-wrap: wrap; gap: 10px; padding: 20px 24px; background: #ffffff;">
                         ${isArchived ? `
-                            <button onclick="unarchiveClassById('${cls.classId}')" style="flex: 1; padding: 12px; background: #3b82f6; border: none; border-radius: 8px; color: #ffffff; font-size: 0.95rem; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transition: background-color 200ms ease;">
+                            <button onclick="unarchiveClassById('${cls.classId}')" style="flex: 1 1 130px; min-width: 0; padding: 12px; background: #3b82f6; border: none; border-radius: 8px; color: #ffffff; font-size: 0.95rem; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transition: background-color 200ms ease;">
                                 <i class="bi bi-arrow-counterclockwise" style="font-size: 1.1rem;"></i>
                                 <span>Khôi phục</span>
                             </button>
-                            <button onclick="deleteClassById('${cls.classId}')" style="width: 54px; background: #ffffff; border: 1px solid #fecaca; border-radius: 8px; color: #ef4444; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 200ms ease;">
+                            <button onclick="deleteClassById('${cls.classId}')" style="width: 48px; flex: 0 0 48px; background: #ffffff; border: 1px solid #fecaca; border-radius: 8px; color: #ef4444; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 200ms ease;">
                                 <i class="bi bi-trash"></i>
                             </button>
                         ` : `
-                            <button onclick="editClassById('${cls.classId}')" style="flex: 1; min-width: 80px; padding: 12px 8px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; color: #475569; font-size: 0.95rem; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; transition: all 200ms ease;">
+                            <button onclick="editClassById('${cls.classId}')" style="flex: 1 1 90px; min-width: 0; padding: 12px 8px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; color: #475569; font-size: 0.95rem; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; transition: all 200ms ease;">
                                 <i class="bi bi-pencil" style="font-size: 1.1rem;"></i>
-                                <span>Chỉnh sửa</span>
                             </button>
-                            <button onclick="viewClassDetails('${cls.classId}')" style="flex: 1.2; min-width: 90px; padding: 12px 8px; background: #2563eb; border: none; border-radius: 8px; color: #ffffff; font-size: 0.95rem; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; transition: background-color 200ms ease; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2), 0 2px 4px -1px rgba(37, 99, 235, 0.1);">
+                            <button onclick="viewClassDetails('${cls.classId}')" style="flex: 1.2 1 110px; min-width: 0; padding: 12px 8px; background: #2563eb; border: none; border-radius: 8px; color: #ffffff; font-size: 0.95rem; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; transition: background-color 200ms ease; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2), 0 2px 4px -1px rgba(37, 99, 235, 0.1);">
                                 <i class="bi bi-eye" style="font-size: 1.1rem;"></i>
-                                <span style="text-align: center; line-height: 1.2;">Xem<br>chi tiết</span>
                             </button>
-                            <button onclick="archiveClassById('${cls.classId}')" title="Lưu trữ" style="width: 50px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; color: #64748b; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 200ms ease; flex-shrink: 0;">
+                            <button onclick="archiveClassById('${cls.classId}')" title="Lưu trữ" style="width: 48px; flex: 0 0 48px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; color: #64748b; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 200ms ease;">
                                 <i class="bi bi-archive"></i>
                             </button>
-                            <button onclick="deleteClassById('${cls.classId}')" title="Xóa" style="width: 50px; background: #ffffff; border: 1px solid #fecaca; border-radius: 8px; color: #ef4444; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 200ms ease; flex-shrink: 0;">
+                            <button onclick="deleteClassById('${cls.classId}')" title="Xóa" style="width: 48px; flex: 0 0 48px; background: #ffffff; border: 1px solid #fecaca; border-radius: 8px; color: #ef4444; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 200ms ease;">
                                 <i class="bi bi-trash"></i>
                             </button>
                         `}
@@ -1847,6 +1930,38 @@ async function renderClassesList() {
                 }
                 .class-card button[onclick^="viewClassDetails"]:hover {
                     background: #1d4ed8 !important;
+                }
+                @media (max-width: 768px) {
+                    .classes-grid {
+                        grid-template-columns: 1fr !important;
+                        gap: 12px !important;
+                    }
+                    .class-card [data-role="card-header"] {
+                        padding: 18px 16px 12px 16px !important;
+                    }
+                    .class-card [data-role="student-count"] {
+                        margin: 0 16px 12px 16px !important;
+                        padding: 20px 14px !important;
+                    }
+                    .class-card [data-role="student-preview"] {
+                        padding: 0 16px 16px 16px !important;
+                        min-height: 128px !important;
+                    }
+                    .class-card [data-role="card-actions"] {
+                        padding: 14px 16px 16px 16px !important;
+                        gap: 8px !important;
+                    }
+                }
+                @media (max-width: 430px) {
+                    .class-table-actions {
+                        justify-content: flex-end !important;
+                    }
+                    .class-card [data-role="student-count"] > div:first-child {
+                        font-size: 2.3rem !important;
+                    }
+                    .class-card [data-role="card-actions"] button {
+                        min-height: 44px;
+                    }
                 }
             </style>
         `;

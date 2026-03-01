@@ -1,4 +1,4 @@
-<div class="container-fluid py-4" id="classDetailPage" data-class-id="<%= classData.classId %>">
+<div class="container-fluid py-4 class-detail-page" id="classDetailPage" data-class-id="<%= classData.classId %>">
     <div class="row align-items-center mb-4">
         <div class="col-md-8">
             <p class="text-muted mb-1">
@@ -32,8 +32,8 @@
         </div>
     </div>
 
-    <div class="row g-3 mb-4">
-        <div class="col-md-3">
+    <div class="row g-3 mb-4 class-detail-stats-row">
+        <div class="col-6 col-md-3">
             <div class="stat-card">
                 <div class="stat-icon bg-primary bg-opacity-10 text-primary">
                     <i class="bi bi-people"></i>
@@ -44,7 +44,7 @@
                 <p>Tổng sinh viên</p>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-6 col-md-3">
             <div class="stat-card">
                 <div class="stat-icon bg-success bg-opacity-10 text-success">
                     <i class="bi bi-clipboard-check"></i>
@@ -59,7 +59,7 @@
                 <p>Profile điểm đang áp dụng</p>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-6 col-md-3">
             <div class="stat-card">
                 <div class="stat-icon bg-warning bg-opacity-10 text-warning">
                     <i class="bi bi-bar-chart-line"></i>
@@ -71,12 +71,12 @@
     </div>
 
     <!-- Tools Row -->
-    <div class="row g-3 mb-4">
+    <div class="row g-3 mb-4 class-detail-tools-row">
         <!-- Lucky Wheel Button -->
-        <div class="col-md-6">
+        <div class="col-12 col-sm-6 col-lg-3">
             <div class="card h-100 border-0 shadow-sm" style="cursor: pointer;" data-bs-toggle="modal"
                 data-bs-target="#luckyWheelModal">
-                <div class="card-body d-flex align-items-center">
+                <div class="card-body d-flex align-items-center class-detail-tool-body">
                     <div>
                         <h5 class="mb-1"><i class="bi bi-arrow-repeat me-1"></i> Vòng Quay</h5>
                     </div>
@@ -84,21 +84,42 @@
             </div>
         </div>
         <!-- Team Grouping Button -->
-        <div class="col-md-6">
+        <div class="col-12 col-sm-6 col-lg-3">
             <div class="card h-100 border-0 shadow-sm" style="cursor: pointer;" data-bs-toggle="modal"
                 data-bs-target="#teamGroupModal">
-                <div class="card-body d-flex align-items-center">
+                <div class="card-body d-flex align-items-center class-detail-tool-body">
                     <div>
                         <h5 class="mb-1"><i class="bi bi-diagram-3 me-1"></i> Chia Nhóm</h5>
                     </div>
                 </div>
             </div>
         </div>
+        <!-- Timer Button -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card h-100 border-0 shadow-sm" style="cursor: pointer;" data-bs-toggle="modal"
+                data-bs-target="#timerModal">
+                <div class="card-body d-flex align-items-center class-detail-tool-body">
+                    <div>
+                        <h5 class="mb-1"><i class="bi bi-stopwatch me-1"></i> Hẹn Giờ</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Note Board Button -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <a href="/classes/<%= classData.classId %>/note" class="card h-100 border-0 shadow-sm text-decoration-none text-reset">
+                <div class="card-body d-flex align-items-center class-detail-tool-body">
+                    <div>
+                        <h5 class="mb-1"><i class="bi bi-pencil-square me-1"></i> Note Bảng</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
     </div>
 
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body">
-            <div class="row g-3 align-items-end">
+            <div class="row g-3 align-items-end class-detail-profile-row">
                 <div class="col-lg-6">
                     <label class="form-label fw-semibold text-muted">
                         <i class="bi bi-sliders me-1"></i> Chọn profile điểm cho lớp
@@ -119,12 +140,12 @@
                         Áp dụng profile điểm để xem và chỉnh sửa điểm thành phần của từng sinh viên.
                     </small>
                 </div>
-                <div class="col-lg-6 text-lg-end">
+                <div class="col-lg-6 text-lg-end class-detail-action-col">
                     <button class="btn btn-outline-secondary me-2" onclick="window.location.href='/classes'">
                         <i class="bi bi-arrow-left-short me-1"></i> Quay lại danh sách
                     </button>
                     <!-- Share Link Button -->
-                    <div class="btn-group me-2">
+                    <div class="btn-group me-2 keep-horizontal-mobile">
                         <button class="btn btn-outline-success" id="shareGradesBtn"
                             title="Chia sẻ link tra cứu điểm cho sinh viên">
                             <i class="bi bi-share me-1"></i> Share điểm
@@ -190,12 +211,12 @@
         </div>
         <!-- Search & Filter Bar -->
         <div class="border-bottom bg-light px-3 py-2">
-            <div class="d-flex flex-wrap gap-2 align-items-center">
+            <div class="d-flex flex-wrap gap-2 align-items-center class-detail-filter-row">
                 <div class="input-group input-group-sm flex-grow-1" style="max-width: 280px;">
                     <span class="input-group-text bg-white border-end-0">
                         <i class="bi bi-search text-muted"></i>
                     </span>
-                    <input type="text" class="form-control border-start-0 shadow-none" id="gradeSearchInput"
+                    <input type="text" class="form-control" id="gradeSearchInput"
                         placeholder="Tìm theo tên hoặc MSSV...">
                 </div>
                 <select class="form-select form-select-sm shadow-none" id="gradeStatusFilter" style="max-width: 160px;">
@@ -223,21 +244,35 @@
                 <i class="bi bi-info-circle me-1"></i>
                 Điểm nhập trong khoảng 0 - 100. Tổng điểm sẽ tự động cập nhật.
             </div>
-            <div class="d-flex flex-wrap gap-2">
-                <div class="d-flex align-items-center gap-2">
+            <div class="d-flex flex-wrap gap-2 class-detail-footer-actions">
+                <div class="d-flex align-items-center gap-2 class-detail-footer-item">
                     <input type="file" id="classDetailImportInput" accept=".xlsx,.xls" class="d-none" />
                     <button class="btn btn-outline-success btn-sm" id="classDetailImportBtn">
                         <i class="bi bi-upload me-1"></i> Nhập điểm Excel
                     </button>
                 </div>
-                <!-- Multi-Quiz Import Button -->
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2 class-detail-footer-item">
                     <input type="file" id="multiQuizImportInput" accept=".xlsx,.xls" class="d-none" />
                     <button class="btn btn-success btn-sm" id="multiQuizImportBtn"
                         title="Nhập điểm từ file có nhiều sheet Quiz/Lab">
                         <i class="bi bi-file-earmark-spreadsheet me-1"></i> Nhập Quiz/Lab (Nhiều sheet)
                     </button>
                 </div>
+                <div class="d-flex align-items-center gap-2 ms-1 class-detail-footer-item">
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" id="importOnlyEmpty" checked />
+                        <label class="form-check-label small text-muted" for="importOnlyEmpty">
+                            ko thêm 0 vào ô trống
+                        </label>
+                    </div>
+                </div>
+                <button class="btn btn-outline-success btn-sm" id="classDetailExportExcelBtn">
+                    <i class="bi bi-file-earmark-excel me-1"></i> Xuất toàn bộ điểm (Excel)
+                </button>
+                <button class="btn btn-outline-dark btn-sm" id="syncGoogleSheetBtn" data-bs-toggle="modal"
+                    data-bs-target="#syncGoogleSheetModal">
+                    <i class="bi bi-google me-1"></i> Sync Google Sheet
+                </button>
                 <button class="btn btn-outline-primary btn-sm" id="classDetailResetBtn">
                     <i class="bi bi-arrow-counterclockwise me-1"></i> Hoàn tác thay đổi
                 </button>
@@ -280,11 +315,25 @@
                         </div>
                     </div>
                     <div class="col-12">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div id="quickImportStatus" class="text-muted small"></div>
-                            <button class="btn btn-warning btn-sm" id="quickImportBtn">
-                                <i class="bi bi-lightning-charge me-1"></i> Áp dụng điểm
-                            </button>
+                        <div class="d-flex justify-content-between align-items-center class-detail-quick-row">
+                            <div class="d-flex align-items-center gap-3 class-detail-quick-meta">
+                                <div id="quickImportStatus" class="text-muted small"></div>
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="checkbox" id="quickImportOnlyEmpty" checked />
+                                    <label class="form-check-label small text-muted" for="quickImportOnlyEmpty">
+                                        Chỉ điền ô trống
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2 class-detail-quick-actions">
+                                <button class="btn btn-outline-secondary btn-sm" id="fillZeroBtn"
+                                    title="Điền 0 vào tất cả ô trống của cột đã chọn">
+                                    <i class="bi bi-0-circle me-1"></i> Điền 0 vào ô trống
+                                </button>
+                                <button class="btn btn-warning btn-sm" id="quickImportBtn">
+                                    <i class="bi bi-lightning-charge me-1"></i> Áp dụng điểm
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -298,15 +347,19 @@
                 <i class="bi bi-bar-chart-fill text-primary"></i>
                 Thống kê phổ điểm
             </h5>
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2 class-detail-stats-controls">
                 <label class="small text-muted mb-0 text-nowrap fw-semibold">Xem theo:</label>
                 <select class="form-select form-select-sm shadow-none border" id="chartComponentSelect"
                     style="width: auto; min-width: 180px;">
                     <option value="TOTAL">Tổng điểm (có bonus)</option>
                 </select>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="statsChartToggleBtn"
+                    aria-expanded="true" title="Ẩn/Hiện thống kê">
+                    <i class="bi bi-chevron-up me-1"></i><span class="toggle-label">Ẩn</span>
+                </button>
             </div>
         </div>
-        <div class="card-body">
+        <div class="card-body" id="statsChartBody">
             <div class="row g-4 align-items-center">
                 <div class="col-12 col-lg-8">
                     <div style="position: relative; height: 320px;">
@@ -504,6 +557,164 @@
     </div>
 </div>
 
+<!-- Share QR Modal -->
+<div class="modal fade" id="shareQrModal" tabindex="-1" aria-labelledby="shareQrModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header text-white" style="background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);">
+                <h5 class="modal-title" id="shareQrModalLabel">
+                    <i class="bi bi-qr-code-scan me-2"></i> Share điểm cho sinh viên
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <img id="shareQrImage" alt="QR code tra cứu điểm" class="img-fluid border rounded p-2 bg-white"
+                        style="max-width: 280px;">
+                    <div class="small text-muted mt-2">
+                        Sinh viên quét mã QR để mở trang tra cứu điểm
+                    </div>
+                </div>
+
+                <label class="form-label small text-muted mb-1">Link tra cứu điểm:</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="shareQrLinkInput" readonly>
+                    <button class="btn btn-outline-primary" type="button" id="copyShareLinkFromModalBtn">
+                        <i class="bi bi-clipboard me-1"></i> Copy
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-success" id="copyQrImageBtn">
+                    <i class="bi bi-image me-1"></i> Copy ảnh QR
+                </button>
+                <button type="button" class="btn btn-success" id="downloadQrBtn">
+                    <i class="bi bi-download me-1"></i> Tải ảnh
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sync Google Sheet Modal -->
+<div class="modal fade" id="syncGoogleSheetModal" tabindex="-1" aria-labelledby="syncGoogleSheetModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header text-white" style="background: linear-gradient(135deg, #0f9d58 0%, #0b8043 100%);">
+                <h5 class="modal-title" id="syncGoogleSheetModalLabel">
+                    <i class="bi bi-google me-2"></i> Sync điểm sang Google Sheet
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="googleSheetInput" class="form-label fw-semibold">Spreadsheet ID hoặc URL</label>
+                    <input type="text" class="form-control" id="googleSheetInput"
+                        placeholder="https://docs.google.com/spreadsheets/d/... hoặc ID">
+                    <div class="form-text">Dán link đầy đủ hoặc chỉ ID của Google Sheet.</div>
+                </div>
+                <div class="mb-3">
+                    <label for="googleSheetTabInput" class="form-label fw-semibold">Tên tab sheet</label>
+                    <input type="text" class="form-control" id="googleSheetTabInput" value="BangDiem"
+                        placeholder="BangDiem">
+                </div>
+                <div class="alert alert-info py-2 small mb-2">
+                    Đồng bộ toàn bộ bảng điểm hiện tại của lớp (gồm điểm thành phần, tổng, trạng thái, bonus, ghi chú).
+                </div>
+                <div id="googleSheetSyncStatus" class="small text-muted"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-success" id="confirmSyncGoogleSheetBtn">
+                    <i class="bi bi-cloud-arrow-up me-1"></i> Sync ngay
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Timer Modal -->
+<div class="modal fade" id="timerModal" tabindex="-1" aria-labelledby="timerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header text-white" style="background-color: #374151;">
+                <h5 class="modal-title" id="timerModalLabel">
+                    <i class="bi bi-stopwatch me-2"></i> Hẹn Giờ
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-4">
+                    <div class="timer-display mb-2">
+                        <span id="timerMin">00</span>:<span id="timerSec">00</span>
+                    </div>
+                    <div class="text-muted small">Bộ đếm ngược cho hoạt động trong lớp</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Chọn nhanh:</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-outline-secondary timer-quick-set" data-minutes="1">1
+                            phút</button>
+                        <button type="button" class="btn btn-outline-secondary timer-quick-set" data-minutes="3">3
+                            phút</button>
+                        <button type="button" class="btn btn-outline-secondary timer-quick-set" data-minutes="5">5
+                            phút</button>
+                        <button type="button" class="btn btn-outline-secondary timer-quick-set" data-minutes="10">10
+                            phút</button>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Tùy chỉnh:</label>
+                    <div class="row g-2 align-items-end">
+                        <div class="col-5">
+                            <label class="form-label small text-muted">Phút</label>
+                            <input id="timerCustomMin" type="number" min="0" max="180" class="form-control" value="0">
+                        </div>
+                        <div class="col-5">
+                            <label class="form-label small text-muted">Giây</label>
+                            <input id="timerCustomSec" type="number" min="0" max="59" class="form-control" value="0">
+                        </div>
+                        <div class="col-2 d-grid">
+                            <button id="timerSetCustomBtn" type="button" class="btn btn-outline-primary"
+                                title="Đặt thời gian">
+                                <i class="bi bi-check2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button id="timerStartPauseBtn" type="button" class="btn btn-primary flex-fill">
+                        <i class="bi bi-play-fill me-1"></i> Bắt đầu
+                    </button>
+                    <button id="timerResetBtn" type="button" class="btn btn-outline-danger">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                    </button>
+                </div>
+
+                <div class="form-check form-switch mt-3">
+                    <input class="form-check-input" type="checkbox" id="timerSoundToggle" checked>
+                    <label class="form-check-label small text-muted" for="timerSoundToggle">
+                        Bật âm báo khi hết giờ
+                    </label>
+                </div>
+
+                <audio id="timerAudioAlarm" preload="auto"></audio>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Score Chart Modal -->
 <div class="modal fade" id="scoreChartModal" tabindex="-1" aria-labelledby="scoreChartModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -604,6 +815,16 @@
 
     #spinWheelBtn:disabled {
         opacity: 0.7;
+    }
+
+    .timer-display {
+        font-size: clamp(2.8rem, 8vw, 4.2rem);
+        line-height: 1;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.04em;
+        color: #1e293b;
+        transition: color 0.2s ease;
     }
 
     /* Copy column button styles */
@@ -745,6 +966,203 @@
     #classDetailTableBody tr.fail td:nth-child(2),
     #classDetailTableBody tr.fail td:nth-child(3) {
         background: linear-gradient(135deg, #fee2e2 0%, rgba(254, 226, 226, 0.7) 100%);
+    }
+
+    @media (max-width: 768px) {
+        .class-detail-page {
+            padding-left: 0.25rem;
+            padding-right: 0.25rem;
+        }
+
+        .class-detail-stats-row .stat-card {
+            min-height: 100%;
+        }
+
+        .class-detail-tools-row .card {
+            min-height: 0;
+        }
+
+        .class-detail-tool-body {
+            min-height: 72px;
+            padding-top: 0.9rem;
+            padding-bottom: 0.9rem;
+        }
+
+        .class-detail-action-col {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            gap: 0.5rem;
+        }
+
+        .class-detail-action-col > button,
+        .class-detail-action-col > .btn-group {
+            margin: 0 !important;
+        }
+
+        .class-detail-filter-row .input-group,
+        .class-detail-filter-row #gradeStatusFilter {
+            max-width: 100% !important;
+            width: 100%;
+        }
+
+        .class-detail-filter-row #gradeFilterCount {
+            width: 100%;
+            margin-left: 0 !important;
+        }
+
+        .class-detail-footer-actions {
+            width: 100%;
+        }
+
+        .class-detail-footer-item {
+            width: 100%;
+            margin-left: 0 !important;
+        }
+
+        .class-detail-footer-item .btn,
+        .class-detail-footer-item input[type="file"] + .btn {
+            width: 100%;
+        }
+
+        .class-detail-quick-row {
+            align-items: flex-start !important;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .class-detail-quick-meta,
+        .class-detail-quick-actions {
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .class-detail-quick-actions .btn {
+            flex: 1 1 170px;
+        }
+
+        #statsChartCard .card-header > div {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        #chartComponentSelect {
+            width: 100% !important;
+            min-width: 0 !important;
+        }
+
+        .class-detail-stats-controls {
+            width: 100%;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+        }
+
+        #statsChartToggleBtn {
+            margin-left: auto;
+        }
+
+        #classDetailTableWrapper {
+            max-height: 52vh;
+        }
+    }
+
+    @media (max-width: 430px) {
+        .class-detail-page {
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        .class-detail-stats-row .col-6 {
+            padding-left: 0.375rem;
+            padding-right: 0.375rem;
+        }
+
+        .class-detail-stats-row h3 {
+            font-size: 1.2rem;
+        }
+
+        .class-detail-tools-row .col-12 {
+            padding-left: 0.375rem;
+            padding-right: 0.375rem;
+        }
+
+        .class-detail-tool-body {
+            min-height: 64px;
+        }
+
+        .class-detail-tool-body h5 {
+            font-size: 1rem;
+        }
+
+        .class-detail-stats-controls label,
+        .class-detail-stats-controls #chartComponentSelect,
+        .class-detail-stats-controls #statsChartToggleBtn {
+            width: 100%;
+            margin-left: 0 !important;
+        }
+
+        .class-detail-action-col > button {
+            width: 100%;
+        }
+
+        .class-detail-action-col > .btn-group {
+            width: 100%;
+        }
+
+        .class-detail-action-col > .btn-group .btn:first-child {
+            flex: 1 1 auto;
+        }
+
+        #classDetailTableHeader th,
+        #classDetailTableBody td {
+            position: static !important;
+            left: auto !important;
+        }
+
+        #classDetailTableHeader th:nth-child(3)::after,
+        #classDetailTableBody td:nth-child(3)::after {
+            display: none;
+        }
+
+        #classDetailTableHeader th:nth-child(3),
+        #classDetailTableBody td:nth-child(3) {
+            border-right: none;
+        }
+
+        #classDetailTableWrapper {
+            max-height: none;
+        }
+
+        #classDetailTableWrapper table {
+            font-size: 0.79rem;
+        }
+
+        #classDetailTableWrapper th,
+        #classDetailTableWrapper td {
+            padding: 0.5rem 0.45rem;
+            white-space: nowrap;
+        }
+
+        #luckyWheelModal .modal-dialog,
+        #teamGroupModal .modal-dialog,
+        #scoreChartModal .modal-dialog,
+        #chartStudentListModal .modal-dialog,
+        #shareQrModal .modal-dialog,
+        #syncGoogleSheetModal .modal-dialog,
+        #timerModal .modal-dialog {
+            margin: 0.45rem;
+        }
+
+        #luckyWheelModal .modal-body,
+        #teamGroupModal .modal-body,
+        #scoreChartModal .modal-body,
+        #chartStudentListModal .modal-body,
+        #shareQrModal .modal-body,
+        #syncGoogleSheetModal .modal-body,
+        #timerModal .modal-body {
+            max-height: calc(100vh - 150px);
+            overflow-y: auto;
+        }
     }
 </style>
 

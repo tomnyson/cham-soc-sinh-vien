@@ -1,137 +1,151 @@
-<%
-    const hasProfiles = Array.isArray(profiles) && profiles.length > 0;
+<% const hasProfiles=Array.isArray(profiles) && profiles.length> 0;
     const hasClasses = Array.isArray(classes) && classes.length > 0;
     const selectedProfile = hasProfiles
-        ? profiles.find(profile => profile.profileId === selectedProfileId) || null
-        : null;
+    ? profiles.find(profile => profile.profileId === selectedProfileId) || null
+    : null;
     const selectedClass = hasClasses
-        ? classes.find(cls => cls.classId === selectedClassId) || null
-        : null;
+    ? classes.find(cls => cls.classId === selectedClassId) || null
+    : null;
     const defaultTemplateSource = hasClasses ? 'class' : 'upload';
-%>
+    %>
 
-<!-- Template Generation Page -->
-<div class="container-fluid py-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h1 class="h3 mb-0">
-                <i class="bi bi-file-earmark-text-fill text-primary me-2"></i>
-                Tạo Template điểm
-            </h1>
-        </div>
-    </div>
-
-    <!-- Profile Selection -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5 class="card-title">Chọn Profile điểm</h5>
-            <select class="form-select" id="templateProfileSelect" onchange="updateTemplateProfile()">
-                <option value="">-- Chọn profile --</option>
-                <% if (hasProfiles) { %>
-                    <% profiles.forEach(profile => { %>
-                        <option value="<%= profile.profileId %>" <%= profile.profileId === selectedProfileId ? 'selected' : '' %>>
-                            <%= profile.name %>
-                        </option>
-                    <% }) %>
-                <% } %>
-            </select>
-
-            <div id="templateProfileInfo" class="alert <%= selectedProfile ? 'alert-success' : 'alert-info' %> mt-3 mb-0">
-                <% if (!selectedProfile) { %>
-                    <%= hasProfiles ? 'Vui lòng chọn profile để xem chi tiết' : 'Chưa có profile nào. Hãy tạo profile ở mục Quản lý Profile.' %>
-                <% } else { %>
-                    <strong><%= selectedProfile.name %></strong><br>
-                    Ngưỡng qua môn: ≥<%= selectedProfile.passThreshold %> điểm<br>
-                    Trọng số:
-                    <% if (Object.keys(selectedProfile.weights || {}).length === 0) { %>
-                        Chưa cấu hình trọng số
-                    <% } else { %>
-                        <%= Object.entries(selectedProfile.weights || {}).map(([key, value]) => `${key}: ${value}%`).join(', ') %>
-                    <% } %>
-                <% } %>
+    <!-- Template Generation Page -->
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="h3 mb-0">
+                    <i class="bi bi-file-earmark-text-fill text-primary me-2"></i>
+                    Tạo Template điểm
+                </h1>
             </div>
         </div>
-    </div>
 
-    <!-- Data Source Selection -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5 class="card-title">Chọn nguồn danh sách sinh viên</h5>
-            <div class="mb-3">
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="templateSource" id="sourceClass" value="class"
-                        <%= defaultTemplateSource === 'class' ? 'checked' : '' %>
-                        onchange="updateTemplateSource()">
-                    <label class="form-check-label" for="sourceClass">
-                        Từ lớp học đã lưu
-                    </label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="templateSource" id="sourceUpload" value="upload" <%= defaultTemplateSource === 'upload' ? 'checked' : '' %> onchange="updateTemplateSource()">
-                    <label class="form-check-label" for="sourceUpload">
-                        Upload file danh sách
-                    </label>
-                </div>
-            </div>
-
-            <!-- Class Source -->
-            <div id="classSourceSection" style="<%= defaultTemplateSource === 'class' ? '' : 'display: none;' %>">
-                <select class="form-select" id="templateClassSelect" onchange="updateTemplateClass()">
-                    <option value="">-- Chọn lớp --</option>
-                    <% if (hasClasses) { %>
-                        <% classes.forEach(cls => { %>
-                            <option value="<%= cls.classId %>" <%= cls.classId === selectedClassId ? 'selected' : '' %>>
-                                <%= cls.name %>
+        <!-- Profile Selection -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Chọn Profile điểm</h5>
+                <select class="form-select" id="templateProfileSelect" onchange="updateTemplateProfile()">
+                    <option value="">-- Chọn profile --</option>
+                    <% if (hasProfiles) { %>
+                        <% profiles.forEach(profile=> { %>
+                            <option value="<%= profile.profileId %>" <%=profile.profileId===selectedProfileId
+                                ? 'selected' : '' %>>
+                                <%= profile.name %>
                             </option>
-                        <% }) %>
-                    <% } %>
+                            <% }) %>
+                                <% } %>
                 </select>
-                <div id="templateClassInfo" class="alert <%= selectedClass ? 'alert-success' : 'alert-info' %> mt-2 mb-0">
-                    <% if (!selectedClass) { %>
-                        <%= hasClasses ? 'Vui lòng chọn lớp để xem chi tiết' : 'Chưa có lớp học nào. Hãy tạo lớp ở mục Quản lý Lớp học hoặc upload file danh sách.' %>
-                    <% } else { %>
-                        <strong><%= selectedClass.name %></strong><br>
-                        <%= selectedClass.description || 'Không có mô tả' %><br>
-                        Số sinh viên: <%= selectedClass.students.length %>
-                    <% } %>
+
+                <div id="templateProfileInfo"
+                    class="alert <%= selectedProfile ? 'alert-success' : 'alert-info' %> mt-3 mb-0">
+                    <% if (!selectedProfile) { %>
+                        <%= hasProfiles ? 'Vui lòng chọn profile để xem chi tiết'
+                            : 'Chưa có profile nào. Hãy tạo profile ở mục Quản lý Profile.' %>
+                            <% } else { %>
+                                <strong>
+                                    <%= selectedProfile.name %>
+                                </strong><br>
+                                Ngưỡng qua môn: ≥<%= selectedProfile.passThreshold %> điểm<br>
+                                    Trọng số:
+                                    <% if (Object.keys(selectedProfile.weights || {}).length===0) { %>
+                                        Chưa cấu hình trọng số
+                                        <% } else { %>
+                                            <%= Object.entries(selectedProfile.weights || {}).map(([key, value])=>
+                                                `${key}: ${value}%`).join(', ') %>
+                                                <% } %>
+                                                    <% } %>
                 </div>
             </div>
+        </div>
 
-            <!-- Upload Source -->
-            <div id="uploadSourceSection" style="<%= defaultTemplateSource === 'upload' ? '' : 'display: none;' %>">
-                <input type="file" class="form-control" id="classListInput" accept=".xlsx, .xls" onchange="handleClassListUpload(event)">
-                <div class="form-text">Upload file Excel chứa danh sách sinh viên (MSSV, Họ tên)</div>
-                <div id="classListFileName" class="text-muted mt-2"></div>
+        <!-- Data Source Selection -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Chọn nguồn danh sách sinh viên</h5>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="templateSource" id="sourceClass"
+                            value="class" <%=defaultTemplateSource==='class' ? 'checked' : '' %>
+                        onchange="updateTemplateSource()">
+                        <label class="form-check-label" for="sourceClass">
+                            Từ lớp học đã lưu
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="templateSource" id="sourceUpload"
+                            value="upload" <%=defaultTemplateSource==='upload' ? 'checked' : '' %>
+                        onchange="updateTemplateSource()">
+                        <label class="form-check-label" for="sourceUpload">
+                            Upload file danh sách
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Class Source -->
+                <div id="classSourceSection" style="<%= defaultTemplateSource === 'class' ? '' : 'display: none;' %>">
+                    <select class="form-select" id="templateClassSelect" onchange="updateTemplateClass()">
+                        <option value="">-- Chọn lớp --</option>
+                        <% if (hasClasses) { %>
+                            <% classes.forEach(cls=> { %>
+                                <option value="<%= cls.classId %>" <%=cls.classId===selectedClassId ? 'selected' : '' %>
+                                    >
+                                    <%= cls.name %>
+                                </option>
+                                <% }) %>
+                                    <% } %>
+                    </select>
+                    <div id="templateClassInfo"
+                        class="alert <%= selectedClass ? 'alert-success' : 'alert-info' %> mt-2 mb-0">
+                        <% if (!selectedClass) { %>
+                            <%= hasClasses ? 'Vui lòng chọn lớp để xem chi tiết'
+                                : 'Chưa có lớp học nào. Hãy tạo lớp ở mục Quản lý Lớp học hoặc upload file danh sách.'
+                                %>
+                                <% } else { %>
+                                    <strong>
+                                        <%= selectedClass.name %>
+                                    </strong><br>
+                                    <%= selectedClass.description || 'Không có mô tả' %><br>
+                                        Số sinh viên: <%= selectedClass.students.length %>
+                                            <% } %>
+                    </div>
+                </div>
+
+                <!-- Upload Source -->
+                <div id="uploadSourceSection" style="<%= defaultTemplateSource === 'upload' ? '' : 'display: none;' %>">
+                    <input type="file" class="form-control" id="classListInput" accept=".xlsx, .xls"
+                        onchange="handleClassListUpload(event)">
+                    <div class="form-text">Upload file Excel chứa danh sách sinh viên (MSSV, Họ tên)</div>
+                    <div id="classListFileName" class="text-muted mt-2"></div>
+                </div>
             </div>
+        </div>
+
+        <!-- Generate Button -->
+        <div class="text-center">
+            <button class="btn btn-success btn-lg" id="generateTemplateBtn" onclick="generateTemplate()" disabled>
+                <i class="bi bi-file-earmark-arrow-down me-2"></i>
+                Tạo Template
+            </button>
         </div>
     </div>
 
-    <!-- Generate Button -->
-    <div class="text-center">
-        <button class="btn btn-success btn-lg" id="generateTemplateBtn" onclick="generateTemplate()" disabled>
-            <i class="bi bi-file-earmark-arrow-down me-2"></i>
-            Tạo Template
-        </button>
-    </div>
-</div>
-
-<script>
-// Initialize template page when data is ready
-window.addEventListener('app-data-ready', function() {
-    if (typeof updateProfileSelect === 'function') {
-        updateProfileSelect();
-    }
-    if (typeof updateClassSelect === 'function') {
-        updateClassSelect();
-    }
-    if (typeof updateTemplateSource === 'function') {
-        updateTemplateSource();
-    }
-    if (typeof updateTemplateProfile === 'function') {
-        updateTemplateProfile();
-    }
-    if (typeof updateTemplateClass === 'function') {
-        updateTemplateClass();
-    }
-});
-</script>
+    <script>
+        // Initialize template page when data is ready
+        window.addEventListener('app-data-ready', function () {
+            if (typeof updateProfileSelect === 'function') {
+                updateProfileSelect();
+            }
+            if (typeof updateClassSelect === 'function') {
+                updateClassSelect();
+            }
+            if (typeof updateTemplateSource === 'function') {
+                updateTemplateSource();
+            }
+            if (typeof updateTemplateProfile === 'function') {
+                updateTemplateProfile();
+            }
+            if (typeof updateTemplateClass === 'function') {
+                updateTemplateClass();
+            }
+        });
+    </script>

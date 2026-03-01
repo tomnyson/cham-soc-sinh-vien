@@ -7,7 +7,7 @@
                 </div>
                 <h1 class="h3 mb-3">Không tìm thấy lớp học</h1>
                 <p class="text-muted mb-4">
-                    Lớp với mã <strong><%= pageData.classId %></strong> không tồn tại hoặc bạn không có quyền truy cập.
+                    Lớp với mã <strong><%= typeof classId !== 'undefined' ? classId : (pageData && pageData.classId ? pageData.classId : '') %></strong> không tồn tại hoặc bạn không có quyền truy cập.
                 </p>
                 <a class="btn btn-primary" href="/classes">
                     <i class="bi bi-arrow-left-short"></i>

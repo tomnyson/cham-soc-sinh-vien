@@ -1,0 +1,76 @@
+<div class="container-fluid py-4 branding-page" id="brandingPage">
+    <div class="row align-items-center mb-4">
+        <div class="col-lg-8">
+            <h1 class="h3 mb-1">
+                <i class="bi bi-palette2 me-2 text-primary"></i> Branding Share Điểm
+            </h1>
+            <p class="text-muted mb-0">
+                Cấu hình logo/subtext dùng chung cho toàn bộ app và trang tra cứu điểm công khai (<code>/student.html</code>), màu primary áp dụng cho trang share điểm.
+            </p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <div class="mb-3">
+                        <label for="brandingLogoInput" class="form-label fw-semibold">Logo</label>
+                        <input class="form-control" type="file" id="brandingLogoInput"
+                            accept="image/png,image/jpeg,image/webp">
+                        <div class="form-text">Chỉ nhận PNG/JPG/WEBP, tối đa 500KB.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="brandingSubtextInput" class="form-label fw-semibold">Subtext</label>
+                        <input type="text" class="form-control" id="brandingSubtextInput" maxlength="80"
+                            placeholder="FPT Polytechnic">
+                    </div>
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6">
+                            <label for="brandingPrimaryColorPicker" class="form-label fw-semibold">Primary Color</label>
+                            <input type="color" class="form-control form-control-color" id="brandingPrimaryColorPicker" value="#FF6C00" title="Chọn màu">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="brandingPrimaryColorInput" class="form-label fw-semibold">Mã màu HEX</label>
+                            <input type="text" class="form-control text-uppercase" id="brandingPrimaryColorInput" value="#FF6C00" maxlength="7" placeholder="#FF6C00">
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 mt-4">
+                        <button class="btn btn-primary" id="brandingSaveBtn" type="button">
+                            <i class="bi bi-save me-1"></i> Lưu Branding
+                        </button>
+                        <button class="btn btn-outline-secondary" id="brandingResetBtn" type="button">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset mặc định
+                        </button>
+                    </div>
+
+                    <div class="branding-status mt-3" id="brandingStatus"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body p-4">
+                    <h2 class="h6 text-muted mb-3">Preview nhanh</h2>
+                    <div class="branding-preview" id="brandingPreview" style="--branding-preview-color:#FF6C00;">
+                        <div class="branding-preview-header">
+                            <img id="brandingLogoPreview" src="https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png"
+                                alt="Logo preview">
+                            <h3><i class="bi bi-mortarboard-fill"></i> Tra cứu điểm sinh viên</h3>
+                            <p id="brandingSubtextPreview">FPT Polytechnic</p>
+                        </div>
+                    </div>
+                    <p class="small text-muted mb-0 mt-3">
+                        Preview mô phỏng phần header của trang share điểm.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="/js/pages/branding.js"></script>

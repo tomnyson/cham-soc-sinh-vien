@@ -32,6 +32,21 @@ class ClassService {
     }
 
     /**
+     * Lấy lớp theo ID (không ràng buộc user) cho tra cứu điểm công khai
+     */
+    async getClassByIdAnyUser(classId) {
+        try {
+            const classData = await Class.findOne({ classId });
+            if (!classData) {
+                throw new Error('Class not found');
+            }
+            return classData;
+        } catch (error) {
+            throw new Error(`Error fetching class: ${error.message}`);
+        }
+    }
+
+    /**
      * Tạo lớp mới
      */
     async createClass(classData, userId = 'default') {

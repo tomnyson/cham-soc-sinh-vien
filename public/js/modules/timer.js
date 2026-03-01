@@ -3,6 +3,7 @@ const TimerModule = {
     // Timer state
     timers: [],
     activeTimerId: null,
+    alarmIntervalId: null,   // track looping alarm
 
     // Initialize the module
     init() {
@@ -99,6 +100,7 @@ const TimerModule = {
         const timer = this.timers.find(t => t.id === timerId);
         if (!timer) return;
 
+        this.stopAlarm(); // stop any ringing alarm
         timer.remainingTime = timer.totalTime;
         timer.isRunning = false;
         timer.isPaused = false;
@@ -113,6 +115,7 @@ const TimerModule = {
     deleteTimer(timerId) {
         if (!confirm('Bạn có chắc muốn xóa timer này?')) return;
 
+        this.stopAlarm(); // stop any ringing alarm
         this.timers = this.timers.filter(t => t.id !== timerId);
         this.saveTimers();
         this.updateUI();
@@ -144,27 +147,40 @@ const TimerModule = {
 
     // Timer completed
     onTimerComplete(timer) {
-        // Play notification sound
-        this.playNotificationSound();
+        // Start looping alarm
+        this.startAlarm();
 
-        // Show notification
+        // Show browser notification
         if (Notification.permission === 'granted') {
+            const brandingLogo = String(window.__APP_BRANDING__?.logoDataUrl || 'https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png').trim()
+                || 'https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png';
             new Notification('⏰ Hẹn giờ hoàn thành!', {
                 body: `${timer.name} đã kết thúc!`,
-                icon: 'https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png'
+                icon: brandingLogo
             });
         }
-
-        // Show alert
-        setTimeout(() => {
-            alert(`⏰ Timer "${timer.name}" đã hoàn thành!`);
-        }, 100);
 
         this.updateUI();
     },
 
-    // Play notification sound
-    playNotificationSound() {
+    // Start looping alarm — repeats every 1.2s until stopAlarm() is called
+    startAlarm() {
+        this.stopAlarm(); // clear any existing alarm
+        this._playBeep();
+        this.alarmIntervalId = setInterval(() => this._playBeep(), 1200);
+    },
+
+    // Stop the alarm
+    stopAlarm() {
+        if (this.alarmIntervalId !== null) {
+            clearInterval(this.alarmIntervalId);
+            this.alarmIntervalId = null;
+        }
+        this.updateUI();
+    },
+
+    // Play a single beep tone
+    _playBeep() {
         try {
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const oscillator = audioContext.createOscillator();
@@ -173,20 +189,12 @@ const TimerModule = {
             oscillator.connect(gainNode);
             gainNode.connect(audioContext.destination);
 
-            oscillator.frequency.value = 800;
+            oscillator.frequency.value = 880;
             oscillator.type = 'sine';
-            gainNode.gain.value = 0.3;
-
+            gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.9);
             oscillator.start();
-
-            // Beep pattern
-            setTimeout(() => oscillator.frequency.value = 1000, 200);
-            setTimeout(() => oscillator.frequency.value = 800, 400);
-            setTimeout(() => oscillator.frequency.value = 1000, 600);
-            setTimeout(() => {
-                oscillator.stop();
-                audioContext.close();
-            }, 800);
+            oscillator.stop(audioContext.currentTime + 0.9);
         } catch (e) {
             console.log('Audio not supported');
         }
@@ -310,8 +318,13 @@ const TimerModule = {
                     
                     <div class="timer-actions">
                         ${timer.isFinished ? `
+                            ${this.alarmIntervalId !== null ? `
+                                <button class="btn btn-sm btn-danger fw-bold" onclick="TimerModule.stopAlarm()">
+                                    <i class="bi bi-bell-slash-fill"></i> D\u1eebng chu\u00f4ng
+                                </button>
+                            ` : ''}
                             <button class="btn btn-sm btn-outline-success" onclick="TimerModule.resetTimer('${timer.id}')">
-                                <i class="bi bi-arrow-clockwise"></i> Đặt lại
+                                <i class="bi bi-arrow-clockwise"></i> \u0110\u1eb7t l\u1ea1i
                             </button>
                         ` : timer.isRunning ? `
                             <button class="btn btn-sm btn-warning" onclick="TimerModule.pauseTimer('${timer.id}')">

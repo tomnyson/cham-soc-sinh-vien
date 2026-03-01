@@ -20,26 +20,65 @@
     function initializeSidebar() {
         const toggleBtn = document.getElementById('toggleSidebar');
         const sidebar = document.getElementById('sidebar');
+        const backdrop = document.getElementById('sidebarBackdrop');
+
+        const isMobileViewport = () => window.innerWidth < 768;
+        const closeSidebar = () => {
+            if (!sidebar) return;
+            sidebar.classList.remove('show');
+            if (backdrop) {
+                backdrop.classList.remove('show');
+            }
+        };
+
+        const toggleSidebar = () => {
+            if (!sidebar) return;
+
+            if (isMobileViewport()) {
+                const willShow = !sidebar.classList.contains('show');
+                sidebar.classList.toggle('show', willShow);
+                if (backdrop) {
+                    backdrop.classList.toggle('show', willShow);
+                }
+            } else {
+                sidebar.classList.toggle('collapsed');
+            }
+        };
 
         if (toggleBtn && sidebar) {
             toggleBtn.addEventListener('click', function() {
-                const isMobile = window.innerWidth < 768;
-                
-                if (isMobile) {
-                    sidebar.classList.toggle('show');
-                } else {
-                    sidebar.classList.toggle('collapsed');
-                }
+                toggleSidebar();
             });
+
+            if (backdrop) {
+                backdrop.addEventListener('click', closeSidebar);
+            }
 
             // Close sidebar when clicking outside on mobile
             document.addEventListener('click', function(event) {
-                const isMobile = window.innerWidth < 768;
-                
-                if (isMobile && sidebar.classList.contains('show')) {
+                if (isMobileViewport() && sidebar.classList.contains('show')) {
                     if (!sidebar.contains(event.target) && !toggleBtn.contains(event.target)) {
-                        sidebar.classList.remove('show');
+                        closeSidebar();
                     }
+                }
+            });
+
+            // Close mobile sidebar when selecting a menu item
+            sidebar.querySelectorAll('.nav-item').forEach((item) => {
+                item.addEventListener('click', () => {
+                    if (isMobileViewport()) {
+                        closeSidebar();
+                    }
+                });
+            });
+
+            // Reset mobile state when resizing to desktop
+            window.addEventListener('resize', () => {
+                if (!isMobileViewport()) {
+                    if (backdrop) {
+                        backdrop.classList.remove('show');
+                    }
+                    sidebar.classList.remove('show');
                 }
             });
         }
@@ -58,11 +97,18 @@
      */
     function updateActiveNavigation() {
         const path = window.location.pathname || '/grade-check';
+        const isRouteActive = (route, currentPath) => {
+            if (!route || !currentPath) return false;
+            if (route === currentPath) return true;
+            if (currentPath === '/' && route === '/grade-check') return true;
+            if (route !== '/' && currentPath.startsWith(`${route}/`)) return true;
+            return false;
+        };
         
         // Update sidebar nav items
         document.querySelectorAll('.sidebar .nav-item').forEach(item => {
             const route = item.getAttribute('data-route');
-            if (route === path || (path === '/' && route === '/grade-check')) {
+            if (isRouteActive(route, path)) {
                 item.classList.add('active');
             } else {
                 item.classList.remove('active');
@@ -72,7 +118,7 @@
         // Update mobile bottom nav items
         document.querySelectorAll('.mobile-nav-item').forEach(item => {
             const route = item.getAttribute('data-route');
-            if (route === path || (path === '/' && route === '/grade-check')) {
+            if (isRouteActive(route, path)) {
                 item.classList.add('active');
             } else {
                 item.classList.remove('active');

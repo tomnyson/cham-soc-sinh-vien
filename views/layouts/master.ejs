@@ -33,6 +33,7 @@
 
 <body>
     <%- include('../partials/sidebar') %>
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
         <!-- Main Content -->
         <div class="main-content">
@@ -48,6 +49,10 @@
         </div>
 
         <%- include('../partials/modals') %>
+
+            <script>
+                window.__APP_BRANDING__ = <%- JSON.stringify(branding || {}).replace(/</g, '\\u003c') %>;
+            </script>
 
             <% if (typeof initialData !== 'undefined' && initialData) { %>
                 <script>

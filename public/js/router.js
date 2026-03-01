@@ -101,10 +101,18 @@ class Router {
 
     // Update navigation active states
     updateNavigation(path) {
+        const isRouteActive = (route, currentPath) => {
+            if (!route || !currentPath) return false;
+            if (route === currentPath) return true;
+            if (currentPath === '/' && route === '/grade-check') return true;
+            if (route !== '/' && currentPath.startsWith(`${route}/`)) return true;
+            return false;
+        };
+
         // Update sidebar nav items
         document.querySelectorAll('.nav-item').forEach(item => {
             const route = item.getAttribute('data-route');
-            if (route === path) {
+            if (isRouteActive(route, path)) {
                 item.classList.add('active');
             } else {
                 item.classList.remove('active');
@@ -114,7 +122,7 @@ class Router {
         // Update mobile nav items
         document.querySelectorAll('.mobile-nav-item').forEach(item => {
             const route = item.getAttribute('data-route');
-            if (route === path) {
+            if (isRouteActive(route, path)) {
                 item.classList.add('active');
             } else {
                 item.classList.remove('active');
@@ -123,9 +131,13 @@ class Router {
 
         // Close sidebar on mobile
         const sidebar = document.getElementById('sidebar');
+        const sidebarBackdrop = document.getElementById('sidebarBackdrop');
         const isMobile = window.innerWidth < 768;
         if (isMobile && sidebar) {
             sidebar.classList.remove('show');
+            if (sidebarBackdrop) {
+                sidebarBackdrop.classList.remove('show');
+            }
         }
     }
 

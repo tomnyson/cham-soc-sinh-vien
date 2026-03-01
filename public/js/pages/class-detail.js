@@ -69,6 +69,7 @@ const elements = {
     profileSelect: document.getElementById('classDetailProfileSelect'),
     saveBtn: document.getElementById('classDetailSaveBtn'),
     resetBtn: document.getElementById('classDetailResetBtn'),
+    exportExcelBtn: document.getElementById('classDetailExportExcelBtn'),
     importBtn: document.getElementById('classDetailImportBtn'),
     importInput: document.getElementById('classDetailImportInput'),
     importStatus: document.getElementById('classDetailImportStatus'),
@@ -80,6 +81,8 @@ const elements = {
     profileName: document.getElementById('classDetailProfileName'),
     passRate: document.getElementById('classDetailPassRate'),
     studentCount: document.getElementById('classDetailStudentCount'),
+    statsChartBody: document.getElementById('statsChartBody'),
+    statsChartToggleBtn: document.getElementById('statsChartToggleBtn'),
     // Quick import elements
     quickImportColumn: document.getElementById('quickImportColumn'),
     quickImportText: document.getElementById('quickImportText'),
@@ -103,6 +106,13 @@ const elements = {
     copyShareLinkFromModalBtn: document.getElementById('copyShareLinkFromModalBtn'),
     copyQrImageBtn: document.getElementById('copyQrImageBtn'),
     downloadQrBtn: document.getElementById('downloadQrBtn'),
+    // Google Sheet sync elements
+    syncGoogleSheetBtn: document.getElementById('syncGoogleSheetBtn'),
+    syncGoogleSheetModal: document.getElementById('syncGoogleSheetModal'),
+    googleSheetInput: document.getElementById('googleSheetInput'),
+    googleSheetTabInput: document.getElementById('googleSheetTabInput'),
+    confirmSyncGoogleSheetBtn: document.getElementById('confirmSyncGoogleSheetBtn'),
+    googleSheetSyncStatus: document.getElementById('googleSheetSyncStatus'),
     // Lucky wheel elements
     wheelCanvas: document.getElementById('wheelCanvas'),
     spinWheelBtn: document.getElementById('spinWheelBtn'),
@@ -135,7 +145,12 @@ const elements = {
     timerAudioAlarm: document.getElementById('timerAudioAlarm'),
     // Search and Filter elements
     gradeSearchInput: document.getElementById('gradeSearchInput'),
-    gradeStatusFilter: document.getElementById('gradeStatusFilter')
+    gradeStatusFilter: document.getElementById('gradeStatusFilter'),
+    // Import only-empty checkboxes
+    importOnlyEmpty: document.getElementById('importOnlyEmpty'),
+    quickImportOnlyEmpty: document.getElementById('quickImportOnlyEmpty'),
+    // Fill-zero button
+    fillZeroBtn: document.getElementById('fillZeroBtn')
 };
 
 function init() {
@@ -151,6 +166,7 @@ function init() {
 
     bindEvents();
     ensureProfileSelection();
+    initializeStatsChartVisibility();
     renderGradesTable();
     updateSummary();
     initializeChartListeners();
@@ -179,6 +195,9 @@ function bindEvents() {
     if (exportChartBtn) {
         exportChartBtn.addEventListener('click', exportChartToImage);
     }
+    if (elements.statsChartToggleBtn) {
+        elements.statsChartToggleBtn.addEventListener('click', toggleStatsChartVisibility);
+    }
 
     // Chart type change
     document.querySelectorAll('input[name="chartType"]').forEach(radio => {
@@ -193,6 +212,10 @@ function bindEvents() {
         elements.resetBtn.addEventListener('click', resetChanges);
     }
 
+    if (elements.exportExcelBtn) {
+        elements.exportExcelBtn.addEventListener('click', exportAllGradesToExcel);
+    }
+
     if (elements.importBtn && elements.importInput) {
         elements.importBtn.addEventListener('click', () => elements.importInput.click());
         elements.importInput.addEventListener('change', handleImportGrades);
@@ -201,6 +224,9 @@ function bindEvents() {
     // Quick import bindings
     if (elements.quickImportBtn) {
         elements.quickImportBtn.addEventListener('click', handleQuickImport);
+    }
+    if (elements.fillZeroBtn) {
+        elements.fillZeroBtn.addEventListener('click', fillZeroForColumn);
     }
 
     // Multi-quiz import bindings
@@ -231,6 +257,12 @@ function bindEvents() {
     }
 
     // Share link bindings
+    if (elements.shareGradesBtn) {
+        elements.shareGradesBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            showShareQrModal();
+        });
+    }
     if (elements.copyShareLinkBtn) {
         elements.copyShareLinkBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -247,14 +279,13 @@ function bindEvents() {
     // Share QR Modal bindings
     if (elements.shareQrModal) {
         elements.shareQrModal.addEventListener('show.bs.modal', function () {
-            const studentUrl = getShareLink(); // For QR Code
-            const adminUrl = getAdminLink();   // For text input
+            const studentUrl = getShareLink();
 
             if (elements.shareQrImage && studentUrl) {
                 elements.shareQrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(studentUrl)}`;
             }
             if (elements.shareQrLinkInput) {
-                elements.shareQrLinkInput.value = adminUrl;
+                elements.shareQrLinkInput.value = studentUrl;
             }
         });
     }
@@ -266,6 +297,14 @@ function bindEvents() {
     }
     if (elements.downloadQrBtn) {
         elements.downloadQrBtn.addEventListener('click', downloadQrCode);
+    }
+
+    // Google Sheet sync bindings
+    if (elements.syncGoogleSheetModal) {
+        elements.syncGoogleSheetModal.addEventListener('show.bs.modal', prefillGoogleSheetSyncForm);
+    }
+    if (elements.confirmSyncGoogleSheetBtn) {
+        elements.confirmSyncGoogleSheetBtn.addEventListener('click', syncGradesToGoogleSheet);
     }
 
     // Lucky wheel bindings
@@ -318,20 +357,25 @@ function bindEvents() {
     if (elements.timerResetBtn) {
         elements.timerResetBtn.addEventListener('click', resetTimer);
     }
+    if (elements.timerSoundToggle) {
+        elements.timerSoundToggle.addEventListener('change', () => {
+            if (!elements.timerSoundToggle.checked) {
+                stopTimerAlarm();
+            }
+        });
+    }
 
     // Set reliable notification sound for timer
     if (elements.timerAudioAlarm) {
         elements.timerAudioAlarm.src = "https://actions.google.com/sounds/v1/alarms/beep_short.ogg";
+        elements.timerAudioAlarm.loop = false;
     }
 
     const timerModal = document.getElementById('timerModal');
     if (timerModal) {
         timerModal.addEventListener('hidden.bs.modal', () => {
             // Stop alarm sound if modal is closed
-            if (elements.timerAudioAlarm) {
-                elements.timerAudioAlarm.pause();
-                elements.timerAudioAlarm.currentTime = 0;
-            }
+            stopTimerAlarm();
         });
     }
 
@@ -462,6 +506,113 @@ function sortColumns(profile) {
         const numB = parseInt(b.match(/\d+/)?.[0] || 0, 10);
         return numA - numB;
     });
+}
+
+function getClassStorageKey(suffix) {
+    const classId = classData?.classId || classData?._id || classData?.id || 'unknown';
+    return `class_detail_${suffix}_${classId}`;
+}
+
+function normalizeSpreadsheetId(input = '') {
+    const raw = String(input || '').trim();
+    if (!raw) return '';
+    const urlMatch = raw.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/i);
+    return urlMatch ? urlMatch[1] : raw;
+}
+
+function normalizeExcelSheetName(name = '') {
+    const fallback = 'BangDiem';
+    const normalized = String(name || '')
+        .replace(/[:\\/?*\[\]]/g, ' ')
+        .trim();
+    if (!normalized) return fallback;
+    return normalized.slice(0, 31);
+}
+
+function clampNumber(value, min, max) {
+    const numeric = Number.parseFloat(value);
+    if (!Number.isFinite(numeric)) return null;
+    return Math.min(Math.max(numeric, min), max);
+}
+
+function getGradeExportPayload() {
+    const profile = getCurrentProfile();
+    if (!profile || !profile.weights || Object.keys(profile.weights).length === 0) {
+        throw new Error('Vui lòng chọn profile điểm trước khi xuất/sync.');
+    }
+
+    const columns = sortColumns(profile);
+    const passThreshold = Number.parseFloat(profile.passThreshold) || 0;
+    const headers = ['STT', 'MSSV', 'Họ và tên', ...columns, 'Tổng', 'Trạng thái', 'Bonus', 'Tổng cuối', 'Ghi chú'];
+
+    const rows = (classData.students || []).map((student, index) => {
+        ensureStudentGrade(student.mssv);
+        const studentGrades = state.grades[student.mssv] || {};
+        const total = calculateTotal(studentGrades, profile.weights);
+        const bonus = clampNumber(studentGrades._bonus, 0, 2) || 0;
+        const finalTotal = Math.min(total + bonus, 10);
+        const status = total >= passThreshold ? 'Đạt' : 'Chưa đạt';
+
+        const componentScores = columns.map(column => {
+            const score = clampNumber(studentGrades[column], 0, 10);
+            return score === null ? '' : Number(score.toFixed(2));
+        });
+
+        return [
+            index + 1,
+            student.mssv || '',
+            student.name || '',
+            ...componentScores,
+            Number(total.toFixed(2)),
+            status,
+            Number(bonus.toFixed(2)),
+            Number(finalTotal.toFixed(2)),
+            (studentGrades._note || '').toString()
+        ];
+    });
+
+    return {
+        headers,
+        rows
+    };
+}
+
+function exportAllGradesToExcel() {
+    try {
+        if (!window.XLSX) {
+            throw new Error('Không tìm thấy thư viện XLSX trên trang.');
+        }
+
+        if (!classData.students || classData.students.length === 0) {
+            throw new Error('Lớp chưa có sinh viên để xuất điểm.');
+        }
+
+        const exportPayload = getGradeExportPayload();
+        const worksheetData = [exportPayload.headers, ...exportPayload.rows];
+
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+
+        worksheet['!cols'] = exportPayload.headers.map((header) => {
+            if (header === 'Họ và tên') return { wch: 28 };
+            if (header === 'Ghi chú') return { wch: 26 };
+            if (header === 'MSSV') return { wch: 14 };
+            return { wch: 11 };
+        });
+
+        const sheetName = normalizeExcelSheetName(classData.name || 'BangDiem');
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const safeClassId = String(classData.classId || 'lop').replace(/[^a-zA-Z0-9_-]/g, '_');
+        const fileName = `bang_diem_${safeClassId}_${timestamp}.xlsx`;
+
+        XLSX.writeFile(workbook, fileName);
+        setImportStatus(`✅ Đã xuất ${exportPayload.rows.length} sinh viên ra file Excel.`, 'success');
+    } catch (error) {
+        console.error('Export Excel error:', error);
+        alert(`Lỗi xuất Excel: ${error.message}`);
+    }
 }
 
 function renderGradesTable() {
@@ -776,7 +927,12 @@ async function handleImportGrades(event) {
                 const parsed = parseFloat(rawValue);
 
                 if (!Number.isNaN(parsed)) {
-                    const value = Math.min(Math.max(parsed, 0), 100);
+                    const value = Math.min(Math.max(parsed, 0), 10);
+                    const onlyEmpty = elements.importOnlyEmpty?.checked;
+                    const existing = state.grades[student.mssv][column];
+                    if (onlyEmpty && existing !== undefined && existing !== null && existing !== '') {
+                        return; // skip non-empty cells
+                    }
                     state.grades[student.mssv][column] = value;
                     hasValue = true;
                 }
@@ -1004,6 +1160,18 @@ function hideAllColumns() {
 // ========================================
 
 /**
+ * Show share QR modal
+ */
+function showShareQrModal() {
+    if (!elements.shareQrModal || typeof bootstrap === 'undefined') {
+        copyShareLink();
+        return;
+    }
+    const modal = bootstrap.Modal.getOrCreateInstance(elements.shareQrModal);
+    modal.show();
+}
+
+/**
  * Get share link URL for student grade lookup (QR code)
  */
 function getShareLink() {
@@ -1020,10 +1188,10 @@ function getAdminLink() {
 }
 
 /**
- * Copy admin link to clipboard
+ * Copy student lookup link to clipboard
  */
 function copyShareLink() {
-    const shareUrl = getAdminLink();
+    const shareUrl = getShareLink();
 
     if (!shareUrl) {
         alert('Không tìm thấy link lớp!');
@@ -1032,7 +1200,7 @@ function copyShareLink() {
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(shareUrl).then(() => {
-            alert(`Đã copy link quản lý lớp!\n\nLink: ${shareUrl}`);
+            alert(`Đã copy link tra cứu điểm!\n\nLink: ${shareUrl}`);
         }).catch(() => {
             fallbackCopyToClipboard(shareUrl);
         });
@@ -1053,9 +1221,9 @@ function fallbackCopyToClipboard(text) {
     textArea.select();
     try {
         document.execCommand('copy');
-        alert(`Đã copy link quản lý lớp!\n\nLink: ${text}`);
+        alert(`Đã copy link tra cứu điểm!\n\nLink: ${text}`);
     } catch (err) {
-        alert(`Link quản lý lớp:\n\n${text}`);
+        alert(`Link tra cứu điểm:\n\n${text}`);
     }
     document.body.removeChild(textArea);
 }
@@ -1142,12 +1310,130 @@ async function copyQrImageToClipboard() {
 }
 
 /**
- * Open admin share page in new tab
+ * Open student grade lookup page in new tab
  */
 function openSharePage() {
-    const shareUrl = getAdminLink();
+    const shareUrl = getShareLink();
     if (shareUrl) {
         window.open(shareUrl, '_blank');
+    }
+}
+
+function setGoogleSheetSyncStatus(message, type = 'info', options = {}) {
+    const { allowHtml = false } = options;
+    if (!elements.googleSheetSyncStatus) return;
+
+    const colorClass = {
+        success: 'text-success',
+        error: 'text-danger',
+        warning: 'text-warning',
+        info: 'text-muted'
+    }[type] || 'text-muted';
+
+    elements.googleSheetSyncStatus.className = `${colorClass} small`;
+    if (allowHtml) {
+        elements.googleSheetSyncStatus.innerHTML = message;
+    } else {
+        elements.googleSheetSyncStatus.textContent = message;
+    }
+}
+
+function prefillGoogleSheetSyncForm() {
+    const spreadsheetIdStorageKey = getClassStorageKey('google_sheet_id');
+    const sheetNameStorageKey = getClassStorageKey('google_sheet_tab');
+
+    if (elements.googleSheetInput) {
+        const savedSheetId = localStorage.getItem(spreadsheetIdStorageKey) || '';
+        elements.googleSheetInput.value = savedSheetId;
+    }
+
+    if (elements.googleSheetTabInput) {
+        const savedSheetTab = localStorage.getItem(sheetNameStorageKey) || 'BangDiem';
+        elements.googleSheetTabInput.value = savedSheetTab;
+    }
+
+    setGoogleSheetSyncStatus('');
+}
+
+async function syncGradesToGoogleSheet() {
+    try {
+        if (!classData.classId) {
+            throw new Error('Không tìm thấy classId để đồng bộ.');
+        }
+
+        if (!classData.students || classData.students.length === 0) {
+            throw new Error('Lớp chưa có sinh viên để đồng bộ.');
+        }
+
+        if (state.isDirty) {
+            const shouldSave = window.confirm('Bạn có thay đổi chưa lưu. Lưu trước khi sync Google Sheet?');
+            if (!shouldSave) {
+                setGoogleSheetSyncStatus('Đã hủy sync vì còn thay đổi chưa lưu.', 'warning');
+                return;
+            }
+            await saveGrades();
+            if (state.isDirty) {
+                setGoogleSheetSyncStatus('Lưu chưa thành công, chưa thể sync.', 'error');
+                return;
+            }
+        }
+
+        // Validate profile/rows before calling API
+        getGradeExportPayload();
+
+        const spreadsheetInput = elements.googleSheetInput?.value || '';
+        const spreadsheetId = normalizeSpreadsheetId(spreadsheetInput);
+        if (!spreadsheetId) {
+            throw new Error('Vui lòng nhập Spreadsheet ID hoặc URL hợp lệ.');
+        }
+
+        const sheetName = (elements.googleSheetTabInput?.value || 'BangDiem').trim() || 'BangDiem';
+
+        if (!elements.confirmSyncGoogleSheetBtn) return;
+
+        elements.confirmSyncGoogleSheetBtn.disabled = true;
+        elements.confirmSyncGoogleSheetBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang sync...';
+        setGoogleSheetSyncStatus('Đang đồng bộ dữ liệu lên Google Sheet...', 'info');
+
+        const response = await fetch(`/api/classes/${classData.classId}/sync-google-sheet`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                spreadsheetId,
+                sheetName
+            })
+        });
+
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || result.message || 'Sync Google Sheet thất bại.');
+        }
+
+        localStorage.setItem(getClassStorageKey('google_sheet_id'), spreadsheetId);
+        localStorage.setItem(getClassStorageKey('google_sheet_tab'), sheetName);
+
+        const spreadsheetUrl = result.data?.spreadsheetUrl ||
+            `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
+        const updatedRows = result.data?.updatedRows ?? 0;
+        const updatedRange = result.data?.updatedRange || '';
+
+        setGoogleSheetSyncStatus(
+            `✅ Sync thành công (${updatedRows} dòng). ` +
+            `<a href="${spreadsheetUrl}" target="_blank" rel="noopener">Mở Google Sheet</a>${updatedRange ? ` • Range: ${updatedRange}` : ''}`,
+            'success',
+            { allowHtml: true }
+        );
+    } catch (error) {
+        console.error('Google Sheet sync error:', error);
+        setGoogleSheetSyncStatus(`❌ ${error.message}`, 'error');
+    } finally {
+        if (elements.confirmSyncGoogleSheetBtn) {
+            elements.confirmSyncGoogleSheetBtn.disabled = false;
+            elements.confirmSyncGoogleSheetBtn.innerHTML = '<i class="bi bi-cloud-arrow-up me-1"></i> Sync ngay';
+        }
     }
 }
 
@@ -1969,9 +2255,18 @@ async function handleQuickImport() {
             return;
         }
 
-        // Apply score (clamp to 0-100)
-        const clampedScore = Math.min(Math.max(score, 0), 100);
+        // Apply score (clamp to 0-10 per input attr)
+        const clampedScore = Math.min(Math.max(score, 0), 10);
         ensureStudentGrade(student.mssv);
+
+        // Respect "only fill empty cells" option
+        const onlyEmpty = elements.quickImportOnlyEmpty?.checked;
+        const existing = state.grades[student.mssv][column];
+        if (onlyEmpty && existing !== undefined && existing !== null && existing !== '') {
+            skippedCount++;
+            return;
+        }
+
         state.grades[student.mssv][column] = clampedScore;
         updatedCount++;
     });
@@ -2009,6 +2304,42 @@ async function handleQuickImport() {
     if (confirm(`Đã nhập điểm ${column} cho ${updatedCount} sinh viên. Bạn có muốn lưu ngay không?`)) {
         await saveGrades();
     }
+}
+
+// ========================================
+// FILL ZERO FOR EMPTY CELLS
+// ========================================
+function fillZeroForColumn() {
+    const column = elements.quickImportColumn?.value;
+    if (!column) {
+        setQuickImportStatus('⚠️ Vui lòng chọn cột điểm trước!', 'warning');
+        return;
+    }
+
+    if (!classData.students || classData.students.length === 0) {
+        setQuickImportStatus('⚠️ Lớp chưa có sinh viên!', 'warning');
+        return;
+    }
+
+    let filledCount = 0;
+    classData.students.forEach(student => {
+        ensureStudentGrade(student.mssv);
+        const existing = state.grades[student.mssv][column];
+        if (existing === undefined || existing === null || existing === '') {
+            state.grades[student.mssv][column] = 0;
+            filledCount++;
+        }
+    });
+
+    if (filledCount === 0) {
+        setQuickImportStatus('ℹ️ Không có ô trống nào trong cột này.', 'info');
+        return;
+    }
+
+    markDirty();
+    renderGradesTable();
+    updateSummary();
+    setQuickImportStatus(`✅ Đã điền 0 vào ${filledCount} ô trống của cột ${column}.`, 'success');
 }
 
 // ========================================
@@ -2144,9 +2475,17 @@ async function handleMultiQuizImport(event) {
                     return;
                 }
 
-                // Apply score (clamp to 0-100)
-                const clampedScore = Math.min(Math.max(score, 0), 100);
+                // Apply score (clamp to 0-10)
+                const clampedScore = Math.min(Math.max(score, 0), 10);
                 ensureStudentGrade(student.mssv);
+
+                const onlyEmpty = elements.importOnlyEmpty?.checked;
+                const existing = state.grades[student.mssv][columnName];
+                if (onlyEmpty && existing !== undefined && existing !== null && existing !== '') {
+                    sheetSkipped++;
+                    return;
+                }
+
                 state.grades[student.mssv][columnName] = clampedScore;
                 sheetUpdated++;
             });
@@ -2429,9 +2768,30 @@ function filterGradesTable() {
 // ========================================
 
 /**
+ * Start timer alarm in loop mode
+ */
+function startTimerAlarmLoop() {
+    if (!elements.timerAudioAlarm) return;
+    elements.timerAudioAlarm.loop = true;
+    elements.timerAudioAlarm.currentTime = 0;
+    elements.timerAudioAlarm.play().catch(e => console.warn('Audio play prevented by browser:', e));
+}
+
+/**
+ * Stop timer alarm
+ */
+function stopTimerAlarm() {
+    if (!elements.timerAudioAlarm) return;
+    elements.timerAudioAlarm.pause();
+    elements.timerAudioAlarm.currentTime = 0;
+    elements.timerAudioAlarm.loop = false;
+}
+
+/**
  * Set the timer to a specific amount of seconds
  */
 function setTimer(totalSeconds) {
+    stopTimerAlarm();
     if (state.timer.isRunning) {
         toggleTimer(); // Pause it first
     }
@@ -2489,10 +2849,7 @@ function toggleTimer() {
         elements.timerStartPauseBtn.classList.replace('btn-primary', 'btn-warning');
 
         // Stop any currently playing alarm
-        if (elements.timerAudioAlarm) {
-            elements.timerAudioAlarm.pause();
-            elements.timerAudioAlarm.currentTime = 0;
-        }
+        stopTimerAlarm();
 
         state.timer.intervalInfo = setInterval(() => {
             state.timer.remainingSeconds--;
@@ -2519,10 +2876,7 @@ function resetTimer() {
         elements.timerStartPauseBtn.classList.replace('btn-warning', 'btn-primary');
     }
 
-    if (elements.timerAudioAlarm) {
-        elements.timerAudioAlarm.pause();
-        elements.timerAudioAlarm.currentTime = 0;
-    }
+    stopTimerAlarm();
 }
 
 /**
@@ -2545,7 +2899,7 @@ function timerFinished() {
 
     // Play sound if enabled
     if (elements.timerSoundToggle && elements.timerSoundToggle.checked && elements.timerAudioAlarm) {
-        elements.timerAudioAlarm.play().catch(e => console.warn('Audio play prevented by browser:', e));
+        startTimerAlarmLoop();
     }
 }
 
@@ -2554,6 +2908,71 @@ function timerFinished() {
 // ========================================
 
 let gradeChartInstance = null;
+
+function getStatsChartStorageKey() {
+    const classId = classData?.classId || classData?._id || classData?.id || 'unknown';
+    return `class_detail_stats_chart_visible_${classId}`;
+}
+
+function isStatsChartVisible() {
+    if (!elements.statsChartBody) return true;
+    return !elements.statsChartBody.classList.contains('d-none');
+}
+
+function setStatsChartVisibility(visible, options = {}) {
+    const { persist = true, rerender = true } = options;
+
+    if (!elements.statsChartBody || !elements.statsChartToggleBtn) return;
+
+    elements.statsChartBody.classList.toggle('d-none', !visible);
+    elements.statsChartToggleBtn.setAttribute('aria-expanded', String(visible));
+
+    const iconEl = elements.statsChartToggleBtn.querySelector('i');
+    const labelEl = elements.statsChartToggleBtn.querySelector('.toggle-label');
+    if (iconEl) {
+        iconEl.className = `bi ${visible ? 'bi-chevron-up' : 'bi-chevron-down'} me-1`;
+    }
+    if (labelEl) {
+        labelEl.textContent = visible ? 'Ẩn' : 'Hiện';
+    }
+
+    if (persist) {
+        try {
+            localStorage.setItem(getStatsChartStorageKey(), visible ? '1' : '0');
+        } catch (error) {
+            console.warn('Cannot persist stats chart visibility:', error);
+        }
+    }
+
+    if (visible && rerender) {
+        requestAnimationFrame(() => {
+            renderChart();
+            if (gradeChartInstance && typeof gradeChartInstance.resize === 'function') {
+                gradeChartInstance.resize();
+            }
+        });
+    }
+}
+
+function toggleStatsChartVisibility() {
+    setStatsChartVisibility(!isStatsChartVisible());
+}
+
+function initializeStatsChartVisibility() {
+    if (!elements.statsChartBody || !elements.statsChartToggleBtn) return;
+
+    let visible = true;
+    try {
+        const saved = localStorage.getItem(getStatsChartStorageKey());
+        if (saved !== null) {
+            visible = saved === '1';
+        }
+    } catch (error) {
+        console.warn('Cannot read stats chart visibility:', error);
+    }
+
+    setStatsChartVisibility(visible, { persist: false, rerender: false });
+}
 
 function renderChart() {
     const chartCanvas = document.getElementById('gradeChartCanvas');
@@ -2775,11 +3194,17 @@ function updateChartComponentSelect() {
 
 function initializeChartListeners() {
     updateChartComponentSelect();
-    renderChart();
+    if (isStatsChartVisible()) {
+        renderChart();
+    }
 
     const chartComponentSelect = document.getElementById('chartComponentSelect');
     if (chartComponentSelect) {
-        chartComponentSelect.addEventListener('change', renderChart);
+        chartComponentSelect.addEventListener('change', () => {
+            if (isStatsChartVisible()) {
+                renderChart();
+            }
+        });
     }
 }
 

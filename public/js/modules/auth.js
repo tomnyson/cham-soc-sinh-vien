@@ -6,6 +6,10 @@
 const AuthModule = {
     currentUser: null,
     isAuthenticated: false,
+    defaultBranding: {
+        logoDataUrl: 'https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png',
+        subtext: 'FPT Polytechnic'
+    },
 
     /**
      * Initialize authentication
@@ -168,10 +172,18 @@ const AuthModule = {
         loginPage.style.display = 'flex';
     },
 
+    getBranding() {
+        const source = window.__APP_BRANDING__ || {};
+        const logoDataUrl = String(source.logoDataUrl || this.defaultBranding.logoDataUrl).trim() || this.defaultBranding.logoDataUrl;
+        const subtext = String(source.subtext || this.defaultBranding.subtext).trim() || this.defaultBranding.subtext;
+        return { logoDataUrl, subtext };
+    },
+
     /**
      * Create login page HTML
      */
     createLoginPage() {
+        const branding = this.getBranding();
         const loginPage = document.createElement('div');
         loginPage.id = 'login-page';
         loginPage.className = 'login-page';
@@ -179,9 +191,9 @@ const AuthModule = {
             <div class="login-container">
                 <div class="login-card">
                     <div class="login-header">
-                        <img src="https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png" alt="FPT Polytechnic" class="login-logo">
+                        <img src="${branding.logoDataUrl}" alt="${branding.subtext}" class="login-logo">
                         <h1>Hệ thống quản lý điểm</h1>
-                        <p class="text-muted">FPT Polytechnic</p>
+                        <p class="text-muted">${branding.subtext}</p>
                     </div>
                     <div class="login-body">
                         <p class="login-message">Vui lòng đăng nhập để tiếp tục</p>

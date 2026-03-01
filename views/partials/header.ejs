@@ -1,4 +1,5 @@
 <% const headerUser=typeof user !=='undefined' && user ? user : null; %>
+<% const appBranding=(typeof branding !=='undefined' && branding) ? branding : { logoDataUrl: 'https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png', subtext: 'FPT Polytechnic' }; %>
     <!-- Top Header -->
     <header class="top-header">
         <div class="header-left">
@@ -7,7 +8,7 @@
             </button>
 
             <div class="header-logo d-md-none">
-                <img src="https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png" alt="FPT" height="30">
+                <img id="appHeaderLogo" src="<%= appBranding.logoDataUrl %>" alt="<%= appBranding.subtext %>" height="30">
             </div>
         </div>
 
@@ -16,18 +17,18 @@
                 <i class="bi bi-mortarboard-fill text-primary"></i>
                 Hệ thống Chăm sóc sinh viên
             </h2>
-            <p class="header-subtitle mb-0">FPT Polytechnic</p>
+            <p class="header-subtitle mb-0" id="appHeaderSubtext"><%= appBranding.subtext %></p>
         </div>
 
         <div class="header-right">
-            <button class="btn btn-link text-dark position-relative p-2" title="Thông báo">
+            <!-- <button class="btn btn-link text-dark position-relative p-2" title="Thông báo">
                 <i class="bi bi-bell-fill fs-5"></i>
                 <span class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle">2</span>
             </button>
 
             <button class="btn btn-link text-dark p-2 d-none d-md-inline-block" title="Trợ giúp">
                 <i class="bi bi-question-circle-fill fs-5"></i>
-            </button>
+            </button> -->
 
             <div class="dropdown">
                 <button class="btn btn-link text-dark dropdown-toggle d-flex align-items-center gap-2 p-2" type="button"

@@ -9,6 +9,7 @@ const cookieParser = require('cookie-parser');
 const config = require('../config/app.config');
 const profileService = require('./services/profile.service');
 const classService = require('./services/class.service');
+const brandingService = require('./services/branding.service');
 
 // Middleware
 const { notFoundHandler, errorHandler } = require('./middleware/error.middleware');
@@ -31,6 +32,13 @@ async function renderLayoutPage(req, res, viewName, {
     initialData = null
 } = {}) {
     console.log(`Rendering page: ${viewName} | Route: ${currentRoute}`);
+    let appBranding = brandingService.getDefaultBranding();
+    try {
+        appBranding = await brandingService.getGlobalBranding();
+    } catch (error) {
+        console.warn('Unable to load branding config for layout, using default:', error.message);
+    }
+
     const safeInitialData = initialData ? { ...initialData } : null;
     const userData = req?.user ? {
         id: req.user._id?.toString?.() || req.user._id,
@@ -53,7 +61,8 @@ async function renderLayoutPage(req, res, viewName, {
         currentRoute,
         body,
         initialData: safeInitialData,
-        user: userData
+        user: userData,
+        branding: appBranding
     });
 }
 
@@ -325,6 +334,88 @@ app.get('/classes/:classId', optionalAuth, async (req, res, next) => {
         });
     } catch (error) {
         console.error('Error rendering class detail:', error);
+        next(error);
+    }
+});
+
+app.get('/classes/:classId/note', optionalAuth, async (req, res, next) => {
+    if (!req.user) {
+        return res.redirect('/?login=required');
+    }
+
+    const userId = req.user._id;
+
+    try {
+        const classId = req.params.classId;
+        let classDoc;
+
+        try {
+            classDoc = await classService.getClassById(classId, userId);
+        } catch (err) {
+            if (err.message.includes('Class not found')) {
+                return renderLayoutPage(req, res, 'class-not-found', {
+                    title: 'Không tìm thấy lớp - FPT Polytechnic',
+                    currentRoute: '/classes',
+                    pageData: { classId }
+                });
+            }
+            throw err;
+        }
+
+        const noteClassData = {
+            classId: classDoc.classId || classId,
+            name: classDoc.name || 'Chưa đặt tên',
+            description: classDoc.description || '',
+            updatedAt: classDoc.updatedAt || null
+        };
+
+        await renderLayoutPage(req, res, 'class-note', {
+            title: `Note bảng ${noteClassData.name} - FPT Polytechnic`,
+            currentRoute: '/classes',
+            pageData: {
+                classData: noteClassData
+            },
+            initialData: {
+                classNote: {
+                    classId: noteClassData.classId,
+                    name: noteClassData.name
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error rendering class note:', error);
+        next(error);
+    }
+});
+
+app.get('/branding', optionalAuth, async (req, res, next) => {
+    if (!req.user) {
+        return res.redirect('/?login=required');
+    }
+
+    try {
+        if (req.user.role !== 'admin') {
+            res.status(403);
+            return renderLayoutPage(req, res, 'forbidden', {
+                title: 'Không có quyền - FPT Polytechnic',
+                currentRoute: '/branding',
+                pageData: {
+                    title: 'Không có quyền truy cập',
+                    message: 'Trang Branding chỉ dành cho tài khoản quản trị viên.',
+                    backUrl: '/grade-check'
+                }
+            });
+        }
+
+        await renderLayoutPage(req, res, 'branding', {
+            title: 'Branding Share Điểm - FPT Polytechnic',
+            currentRoute: '/branding',
+            initialData: {
+                brandingDefault: brandingService.getDefaultBranding()
+            }
+        });
+    } catch (error) {
+        console.error('Error rendering branding page:', error);
         next(error);
     }
 });

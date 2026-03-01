@@ -1,0 +1,100 @@
+<div class="container-fluid py-3 class-note-page" id="classNotePage" data-class-id="<%= classData.classId %>">
+    <div class="class-note-topbar card shadow-sm border-0">
+        <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div class="class-note-topbar-info">
+                <p class="text-muted mb-1">
+                    <a href="/classes/<%= classData.classId %>" class="text-decoration-none">
+                        <i class="bi bi-arrow-left me-1"></i> Quay lại lớp
+                    </a>
+                </p>
+                <h1 class="h5 mb-1 d-flex align-items-center gap-2">
+                    <i class="bi bi-pencil-square text-primary"></i>
+                    <span>Note bảng - <%= classData.name %></span>
+                </h1>
+                <p class="small text-muted mb-0">
+                    <% if (classData.updatedAt) { %>
+                        Cập nhật lớp: <%= new Date(classData.updatedAt).toLocaleString('vi-VN') %>
+                    <% } else { %>
+                        Dùng để ghi chú và trình chiếu nhanh cho sinh viên.
+                    <% } %>
+                </p>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 class-note-topbar-actions">
+                <button class="btn btn-outline-secondary btn-sm" id="noteUndoBtn" type="button">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Undo
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" id="noteRedoBtn" type="button">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Redo
+                </button>
+                <button class="btn btn-outline-danger btn-sm" id="noteClearBtn" type="button">
+                    <i class="bi bi-trash3 me-1"></i> Xóa bảng
+                </button>
+                <button class="btn btn-outline-success btn-sm" id="noteExportBtn" type="button">
+                    <i class="bi bi-download me-1"></i> Export PNG
+                </button>
+                <button class="btn btn-primary btn-sm" id="notePresentBtn" type="button">
+                    <i class="bi bi-arrows-fullscreen me-1"></i> Trình chiếu
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="class-note-workspace">
+        <aside class="class-note-toolbar card shadow-sm border-0">
+            <div class="card-body">
+                <div class="class-note-tool-group">
+                    <button type="button" class="class-note-tool-btn active" id="noteToolPen" data-tool="pen">
+                        <i class="bi bi-pen"></i>
+                        <span>Pen</span>
+                    </button>
+                    <button type="button" class="class-note-tool-btn" id="noteToolEraser" data-tool="eraser">
+                        <i class="bi bi-eraser"></i>
+                        <span>Eraser</span>
+                    </button>
+                    <button type="button" class="class-note-tool-btn" id="noteToolText" data-tool="text">
+                        <i class="bi bi-type"></i>
+                        <span>Text</span>
+                    </button>
+                    <button type="button" class="class-note-tool-btn" id="noteToolPan" data-tool="pan">
+                        <i class="bi bi-arrows-move"></i>
+                        <span>Move</span>
+                    </button>
+                    <button type="button" class="class-note-tool-btn" id="noteToolRect" data-tool="rect">
+                        <i class="bi bi-square"></i>
+                        <span>Rect</span>
+                    </button>
+                    <button type="button" class="class-note-tool-btn" id="noteToolCircle" data-tool="circle">
+                        <i class="bi bi-circle"></i>
+                        <span>Circle</span>
+                    </button>
+                </div>
+
+                <div class="class-note-control-group">
+                    <label for="noteColorInput" class="form-label small text-muted mb-1">Màu</label>
+                    <input type="color" id="noteColorInput" class="form-control form-control-color" value="#2f6fed"
+                        title="Chọn màu vẽ">
+                </div>
+
+                <div class="class-note-control-group">
+                    <label for="noteSizeInput" class="form-label small text-muted mb-1 d-flex justify-content-between">
+                        <span>Độ dày</span>
+                        <span id="noteSizeValue">4</span>
+                    </label>
+                    <input type="range" id="noteSizeInput" class="form-range" min="1" max="24" step="1" value="4">
+                </div>
+            </div>
+        </aside>
+
+        <section class="class-note-canvas-stage">
+            <div class="class-note-canvas-wrap" id="noteCanvasWrap">
+                <canvas id="noteCanvas"></canvas>
+            </div>
+            <div class="class-note-status" id="noteStatus">
+                Sẵn sàng vẽ. Dữ liệu note lưu cục bộ theo lớp trong trình duyệt này.
+            </div>
+        </section>
+    </div>
+</div>
+
+<script type="module" src="/js/pages/class-note.js"></script>

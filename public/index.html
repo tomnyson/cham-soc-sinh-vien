@@ -30,7 +30,7 @@
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <img src="https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png" alt="FPT Polytechnic" class="logo">
+            <img id="appSidebarLogo" src="https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png" alt="FPT Polytechnic" class="logo">
         </div>
 
         <nav class="sidebar-nav">
@@ -67,7 +67,7 @@
                 </button>
 
                 <div class="header-logo d-md-none">
-                    <img src="https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png" alt="FPT" height="30">
+                    <img id="appHeaderLogo" src="https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png" alt="FPT" height="30">
                 </div>
             </div>
 
@@ -76,7 +76,7 @@
                     <i class="bi bi-mortarboard-fill text-primary"></i>
                     Hệ thống quản lý điểm sinh viên
                 </h1>
-                <p class="header-subtitle mb-0">FPT Polytechnic</p>
+                <p class="header-subtitle mb-0" id="appHeaderSubtext">FPT Polytechnic</p>
             </div>
 
             <div class="header-right">
@@ -820,8 +820,59 @@
             <script type="module" src="/js/init.js"></script>
 
             <script>
+                const APP_BRANDING_DEFAULTS = {
+                    logoDataUrl: 'https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png',
+                    subtext: 'FPT Polytechnic'
+                };
+
+                function normalizeBranding(payload) {
+                    const source = payload || {};
+                    return {
+                        logoDataUrl: String(source.logoDataUrl || APP_BRANDING_DEFAULTS.logoDataUrl).trim() || APP_BRANDING_DEFAULTS.logoDataUrl,
+                        subtext: String(source.subtext || APP_BRANDING_DEFAULTS.subtext).trim() || APP_BRANDING_DEFAULTS.subtext
+                    };
+                }
+
+                function applyAppBranding(brandingPayload) {
+                    const branding = normalizeBranding(brandingPayload);
+                    window.__APP_BRANDING__ = branding;
+
+                    const sidebarLogo = document.getElementById('appSidebarLogo');
+                    if (sidebarLogo) {
+                        sidebarLogo.src = branding.logoDataUrl;
+                        sidebarLogo.alt = branding.subtext;
+                    }
+
+                    const headerLogo = document.getElementById('appHeaderLogo');
+                    if (headerLogo) {
+                        headerLogo.src = branding.logoDataUrl;
+                        headerLogo.alt = branding.subtext;
+                    }
+
+                    const subtextEl = document.getElementById('appHeaderSubtext');
+                    if (subtextEl) {
+                        subtextEl.textContent = branding.subtext;
+                    }
+                }
+
+                async function loadAppBranding() {
+                    applyAppBranding(APP_BRANDING_DEFAULTS);
+                    try {
+                        const response = await fetch('/api/public/branding');
+                        const result = await response.json().catch(() => ({}));
+                        if (!response.ok || !result.success || !result.data) {
+                            return;
+                        }
+                        applyAppBranding(result.data);
+                    } catch (error) {
+                        console.warn('Cannot load app branding:', error.message);
+                    }
+                }
+
                 // Wait for DOM to be ready before attaching event listeners
                 document.addEventListener('DOMContentLoaded', function () {
+                    loadAppBranding();
+
                     // Toggle sidebar
                     const toggleBtn = document.getElementById('toggleSidebar');
                     if (toggleBtn) {

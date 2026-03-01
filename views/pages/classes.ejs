@@ -1,15 +1,27 @@
 <!-- Classes Management Page -->
-<div class="container-fluid py-4">
+<div class="container-fluid py-4 classes-page">
     <div class="row mb-4">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex justify-content-between align-items-center classes-page-header">
                 <h1 class="h3 mb-0">
                     <i class="bi bi-people-fill text-primary me-2"></i>
                     Quản lý Lớp học
                 </h1>
-                <button class="btn btn-primary" onclick="createNewClass()">
-                    <i class="bi bi-plus-circle me-1"></i> Tạo Lớp mới
-                </button>
+                <div class="d-flex gap-2 align-items-center classes-page-actions">
+                    <div class="btn-group keep-horizontal-mobile" id="viewModeToggle" role="group">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="gridViewBtn"
+                            onclick="setClassViewMode('grid')" title="Dạng lưới">
+                            <i class="bi bi-grid-3x3-gap-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="tableViewBtn"
+                            onclick="setClassViewMode('table')" title="Dạng bảng">
+                            <i class="bi bi-list-ul"></i>
+                        </button>
+                    </div>
+                    <button class="btn btn-primary" onclick="createNewClass()">
+                        <i class="bi bi-plus-circle me-1"></i> Tạo Lớp mới
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -110,6 +122,78 @@
 
     .class-tab.active .tab-count.archived {
         background: #64748b;
+    }
+
+    @media (max-width: 768px) {
+        .classes-page {
+            padding-left: 0.25rem;
+            padding-right: 0.25rem;
+        }
+
+        .classes-page-header {
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: stretch !important;
+        }
+
+        .classes-page-header h1 {
+            width: 100%;
+            font-size: 1.35rem;
+        }
+
+        .classes-page-actions {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .class-tabs-container {
+            display: flex;
+            width: 100%;
+            padding: 4px;
+        }
+
+        .class-tabs {
+            width: 100%;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .class-tab {
+            flex: 1 1 calc(50% - 6px);
+            justify-content: center;
+            padding: 9px 12px;
+            min-height: 42px;
+        }
+    }
+
+    @media (max-width: 430px) {
+        .classes-page {
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        .classes-page-actions {
+            gap: 0.5rem !important;
+        }
+
+        .classes-page-actions #viewModeToggle {
+            flex: 0 0 auto;
+        }
+
+        .classes-page-actions>button.btn-primary {
+            flex: 1 1 auto;
+            min-width: 0;
+            padding-left: 0.65rem;
+            padding-right: 0.65rem;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
+
+        .class-tab {
+            flex: 1 1 100%;
+            justify-content: space-between;
+        }
     }
 </style>
 

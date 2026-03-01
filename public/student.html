@@ -86,6 +86,33 @@
             color: white;
         }
 
+        .btn-primary {
+            background-color: var(--fpt-orange);
+            border-color: var(--fpt-orange);
+        }
+
+        .btn-primary:hover,
+        .btn-primary:focus {
+            background-color: var(--fpt-orange-dark);
+            border-color: var(--fpt-orange-dark);
+        }
+
+        .btn-outline-primary {
+            color: var(--fpt-orange);
+            border-color: var(--fpt-orange);
+        }
+
+        .btn-outline-primary:hover,
+        .btn-outline-primary:focus {
+            color: #fff;
+            background-color: var(--fpt-orange);
+            border-color: var(--fpt-orange);
+        }
+
+        .text-primary {
+            color: var(--fpt-orange) !important;
+        }
+
         .status-pass {
             color: #10b981;
             font-weight: 600;
@@ -102,10 +129,10 @@
     <!-- Header -->
     <div class="header">
         <div class="container text-center">
-            <img src="https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png" alt="FPT Polytechnic"
+            <img id="shareBrandLogo" src="https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png" alt="FPT Polytechnic"
                 style="max-width: 200px; margin-bottom: 1rem;">
             <h1><i class="bi bi-mortarboard-fill"></i> Tra cứu điểm sinh viên</h1>
-            <p class="mb-0">FPT Polytechnic</p>
+            <p class="mb-0" id="shareBrandSubtext">FPT Polytechnic</p>
         </div>
     </div>
 
@@ -115,7 +142,7 @@
             <div class="card login-card shadow">
                 <div class="card-body p-4">
                     <h4 class="card-title text-center mb-4">
-                        <i class="bi bi-person-badge"></i> Đăng nhập tra cứu điểm
+                        <i class="bi bi-person-badge"></i> Nhập thông tin tra cứu điểm
                     </h4>
 
                     <div class="mb-3">
@@ -153,7 +180,7 @@
                             </div>
                             <div class="col-md-4 text-end">
                                 <button class="btn btn-outline-secondary" onclick="logout()">
-                                    <i class="bi bi-box-arrow-left"></i> Đăng xuất
+                                    <i class="bi bi-arrow-repeat"></i> Tra cứu khác
                                 </button>
                             </div>
                         </div>
@@ -231,6 +258,8 @@
     <script>
         // Check if URL has params
         window.addEventListener('DOMContentLoaded', function () {
+            loadBrandingConfig();
+
             const urlParams = new URLSearchParams(window.location.search);
             const classId = urlParams.get('class');
             const mssv = urlParams.get('mssv');
@@ -246,6 +275,71 @@
             }
         });
 
+        async function loadBrandingConfig() {
+            try {
+                const response = await fetch('/api/public/branding');
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result.success || !result.data) {
+                    return;
+                }
+                applyShareBranding(result.data);
+            } catch (error) {
+                console.warn('Cannot load public branding:', error.message);
+            }
+        }
+
+        function applyShareBranding(branding) {
+            const logoDataUrl = String(branding.logoDataUrl || '').trim();
+            const subtext = String(branding.subtext || '').trim();
+            const primaryColor = normalizeHexColor(branding.primaryColor, '#FF6C00');
+            const darkColor = shadeHexColor(primaryColor, -15);
+
+            if (logoDataUrl) {
+                const logoEl = document.getElementById('shareBrandLogo');
+                if (logoEl) {
+                    logoEl.src = logoDataUrl;
+                    logoEl.alt = subtext || 'Brand Logo';
+                }
+            }
+
+            if (subtext) {
+                const subtextEl = document.getElementById('shareBrandSubtext');
+                if (subtextEl) {
+                    subtextEl.textContent = subtext;
+                }
+                document.title = `${subtext} - Tra cứu điểm`;
+            }
+
+            document.documentElement.style.setProperty('--fpt-orange', primaryColor);
+            document.documentElement.style.setProperty('--fpt-orange-dark', darkColor);
+        }
+
+        function normalizeHexColor(input, fallback) {
+            const color = String(input || '').trim().toUpperCase();
+            if (/^#[0-9A-F]{6}$/.test(color)) {
+                return color;
+            }
+            return fallback;
+        }
+
+        function shadeHexColor(hexColor, percent) {
+            const normalized = normalizeHexColor(hexColor, '#FF6C00').replace('#', '');
+            const value = parseInt(normalized, 16);
+            const amount = Math.round(2.55 * percent);
+            const r = clampChannel((value >> 16) + amount);
+            const g = clampChannel(((value >> 8) & 0x00FF) + amount);
+            const b = clampChannel((value & 0x0000FF) + amount);
+            return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+        }
+
+        function clampChannel(channel) {
+            return Math.max(0, Math.min(255, channel));
+        }
+
+        function toHex(channel) {
+            return channel.toString(16).padStart(2, '0').toUpperCase();
+        }
+
         async function checkGrades() {
             const classId = document.getElementById('classIdInput').value.trim();
             const mssv = document.getElementById('mssvInput').value.trim().toUpperCase();
@@ -256,44 +350,31 @@
             }
 
             try {
-                // Fetch class data
-                const response = await fetch(`/api/classes/${classId}`);
+                // Public grade lookup (no login required)
+                const response = await fetch(
+                    `/api/public/student-grade?classId=${encodeURIComponent(classId)}&mssv=${encodeURIComponent(mssv)}`
+                );
                 const result = await response.json();
 
                 if (!result.success) {
-                    alert('Không tìm thấy lớp học!');
+                    alert(result.message || 'Không tìm thấy dữ liệu tra cứu!');
                     return;
                 }
 
-                const classData = result.data;
+                const {
+                    classData,
+                    student,
+                    profile,
+                    studentGrades
+                } = result.data || {};
 
-                // Find student
-                const student = classData.students.find(s => s.mssv === mssv);
-                if (!student) {
-                    alert('MSSV không có trong lớp này!');
+                if (!classData || !student || !profile) {
+                    alert('Dữ liệu tra cứu không hợp lệ!');
                     return;
                 }
-
-                // Check if grades exist
-                if (!classData.grades || !classData.grades.profileId) {
-                    alert('Lớp chưa có điểm!');
-                    return;
-                }
-
-                // Fetch profile
-                const profileResponse = await fetch(`/api/profiles/${classData.grades.profileId}`);
-                const profileResult = await profileResponse.json();
-
-                if (!profileResult.success) {
-                    alert('Không tìm thấy profile điểm!');
-                    return;
-                }
-
-                const profile = profileResult.data;
-                const studentGrades = classData.grades.students[mssv] || {};
 
                 // Display results
-                displayGrades(student, classData, profile, studentGrades);
+                displayGrades(student, classData, profile, studentGrades || {});
 
                 // Update share link
                 const shareUrl = `${window.location.origin}/student.html?class=${classId}&mssv=${mssv}`;
