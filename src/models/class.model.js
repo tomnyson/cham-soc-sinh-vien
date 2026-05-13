@@ -13,6 +13,17 @@ const studentSchema = new mongoose.Schema({
         type: String,
         required: true,
         trim: true
+    },
+    phone: {
+        type: String,
+        trim: true,
+        default: ''
+    },
+    email: {
+        type: String,
+        trim: true,
+        lowercase: true,
+        default: ''
     }
 }, { _id: false });
 
@@ -96,8 +107,8 @@ classSchema.statics.findByUserId = function (userId = 'default') {
 };
 
 // Instance method: Thêm sinh viên
-classSchema.methods.addStudent = function (mssv, name) {
-    this.students.push({ mssv, name });
+classSchema.methods.addStudent = function (mssv, name, phone = '', email = '') {
+    this.students.push({ mssv, name, phone, email });
     return this.save();
 };
 

@@ -9,6 +9,8 @@
 - ✅ Quản lý danh sách lớp học
 - ✅ Tạo template Excel cho nhập điểm
 - ✅ Xuất kết quả ra file Excel
+- ✅ Lưu phone/email sinh viên (optional) theo từng lớp
+- ✅ Gửi điểm + ghi chú cho sinh viên qua email (SMTP)
 - ✅ Lưu trữ cấu hình trên browser (LocalStorage)
 - ✅ Hỗ trợ import/export cấu hình
 
@@ -87,6 +89,15 @@ UPLOAD_DIR=./uploads
 
 # CORS Configuration
 CORS_ORIGIN=*
+
+# SMTP Configuration (for sending score emails)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-smtp-user
+SMTP_PASS=your-smtp-password
+SMTP_FROM_NAME=FPT Polytechnic
+SMTP_FROM_EMAIL=no-reply@example.com
 ```
 
 4. **Chạy ứng dụng**

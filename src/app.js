@@ -32,13 +32,6 @@ async function renderLayoutPage(req, res, viewName, {
     initialData = null
 } = {}) {
     console.log(`Rendering page: ${viewName} | Route: ${currentRoute}`);
-    let appBranding = brandingService.getDefaultBranding();
-    try {
-        appBranding = await brandingService.getGlobalBranding();
-    } catch (error) {
-        console.warn('Unable to load branding config for layout, using default:', error.message);
-    }
-
     const safeInitialData = initialData ? { ...initialData } : null;
     const userData = req?.user ? {
         id: req.user._id?.toString?.() || req.user._id,
@@ -61,8 +54,7 @@ async function renderLayoutPage(req, res, viewName, {
         currentRoute,
         body,
         initialData: safeInitialData,
-        user: userData,
-        branding: appBranding
+        user: userData
     });
 }
 
@@ -88,18 +80,56 @@ function serializeProfile(profileDoc = {}) {
  */
 function serializeClass(classDoc = {}) {
     const students = Array.isArray(classDoc.students) ? classDoc.students : [];
+    const normalizedStudents = students.map(student => ({
+        mssv: String(student?.mssv || '').trim(),
+        name: String(student?.name || '').trim(),
+        phone: String(student?.phone || '').trim(),
+        email: String(student?.email || '').trim().toLowerCase()
+    }));
+
     const gradesDoc = classDoc.grades || null;
     let normalizedGrades = null;
 
-    if (gradesDoc) {
-        const studentEntries = gradesDoc.students instanceof Map
-            ? Array.from(gradesDoc.students.entries())
-            : Object.entries(gradesDoc.students || {});
+    if (gradesDoc && typeof gradesDoc === 'object') {
+        const rawGradeStudents = (() => {
+            if (gradesDoc.students instanceof Map) {
+                return Object.fromEntries(gradesDoc.students.entries());
+            }
+
+            if (gradesDoc.students && typeof gradesDoc.students === 'object' && !Array.isArray(gradesDoc.students)) {
+                return gradesDoc.students;
+            }
+
+            // Legacy compatibility: grades stored directly by MSSV (without grades.students wrapper)
+            if (!Object.prototype.hasOwnProperty.call(gradesDoc, 'students') && !Array.isArray(gradesDoc)) {
+                return Object.entries(gradesDoc).reduce((acc, [key, value]) => {
+                    if (key === 'profileId') return acc;
+                    acc[key] = value;
+                    return acc;
+                }, {});
+            }
+
+            return {};
+        })();
+
+        const studentEntries = rawGradeStudents instanceof Map
+            ? Array.from(rawGradeStudents.entries())
+            : Object.entries(rawGradeStudents || {});
 
         normalizedGrades = {
-            profileId: gradesDoc.profileId || '',
+            profileId: String(gradesDoc.profileId || '').trim(),
             students: studentEntries.reduce((acc, [key, value]) => {
-                acc[key] = value || {};
+                const mssv = String(key || '').trim();
+                if (!mssv) return acc;
+
+                if (value instanceof Map) {
+                    acc[mssv] = Object.fromEntries(value.entries());
+                    return acc;
+                }
+
+                acc[mssv] = (value && typeof value === 'object' && !Array.isArray(value))
+                    ? { ...value }
+                    : {};
                 return acc;
             }, {})
         };
@@ -109,10 +139,7 @@ function serializeClass(classDoc = {}) {
         classId: classDoc.classId || '',
         name: classDoc.name || 'Chưa đặt tên',
         description: classDoc.description || '',
-        students: students.map(student => ({
-            mssv: student.mssv || '',
-            name: student.name || ''
-        })),
+        students: normalizedStudents,
         grades: normalizedGrades,
         createdAt: classDoc.createdAt,
         updatedAt: classDoc.updatedAt
@@ -394,21 +421,8 @@ app.get('/branding', optionalAuth, async (req, res, next) => {
     }
 
     try {
-        if (req.user.role !== 'admin') {
-            res.status(403);
-            return renderLayoutPage(req, res, 'forbidden', {
-                title: 'Không có quyền - FPT Polytechnic',
-                currentRoute: '/branding',
-                pageData: {
-                    title: 'Không có quyền truy cập',
-                    message: 'Trang Branding chỉ dành cho tài khoản quản trị viên.',
-                    backUrl: '/grade-check'
-                }
-            });
-        }
-
         await renderLayoutPage(req, res, 'branding', {
-            title: 'Branding Share Điểm - FPT Polytechnic',
+            title: 'settings',
             currentRoute: '/branding',
             initialData: {
                 brandingDefault: brandingService.getDefaultBranding()
@@ -420,7 +434,7 @@ app.get('/branding', optionalAuth, async (req, res, next) => {
     }
 });
 
-app.get('/template', async (req, res, next) => {
+app.get('/template', optionalAuth, async (req, res, next) => {
     try {
         const userId = req.user?._id || 'default';
         const [profilesResult, classesResult] = await Promise.allSettled([

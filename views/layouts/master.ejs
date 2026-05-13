@@ -50,8 +50,15 @@
 
         <%- include('../partials/modals') %>
 
+            <% const layoutBranding = (typeof branding !== 'undefined' && branding)
+                ? branding
+                : {
+                    logoDataUrl: 'https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png',
+                    subtext: 'FPT Polytechnic',
+                    primaryColor: '#FF6C00'
+                }; %>
             <script>
-                window.__APP_BRANDING__ = <%- JSON.stringify(branding || {}).replace(/</g, '\\u003c') %>;
+                window.__APP_BRANDING__ = <%- JSON.stringify(layoutBranding).replace(/</g, '\\u003c') %>;
             </script>
 
             <% if (typeof initialData !== 'undefined' && initialData) { %>

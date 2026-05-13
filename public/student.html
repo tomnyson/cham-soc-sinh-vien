@@ -188,6 +188,11 @@
                 </div>
 
                 <!-- Statistics -->
+                <div id="studentNoteSection" class="alert alert-warning border-0 shadow-sm" style="display: none;">
+                    <div class="fw-bold mb-1"><i class="bi bi-journal-text me-1"></i> Ghi chú từ giáo viên</div>
+                    <div id="studentNoteText" class="mb-0"></div>
+                </div>
+
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
                         <div class="stat-card">
@@ -396,6 +401,19 @@
             document.getElementById('studentMSSV').textContent = student.mssv;
             document.getElementById('studentClass').textContent = classData.name;
 
+            const noteSection = document.getElementById('studentNoteSection');
+            const noteText = document.getElementById('studentNoteText');
+            const teacherNote = String(studentGrades._note || '').trim();
+            if (noteSection && noteText) {
+                if (teacherNote) {
+                    noteText.textContent = teacherNote;
+                    noteSection.style.display = 'block';
+                } else {
+                    noteText.textContent = '';
+                    noteSection.style.display = 'none';
+                }
+            }
+
             // Calculate total
             let total = 0;
             const gradesBody = document.getElementById('gradesBody');
@@ -439,6 +457,10 @@
             document.getElementById('resultsSection').style.display = 'none';
             document.getElementById('classIdInput').value = '';
             document.getElementById('mssvInput').value = '';
+            const noteSection = document.getElementById('studentNoteSection');
+            const noteText = document.getElementById('studentNoteText');
+            if (noteSection) noteSection.style.display = 'none';
+            if (noteText) noteText.textContent = '';
 
             // Clear URL params
             window.history.replaceState({}, document.title, window.location.pathname);

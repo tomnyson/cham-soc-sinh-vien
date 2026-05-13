@@ -1067,24 +1067,36 @@ function renderStudentEditor(students) {
     editor.innerHTML = '';
 
     students.forEach(student => {
-        addStudentRowWithData(student.mssv, student.name);
+        addStudentRowWithData(student.mssv, student.name, student.phone || '', student.email || '');
     });
 
     updateStudentCount();
 }
 
 function addStudentRow() {
-    addStudentRowWithData('', '');
+    addStudentRowWithData('', '', '', '');
 }
 
-function addStudentRowWithData(mssv, name) {
+function escapeAttribute(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function addStudentRowWithData(mssv, name, phone = '', email = '') {
     const editor = document.getElementById('studentEditor');
     const row = document.createElement('div');
-    row.className = 'weight-row';
+    row.className = 'weight-row student-contact-row';
     row.innerHTML = `
-        <input type="text" placeholder="MSSV" value="${mssv}" class="student-mssv">
-        <input type="text" placeholder="Họ và tên" value="${name}" class="student-name">
-        <button onclick="removeStudentRow(this)">Xóa</button>
+        <input type="text" placeholder="MSSV" value="${escapeAttribute(mssv)}" class="student-mssv">
+        <input type="text" placeholder="Họ và tên" value="${escapeAttribute(name)}" class="student-name">
+        <input type="text" placeholder="Phone (optional)" value="${escapeAttribute(phone)}" class="student-phone">
+        <input type="email" placeholder="Email (optional)" value="${escapeAttribute(email)}" class="student-email">
+        <button type="button" onclick="removeStudentRow(this)" title="Xóa sinh viên">
+            <i class="bi bi-trash"></i>
+        </button>
     `;
     editor.appendChild(row);
     updateStudentCount();
@@ -1097,7 +1109,10 @@ function removeStudentRow(btn) {
 
 function updateStudentCount() {
     const rows = document.querySelectorAll('#studentEditor .weight-row');
-    document.getElementById('totalStudents').textContent = rows.length;
+    const countElement = document.getElementById('classStudentCount') || document.getElementById('totalStudents');
+    if (countElement) {
+        countElement.textContent = rows.length;
+    }
 }
 
 async function handleClassStudentUpload(event) {
@@ -1148,6 +1163,21 @@ function parseStudentList(data) {
             normalized.includes('hovaten') || normalized.includes('ho');
     });
 
+    const phoneIndex = headers.findIndex(h => {
+        if (!h) return false;
+        const normalized = normalizeString(h);
+        return normalized.includes('phone') ||
+            normalized.includes('sdt') ||
+            normalized.includes('sodienthoai') ||
+            normalized.includes('dienthoai');
+    });
+
+    const emailIndex = headers.findIndex(h => {
+        if (!h) return false;
+        const normalized = normalizeString(h);
+        return normalized.includes('email') || normalized.includes('mail');
+    });
+
     if (mssvIndex === -1 || nameIndex === -1) {
         alert('Không tìm thấy cột MSSV hoặc Họ tên!');
         return;
@@ -1161,9 +1191,11 @@ function parseStudentList(data) {
 
         const mssv = row[mssvIndex] || '';
         const name = row[nameIndex] || '';
+        const phone = phoneIndex >= 0 ? (row[phoneIndex] || '') : '';
+        const email = emailIndex >= 0 ? (row[emailIndex] || '') : '';
 
         if (mssv) {
-            addStudentRowWithData(mssv, name);
+            addStudentRowWithData(mssv, name, phone, email);
         }
     }
 
@@ -2293,7 +2325,7 @@ async function editClassById(classId) {
 
         if (classData.students && classData.students.length > 0) {
             classData.students.forEach(student => {
-                addStudentRowWithData(student.mssv, student.name);
+                addStudentRowWithData(student.mssv, student.name, student.phone || '', student.email || '');
             });
         }
 
@@ -2411,8 +2443,10 @@ async function saveClass() {
     rows.forEach(row => {
         const mssv = row.querySelector('.student-mssv').value.trim();
         const studentName = row.querySelector('.student-name').value.trim();
+        const phone = row.querySelector('.student-phone')?.value.trim() || '';
+        const email = row.querySelector('.student-email')?.value.trim() || '';
         if (mssv && studentName) {
-            students.push({ mssv, name: studentName });
+            students.push({ mssv, name: studentName, phone, email });
         }
     });
 
@@ -2479,7 +2513,7 @@ function closeClassModal() {
 
 function updateStudentCount() {
     const rows = document.querySelectorAll('#studentEditor .weight-row');
-    const countElement = document.getElementById('classStudentCount');
+    const countElement = document.getElementById('classStudentCount') || document.getElementById('totalStudents');
     if (countElement) {
         countElement.textContent = rows.length;
     }

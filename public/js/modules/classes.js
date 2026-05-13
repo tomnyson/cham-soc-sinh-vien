@@ -203,7 +203,7 @@ const ClassesModule = {
                             <input type="number" 
                                    class="grade-input" 
                                    min="0" 
-                                   max="100" 
+                                   max="10" 
                                    step="0.1"
                                    value="${studentGrades[col] || ''}"
                                    placeholder="0"
@@ -242,9 +242,9 @@ const ClassesModule = {
         const value = parseFloat(input.value) || 0;
 
         // Validate
-        if (value < 0 || value > 100) {
+        if (value < 0 || value > 10) {
             input.classList.add('is-invalid');
-            alert('Điểm phải từ 0 đến 100');
+            alert('Điểm phải từ 0 đến 10');
             return;
         }
         input.classList.remove('is-invalid');
@@ -461,7 +461,7 @@ const ClassesModule = {
                 // Import only the columns that match profile
                 for (const [colName, colIndex] of Object.entries(gradeColumnIndices)) {
                     const score = parseFloat(row[colIndex]);
-                    if (!isNaN(score) && score >= 0 && score <= 100) {
+                    if (!isNaN(score) && score >= 0 && score <= 10) {
                         classData.grades.students[mssv][colName] = score;
                     } else {
                         // Set to 0 if invalid or empty

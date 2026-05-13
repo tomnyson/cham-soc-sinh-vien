@@ -30,6 +30,69 @@
 const serverData = window.__INITIAL_SERVER_DATA__ || {};
 const classData = JSON.parse(JSON.stringify(serverData.classDetail || {}));
 const profiles = serverData.profiles || {};
+const initialGrades = normalizeGradeStudents(classData?.grades?.students || {}, classData?.students || []);
+const ZALO_CHAT_URL = 'https://chat.zalo.me/';
+
+function normalizeMssvKey(value = '') {
+    return String(value || '').trim().toUpperCase();
+}
+
+function toPlainGradeObject(value) {
+    if (value instanceof Map) {
+        return Object.fromEntries(value.entries());
+    }
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        return {};
+    }
+    return { ...value };
+}
+
+function normalizeGradeStudents(rawGradeStudents = {}, students = []) {
+    const entries = rawGradeStudents instanceof Map
+        ? Array.from(rawGradeStudents.entries())
+        : Object.entries(rawGradeStudents || {});
+
+    const gradeByNormalizedMssv = entries.reduce((acc, [rawMssv, rawGrades]) => {
+        const normalizedKey = normalizeMssvKey(rawMssv);
+        if (!normalizedKey) return acc;
+        acc[normalizedKey] = toPlainGradeObject(rawGrades);
+        return acc;
+    }, {});
+
+    const normalizedGrades = {};
+    (Array.isArray(students) ? students : []).forEach((student) => {
+        const exactMssv = String(student?.mssv || '').trim();
+        if (!exactMssv) return;
+        const normalizedKey = normalizeMssvKey(exactMssv);
+        normalizedGrades[exactMssv] = gradeByNormalizedMssv[normalizedKey]
+            ? { ...gradeByNormalizedMssv[normalizedKey] }
+            : {};
+    });
+
+    // Keep unmatched keys to avoid accidental data loss on save.
+    entries.forEach(([rawMssv, rawGrades]) => {
+        const exactMssv = String(rawMssv || '').trim();
+        if (!exactMssv || Object.prototype.hasOwnProperty.call(normalizedGrades, exactMssv)) return;
+        normalizedGrades[exactMssv] = toPlainGradeObject(rawGrades);
+    });
+
+    return normalizedGrades;
+}
+
+function normalizeStudentRecord(student = {}) {
+    return {
+        mssv: String(student?.mssv || '').trim(),
+        name: String(student?.name || '').trim(),
+        phone: String(student?.phone || '').trim(),
+        email: String(student?.email || '').trim().toLowerCase()
+    };
+}
+
+function normalizeStudentList(students = []) {
+    return (Array.isArray(students) ? students : [])
+        .map(normalizeStudentRecord)
+        .filter(student => student.mssv);
+}
 
 const state = {
     classData,
@@ -38,10 +101,10 @@ const state = {
         classData?.grades?.profileId ||
         Object.keys(profiles)[0] ||
         '',
-    grades: JSON.parse(JSON.stringify(classData?.grades?.students || {})),
+    grades: JSON.parse(JSON.stringify(initialGrades)),
     original: {
         profileId: (classData?.grades?.profileId) || '',
-        grades: JSON.parse(JSON.stringify(classData?.grades?.students || {}))
+        grades: JSON.parse(JSON.stringify(initialGrades))
     },
     isDirty: false,
     isSaving: false,
@@ -62,6 +125,9 @@ const state = {
         remainingSeconds: 0,
         isRunning: false,
         isPaused: false
+    },
+    emailModal: {
+        preselectedMssv: ''
     }
 };
 
@@ -97,6 +163,7 @@ const elements = {
     hideAllColumnsBtn: document.getElementById('hideAllColumnsBtn'),
     // Share link elements
     shareGradesBtn: document.getElementById('shareGradesBtn'),
+    sendScoreEmailBtn: document.getElementById('classDetailSendEmailBtn'),
     copyShareLinkBtn: document.getElementById('copyShareLinkBtn'),
     openShareLinkBtn: document.getElementById('openShareLinkBtn'),
     // Share QR Modal elements
@@ -106,6 +173,16 @@ const elements = {
     copyShareLinkFromModalBtn: document.getElementById('copyShareLinkFromModalBtn'),
     copyQrImageBtn: document.getElementById('copyQrImageBtn'),
     downloadQrBtn: document.getElementById('downloadQrBtn'),
+    // Send score email modal elements
+    sendScoreEmailModal: document.getElementById('sendScoreEmailModal'),
+    emailRecipientList: document.getElementById('emailRecipientList'),
+    emailSelectAllBtn: document.getElementById('emailSelectAllBtn'),
+    emailClearSelectionBtn: document.getElementById('emailClearSelectionBtn'),
+    emailCustomMessageInput: document.getElementById('emailCustomMessageInput'),
+    emailNoteOnlyToggle: document.getElementById('emailNoteOnlyToggle'),
+    emailSendBtn: document.getElementById('emailSendBtn'),
+    emailSendStatus: document.getElementById('emailSendStatus'),
+    emailRecipientCount: document.getElementById('emailRecipientCount'),
     // Google Sheet sync elements
     syncGoogleSheetBtn: document.getElementById('syncGoogleSheetBtn'),
     syncGoogleSheetModal: document.getElementById('syncGoogleSheetModal'),
@@ -170,6 +247,66 @@ function init() {
     renderGradesTable();
     updateSummary();
     initializeChartListeners();
+
+    // Rehydrate from API to avoid stale/missing SSR score payloads.
+    void hydrateClassDetailFromApi();
+}
+
+function getClassDetailId() {
+    const pageEl = document.getElementById('classDetailPage');
+    const dataClassId = pageEl?.dataset?.classId;
+    return String(classData?.classId || dataClassId || classData?._id || classData?.id || '').trim();
+}
+
+async function hydrateClassDetailFromApi() {
+    const classId = getClassDetailId();
+    if (!classId) return;
+
+    try {
+        const response = await fetch(`/api/classes/${encodeURIComponent(classId)}`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+
+        if (!response.ok) return;
+
+        const result = await response.json().catch(() => ({}));
+        if (!result?.success || !result?.data || state.isDirty) {
+            return;
+        }
+
+        const freshClass = result.data;
+        const freshStudents = normalizeStudentList(freshClass.students);
+        const freshProfileId = String(freshClass?.grades?.profileId || '').trim();
+        const freshGrades = normalizeGradeStudents(freshClass?.grades?.students || {}, freshStudents);
+
+        classData.classId = String(freshClass.classId || classData.classId || '').trim();
+        classData.name = String(freshClass.name || classData.name || '').trim();
+        classData.description = String(freshClass.description || '').trim();
+        classData.students = freshStudents;
+        classData.grades = freshClass.grades && typeof freshClass.grades === 'object'
+            ? { ...freshClass.grades }
+            : null;
+        classData.updatedAt = freshClass.updatedAt || classData.updatedAt;
+
+        state.grades = JSON.parse(JSON.stringify(freshGrades));
+        state.original.profileId = freshProfileId || state.original.profileId || '';
+        state.original.grades = JSON.parse(JSON.stringify(freshGrades));
+        state.currentProfileId = freshProfileId || state.currentProfileId;
+        state.isDirty = false;
+
+        const updatedAtEl = document.getElementById('classDetailUpdatedAt');
+        if (updatedAtEl && classData.updatedAt) {
+            updatedAtEl.textContent = new Date(classData.updatedAt).toLocaleString('vi-VN');
+        }
+
+        ensureProfileSelection();
+        renderGradesTable();
+        updateSummary();
+        updateSaveButtonState();
+    } catch (error) {
+        console.warn('Unable to refresh class detail from API:', error);
+    }
 }
 
 function bindEvents() {
@@ -182,6 +319,7 @@ function bindEvents() {
         // Handle extra fields (bonus, dates, note)
         elements.tableBody.addEventListener('input', handleExtraInput);
         elements.tableBody.addEventListener('change', handleExtraInput);
+        elements.tableBody.addEventListener('click', handleTableBodyClick);
     }
 
     // Copy column scores binding (event delegation on table header)
@@ -263,6 +401,12 @@ function bindEvents() {
             showShareQrModal();
         });
     }
+    if (elements.sendScoreEmailBtn) {
+        elements.sendScoreEmailBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openSendEmailModal();
+        });
+    }
     if (elements.copyShareLinkBtn) {
         elements.copyShareLinkBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -297,6 +441,22 @@ function bindEvents() {
     }
     if (elements.downloadQrBtn) {
         elements.downloadQrBtn.addEventListener('click', downloadQrCode);
+    }
+
+    if (elements.sendScoreEmailModal) {
+        elements.sendScoreEmailModal.addEventListener('show.bs.modal', renderEmailRecipientList);
+    }
+    if (elements.emailSelectAllBtn) {
+        elements.emailSelectAllBtn.addEventListener('click', () => toggleAllEmailRecipients(true));
+    }
+    if (elements.emailClearSelectionBtn) {
+        elements.emailClearSelectionBtn.addEventListener('click', () => toggleAllEmailRecipients(false));
+    }
+    if (elements.emailRecipientList) {
+        elements.emailRecipientList.addEventListener('change', updateEmailRecipientCount);
+    }
+    if (elements.emailSendBtn) {
+        elements.emailSendBtn.addEventListener('click', sendScoreEmails);
     }
 
     // Google Sheet sync bindings
@@ -389,12 +549,26 @@ function bindEvents() {
 }
 
 function ensureProfileSelection() {
-    if (!state.currentProfileId && elements.profileSelect) {
-        state.currentProfileId = elements.profileSelect.value || Object.keys(profiles)[0] || '';
+    const selectableProfileIds = elements.profileSelect
+        ? Array.from(elements.profileSelect.options).map(option => option.value).filter(Boolean)
+        : Object.keys(profiles);
+
+    const hasValidCurrent = Boolean(state.currentProfileId && profiles[state.currentProfileId]);
+    if (!hasValidCurrent) {
+        const gradeProfileId = String(classData?.grades?.profileId || '').trim();
+        if (gradeProfileId && profiles[gradeProfileId]) {
+            state.currentProfileId = gradeProfileId;
+        } else {
+            state.currentProfileId = selectableProfileIds[0] || '';
+        }
     }
 
     if (elements.profileSelect) {
         elements.profileSelect.value = state.currentProfileId;
+        if (elements.profileSelect.value !== state.currentProfileId) {
+            state.currentProfileId = selectableProfileIds[0] || '';
+            elements.profileSelect.value = state.currentProfileId;
+        }
     }
 }
 
@@ -421,7 +595,7 @@ function handleGradeInput(event) {
     if (Number.isNaN(value)) {
         value = '';
     } else {
-        value = Math.min(Math.max(value, 0), 100);
+        value = Math.min(Math.max(value, 0), 10);
     }
 
     target.value = value === '' ? '' : value;
@@ -470,6 +644,243 @@ function handleExtraInput(event) {
     // Update final total if bonus changed
     if (field === '_bonus') {
         updateFinalTotal(mssv);
+    }
+}
+
+function isValidEmailAddress(value) {
+    const email = String(value || '').trim().toLowerCase();
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function escapeHtml(value = '') {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function normalizePhoneForZalo(phone = '') {
+    const digits = String(phone || '').replace(/\D/g, '');
+    if (!digits) return '';
+    if (digits.startsWith('84')) return digits;
+    if (digits.startsWith('0')) return `84${digits.slice(1)}`;
+    return digits;
+}
+
+function buildZaloChatLink(phone = '') {
+    const normalized = normalizePhoneForZalo(phone);
+    return normalized
+        ? `${ZALO_CHAT_URL}?phone=${encodeURIComponent(normalized)}`
+        : ZALO_CHAT_URL;
+}
+
+function renderContactIcons(email = '', phone = '') {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const safeEmail = escapeHtml(normalizedEmail);
+    const safePhone = escapeHtml(String(phone || '').trim());
+    const normalizedPhone = normalizePhoneForZalo(phone);
+
+    const emailIcon = isValidEmailAddress(normalizedEmail)
+        ? `<a href="mailto:${safeEmail}" target="_blank" rel="noopener noreferrer" class="text-decoration-none" title="${safeEmail}">
+                <i class="bi bi-envelope-at-fill"></i>
+            </a>`
+        : `<span class="text-muted" title="Chưa có email hợp lệ">
+                <i class="bi bi-envelope-slash"></i>
+            </span>`;
+
+    const phoneIcon = normalizedPhone
+        ? `<a href="${escapeHtml(buildZaloChatLink(normalizedPhone))}" target="_blank" rel="noopener noreferrer" class="text-decoration-none" title="Zalo: ${safePhone || normalizedPhone}">
+                <i class="bi bi-telephone-fill"></i>
+            </a>`
+        : `<span class="text-muted" title="Chưa có số điện thoại">
+                <i class="bi bi-telephone-x"></i>
+            </span>`;
+
+    return `<span class="d-inline-flex align-items-center gap-2">${emailIcon}${phoneIcon}</span>`;
+}
+
+function handleTableBodyClick(event) {
+    const emailBtn = event.target.closest('.send-score-mail-btn');
+    if (!emailBtn) return;
+
+    event.preventDefault();
+    const mssv = String(emailBtn.dataset.mssv || '').trim();
+    if (!mssv) return;
+    openSendEmailModal(mssv);
+}
+
+function openSendEmailModal(preselectedMssv = '') {
+    state.emailModal.preselectedMssv = String(preselectedMssv || '').trim().toUpperCase();
+    setEmailSendStatus('', 'info');
+    if (elements.emailNoteOnlyToggle) {
+        elements.emailNoteOnlyToggle.checked = false;
+    }
+
+    const modalEl = elements.sendScoreEmailModal;
+    if (!modalEl) return;
+
+    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    modal.show();
+}
+
+function renderEmailRecipientList() {
+    if (!elements.emailRecipientList) return;
+
+    const students = Array.isArray(classData.students) ? classData.students : [];
+    const onlyMssv = state.emailModal.preselectedMssv;
+    const hasSingleSelection = Boolean(onlyMssv);
+
+    if (!students.length) {
+        elements.emailRecipientList.innerHTML = '<div class="small text-muted text-center py-3">Lớp chưa có sinh viên.</div>';
+        updateEmailRecipientCount();
+        return;
+    }
+
+    elements.emailRecipientList.innerHTML = students.map((student) => {
+        const mssv = String(student.mssv || '').trim();
+        const name = String(student.name || '').trim();
+        const email = String(student.email || '').trim().toLowerCase();
+        const phone = String(student.phone || '').trim();
+        const emailValid = isValidEmailAddress(email);
+        const checked = hasSingleSelection ? (mssv.toUpperCase() === onlyMssv && emailValid) : emailValid;
+        const disabled = !emailValid;
+
+        return `
+            <label class="d-flex align-items-start gap-2 p-2 border-bottom email-recipient-item ${disabled ? 'opacity-75' : ''}">
+                <input type="checkbox"
+                    class="form-check-input mt-1 email-recipient-checkbox"
+                    value="${escapeHtml(mssv)}"
+                    ${checked ? 'checked' : ''}
+                    ${disabled ? 'disabled' : ''}>
+                <div class="small">
+                    <div class="fw-semibold">${escapeHtml(name)} <span class="text-muted">(${escapeHtml(mssv)})</span></div>
+                    <div class="text-muted">${renderContactIcons(email, phone)}</div>
+                </div>
+            </label>
+        `;
+    }).join('');
+
+    updateEmailRecipientCount();
+}
+
+function updateEmailRecipientCount() {
+    if (!elements.emailRecipientCount) return;
+    const selected = getSelectedEmailRecipients().length;
+    const total = document.querySelectorAll('.email-recipient-checkbox:not(:disabled)').length;
+    elements.emailRecipientCount.textContent = `${selected}/${total} sinh viên đã chọn để gửi email`;
+}
+
+function toggleAllEmailRecipients(checked) {
+    document.querySelectorAll('.email-recipient-checkbox:not(:disabled)').forEach((checkbox) => {
+        checkbox.checked = checked;
+    });
+    updateEmailRecipientCount();
+}
+
+function getSelectedEmailRecipients() {
+    return Array.from(document.querySelectorAll('.email-recipient-checkbox:checked:not(:disabled)'))
+        .map((checkbox) => String(checkbox.value || '').trim())
+        .filter(Boolean);
+}
+
+function setEmailSendStatus(message, type = 'info') {
+    if (!elements.emailSendStatus) return;
+    if (!message) {
+        elements.emailSendStatus.innerHTML = '';
+        elements.emailSendStatus.className = 'small text-muted';
+        return;
+    }
+
+    const classMap = {
+        success: 'small text-success',
+        error: 'small text-danger',
+        warning: 'small text-warning',
+        info: 'small text-muted'
+    };
+    elements.emailSendStatus.className = classMap[type] || classMap.info;
+    elements.emailSendStatus.innerHTML = escapeHtml(String(message || '')).replace(/\n/g, '<br>');
+}
+
+function formatEmailIssue(item = {}) {
+    const mssv = String(item?.mssv || '').trim();
+    const email = String(item?.email || '').trim();
+    const reason = String(item?.reason || '').trim() || 'Không rõ nguyên nhân';
+    const identity = mssv ? (email ? `${mssv} (${email})` : mssv) : (email || 'unknown');
+    return `${identity}: ${reason}`;
+}
+
+async function sendScoreEmails() {
+    const recipients = getSelectedEmailRecipients();
+    const customMessage = String(elements.emailCustomMessageInput?.value || '').trim();
+    const noteOnly = Boolean(elements.emailNoteOnlyToggle?.checked);
+
+    if (!recipients.length) {
+        setEmailSendStatus('Vui lòng chọn ít nhất 1 sinh viên có email hợp lệ.', 'warning');
+        return;
+    }
+
+    const sendBtn = elements.emailSendBtn;
+    if (!sendBtn) return;
+
+    const originalHtml = sendBtn.innerHTML;
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Đang gửi...';
+    setEmailSendStatus(`Đang gửi email cho ${recipients.length} sinh viên...`, 'info');
+
+    try {
+        const response = await fetch(`/api/classes/${encodeURIComponent(classData.classId)}/send-score-email`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                recipients,
+                customMessage,
+                noteOnly
+            })
+        });
+
+        const result = await response.json().catch(() => ({}));
+        const failed = Array.isArray(result?.data?.failed) ? result.data.failed : [];
+        const skipped = Array.isArray(result?.data?.skipped) ? result.data.skipped : [];
+
+        if (!response.ok || !result.success) {
+            const detailLines = [
+                ...failed.slice(0, 3).map(formatEmailIssue),
+                ...skipped.slice(0, 2).map(formatEmailIssue)
+            ];
+            const suffix = detailLines.length
+                ? `\nChi tiết:\n- ${detailLines.join('\n- ')}${(failed.length + skipped.length) > detailLines.length ? '\n- ...' : ''}`
+                : '';
+            throw new Error(`${result.error || result.message || 'Không thể gửi email'}${suffix}`);
+        }
+
+        const sentCount = Number(result.data?.sentCount || 0);
+        const skippedCount = skipped.length;
+        const failedCount = failed.length;
+        const detailLines = [];
+
+        if (failedCount > 0) {
+            detailLines.push('Chi tiết lỗi:');
+            failed.slice(0, 3).forEach((item) => detailLines.push(`- ${formatEmailIssue(item)}`));
+            if (failedCount > 3) {
+                detailLines.push(`- ... và ${failedCount - 3} lỗi khác`);
+            }
+        }
+
+        setEmailSendStatus(
+            `Gửi xong: thành công ${sentCount}, bỏ qua ${skippedCount}, lỗi ${failedCount}.${detailLines.length ? `\n${detailLines.join('\n')}` : ''}`,
+            failedCount > 0 ? 'warning' : 'success'
+        );
+    } catch (error) {
+        console.error('Send score email error:', error);
+        setEmailSendStatus(`Lỗi gửi email: ${error.message}`, 'error');
+    } finally {
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = originalHtml;
     }
 }
 
@@ -683,12 +1094,50 @@ function renderGradesTable() {
         const passed = total >= (profile.passThreshold || 0);
         const bonus = parseFloat(studentGrades._bonus) || 0;
         const finalTotal = Math.min(total + bonus, 10); // Cap at 10
+        const studentEmail = String(student.email || '').trim().toLowerCase();
+        const studentPhone = String(student.phone || '').trim();
+        const canSendMail = isValidEmailAddress(studentEmail);
+        const normalizedPhoneForZalo = normalizePhoneForZalo(studentPhone);
+        const canOpenZalo = Boolean(normalizedPhoneForZalo);
+        const zaloChatLink = buildZaloChatLink(normalizedPhoneForZalo);
 
         return `
             <tr class="${passed ? 'pass' : 'fail'}">
                 <td class="text-center sticky-col-1">${index + 1}</td>
                 <td class="sticky-col-2"><span class="badge bg-primary">${student.mssv}</span></td>
-                <td class="sticky-col-3">${student.name}</td>
+                <td class="sticky-col-3">
+                    <div class="class-detail-email-row">
+                        <div>
+                            <div>${escapeHtml(student.name)}</div>
+                        </div>
+                        <button
+                            type="button"
+                            class="btn btn-outline-primary btn-sm send-score-mail-btn"
+                            data-mssv="${escapeHtml(student.mssv)}"
+                            title="${canSendMail ? 'Gửi email điểm cho sinh viên này' : 'Sinh viên chưa có email hợp lệ'}"
+                            ${canSendMail ? '' : 'disabled'}>
+                            <i class="bi bi-envelope"></i>
+                        </button>
+                        ${canOpenZalo ? `
+                            <a
+                                href="${escapeHtml(zaloChatLink)}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="btn btn-outline-success btn-sm"
+                                title="Nhắn Zalo cho ${escapeHtml(studentPhone)}">
+                                <i class="bi bi-telephone-fill"></i>
+                            </a>
+                        ` : `
+                            <button
+                                type="button"
+                                class="btn btn-outline-success btn-sm"
+                                title="Sinh viên chưa có số điện thoại hợp lệ"
+                                disabled>
+                                <i class="bi bi-telephone-x"></i>
+                            </button>
+                        `}
+                    </div>
+                </td>
                 ${visibleColumns.map(column => `
                     <td class="text-center" data-column="${column}">
                         <input

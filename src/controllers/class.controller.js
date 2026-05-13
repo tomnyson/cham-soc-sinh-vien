@@ -1,10 +1,29 @@
 const classService = require('../services/class.service');
 const profileService = require('../services/profile.service');
 const googleSheetService = require('../services/google-sheet.service');
+const emailService = require('../services/email.service');
 
 /**
  * Class Controller - Xử lý requests liên quan đến classes
  */
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function parseBooleanFlag(value, defaultValue = false) {
+    if (value === undefined || value === null || value === '') {
+        return defaultValue;
+    }
+    if (typeof value === 'boolean') {
+        return value;
+    }
+    const normalized = String(value).trim().toLowerCase();
+    if (normalized === 'true' || normalized === '1' || normalized === 'yes') {
+        return true;
+    }
+    if (normalized === 'false' || normalized === '0' || normalized === 'no') {
+        return false;
+    }
+    return defaultValue;
+}
 
 function sortGradeColumns(weights = {}) {
     return Object.keys(weights).sort((a, b) => {
@@ -47,11 +66,115 @@ function normalizeWeights(profile = {}) {
     return normalized;
 }
 
-function normalizeGradeStudents(gradeStudents = {}) {
+function getStudentGradesByMssv(gradeStudents = {}, mssv = '') {
+    const target = String(mssv || '').trim().toUpperCase();
+    if (!target) return {};
+
     if (gradeStudents instanceof Map) {
-        return Object.fromEntries(gradeStudents.entries());
+        for (const [key, value] of gradeStudents.entries()) {
+            if (String(key || '').trim().toUpperCase() === target) {
+                return value || {};
+            }
+        }
+        return {};
     }
-    return gradeStudents || {};
+
+    for (const [key, value] of Object.entries(gradeStudents || {})) {
+        if (String(key || '').trim().toUpperCase() === target) {
+            return value || {};
+        }
+    }
+    return {};
+}
+
+function escapeHtml(value = '') {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function buildScoreEmailContent({
+    classData,
+    student,
+    total,
+    bonus,
+    finalTotal,
+    status,
+    note,
+    customMessage,
+    lookupLink,
+    noteOnly = false
+}) {
+    const safeClassName = escapeHtml(classData?.name || '');
+    const safeStudentName = escapeHtml(student?.name || '');
+    const safeStudentMssv = escapeHtml(student?.mssv || '');
+    const safeStatus = escapeHtml(status);
+    const safeNote = escapeHtml(note || 'Không có');
+    const safeCustomMessage = escapeHtml(customMessage || '');
+    const safeLink = escapeHtml(lookupLink);
+
+    const text = noteOnly
+        ? [
+            `Lớp: ${classData?.name || ''}`,
+            `Sinh viên: ${student?.name || ''} (${student?.mssv || ''})`,
+            `Ghi chú GV: ${note || 'Không có'}`,
+            customMessage ? `Tin nhắn từ GV: ${customMessage}` : '',
+            `Tra cứu chi tiết: ${lookupLink}`
+        ].filter(Boolean).join('\n')
+        : [
+            `Lớp: ${classData?.name || ''}`,
+            `Sinh viên: ${student?.name || ''} (${student?.mssv || ''})`,
+            `Tổng điểm: ${total.toFixed(2)}`,
+            `Bonus: ${bonus.toFixed(2)}`,
+            `Tổng cuối: ${finalTotal.toFixed(2)}`,
+            `Trạng thái: ${status}`,
+            `Ghi chú GV: ${note || 'Không có'}`,
+            customMessage ? `Tin nhắn từ GV: ${customMessage}` : '',
+            `Tra cứu chi tiết: ${lookupLink}`
+        ].filter(Boolean).join('\n');
+
+    const html = noteOnly
+        ? `
+            <div style="font-family:Arial,sans-serif;line-height:1.5;color:#111827;">
+                <h3 style="margin:0 0 8px;">Ghi chú từ lớp ${safeClassName}</h3>
+                <p style="margin:0 0 14px;">Sinh viên: <strong>${safeStudentName}</strong> (${safeStudentMssv})</p>
+                <table style="border-collapse:collapse;width:100%;max-width:520px;margin-bottom:14px;">
+                    <tbody>
+                        <tr><td style="padding:6px 8px;border:1px solid #e5e7eb;">Ghi chú GV</td><td style="padding:6px 8px;border:1px solid #e5e7eb;">${safeNote}</td></tr>
+                    </tbody>
+                </table>
+                ${safeCustomMessage ? `<p style="margin:0 0 10px;"><strong>Tin nhắn từ giáo viên:</strong><br>${safeCustomMessage.replace(/\n/g, '<br>')}</p>` : ''}
+                <p style="margin:0;">
+                    Tra cứu chi tiết:
+                    <a href="${safeLink}" target="_blank" rel="noopener noreferrer">${safeLink}</a>
+                </p>
+            </div>
+        `
+        : `
+            <div style="font-family:Arial,sans-serif;line-height:1.5;color:#111827;">
+                <h3 style="margin:0 0 8px;">Thông báo điểm từ lớp ${safeClassName}</h3>
+                <p style="margin:0 0 14px;">Sinh viên: <strong>${safeStudentName}</strong> (${safeStudentMssv})</p>
+                <table style="border-collapse:collapse;width:100%;max-width:520px;margin-bottom:14px;">
+                    <tbody>
+                        <tr><td style="padding:6px 8px;border:1px solid #e5e7eb;">Tổng điểm</td><td style="padding:6px 8px;border:1px solid #e5e7eb;"><strong>${total.toFixed(2)}</strong></td></tr>
+                        <tr><td style="padding:6px 8px;border:1px solid #e5e7eb;">Bonus</td><td style="padding:6px 8px;border:1px solid #e5e7eb;">${bonus.toFixed(2)}</td></tr>
+                        <tr><td style="padding:6px 8px;border:1px solid #e5e7eb;">Tổng cuối</td><td style="padding:6px 8px;border:1px solid #e5e7eb;"><strong>${finalTotal.toFixed(2)}</strong></td></tr>
+                        <tr><td style="padding:6px 8px;border:1px solid #e5e7eb;">Trạng thái</td><td style="padding:6px 8px;border:1px solid #e5e7eb;">${safeStatus}</td></tr>
+                        <tr><td style="padding:6px 8px;border:1px solid #e5e7eb;">Ghi chú GV</td><td style="padding:6px 8px;border:1px solid #e5e7eb;">${safeNote}</td></tr>
+                    </tbody>
+                </table>
+                ${safeCustomMessage ? `<p style="margin:0 0 10px;"><strong>Tin nhắn từ giáo viên:</strong><br>${safeCustomMessage.replace(/\n/g, '<br>')}</p>` : ''}
+                <p style="margin:0;">
+                    Tra cứu chi tiết:
+                    <a href="${safeLink}" target="_blank" rel="noopener noreferrer">${safeLink}</a>
+                </p>
+            </div>
+        `;
+
+    return { text, html };
 }
 
 function clampNumber(value, min, max) {
@@ -70,14 +193,14 @@ function calculateTotal(studentGrades = {}, weights = {}) {
 
 function buildGradeRowsForSync(classData = {}, profile = {}) {
     const students = Array.isArray(classData.students) ? classData.students : [];
-    const gradeStudents = normalizeGradeStudents(classData.grades?.students || {});
+    const gradeStudents = classData.grades?.students || {};
     const weights = normalizeWeights(profile);
     const columns = sortGradeColumns(weights);
     const passThreshold = Number.parseFloat(profile.passThreshold) || 0;
 
     const headers = ['STT', 'MSSV', 'Họ và tên', ...columns, 'Tổng', 'Trạng thái', 'Bonus', 'Tổng cuối', 'Ghi chú'];
     const rows = students.map((student, index) => {
-        const studentGrades = gradeStudents[student.mssv] || {};
+        const studentGrades = getStudentGradesByMssv(gradeStudents, student.mssv);
         const total = calculateTotal(studentGrades, weights);
         const bonus = clampNumber(studentGrades._bonus, 0, 2) || 0;
         const finalTotal = Math.min(total + bonus, 10);
@@ -377,6 +500,137 @@ const syncGradesToGoogleSheet = async (req, res, next) => {
 };
 
 /**
+ * Gửi email điểm + ghi chú cho 1 hoặc nhiều sinh viên trong lớp
+ */
+const sendScoreEmail = async (req, res, next) => {
+    try {
+        const { classId } = req.params;
+        const userId = req.user._id;
+        const recipientsRaw = Array.isArray(req.body?.recipients) ? req.body.recipients : [];
+        const customMessage = String(req.body?.customMessage || '').trim().slice(0, 2000);
+        const noteOnly = parseBooleanFlag(req.body?.noteOnly, false);
+        const recipients = [...new Set(
+            recipientsRaw
+                .map(value => String(value || '').trim().toUpperCase())
+                .filter(Boolean)
+        )];
+
+        if (recipients.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'recipients là bắt buộc'
+            });
+        }
+
+        const classData = await classService.getClassById(classId, userId);
+        if (!classData?.grades?.profileId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Lớp chưa có profile điểm để gửi email'
+            });
+        }
+
+        const profile = await profileService.getProfileById(classData.grades.profileId, userId);
+        const weights = normalizeWeights(profile);
+        const passThreshold = Number.parseFloat(profile.passThreshold) || 0;
+        const gradeStudents = classData.grades?.students || {};
+        const students = Array.isArray(classData.students) ? classData.students : [];
+        const origin = `${req.protocol}://${req.get('host')}`;
+
+        // Validate SMTP config once before iterating recipients
+        emailService.getConfig();
+
+        const failed = [];
+        const skipped = [];
+        let sentCount = 0;
+
+        for (const recipientMssv of recipients) {
+            const student = students.find(
+                s => String(s.mssv || '').trim().toUpperCase() === recipientMssv
+            );
+
+            if (!student) {
+                skipped.push({ mssv: recipientMssv, reason: 'Không có sinh viên trong lớp' });
+                continue;
+            }
+
+            const email = String(student.email || '').trim().toLowerCase();
+            if (!email) {
+                skipped.push({ mssv: student.mssv, reason: 'Sinh viên chưa có email' });
+                continue;
+            }
+
+            if (!EMAIL_REGEX.test(email)) {
+                skipped.push({ mssv: student.mssv, reason: 'Email không hợp lệ' });
+                continue;
+            }
+
+            const studentGrades = getStudentGradesByMssv(gradeStudents, student.mssv);
+            const total = calculateTotal(studentGrades, weights);
+            const bonus = clampNumber(studentGrades._bonus, 0, 2) || 0;
+            const finalTotal = Math.min(total + bonus, 10);
+            const status = total >= passThreshold ? 'Đạt' : 'Chưa đạt';
+            const note = String(studentGrades._note || '').trim();
+            const lookupLink = `${origin}/student.html?class=${encodeURIComponent(classData.classId)}&mssv=${encodeURIComponent(student.mssv)}`;
+
+            const { text, html } = buildScoreEmailContent({
+                classData,
+                student,
+                total,
+                bonus,
+                finalTotal,
+                status,
+                note,
+                customMessage,
+                lookupLink,
+                noteOnly
+            });
+
+            const subject = noteOnly
+                ? `[${classData.name}] Ghi chú từ giảng viên - ${student.name} (${student.mssv})`
+                : `[${classData.name}] Kết quả điểm - ${student.name} (${student.mssv})`;
+
+            try {
+                await emailService.sendMail({
+                    to: email,
+                    subject,
+                    text,
+                    html
+                });
+                sentCount += 1;
+            } catch (error) {
+                failed.push({
+                    mssv: student.mssv,
+                    email,
+                    reason: error.message
+                });
+            }
+        }
+
+        if (sentCount === 0 && failed.length === 0 && skipped.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Không có người nhận hợp lệ để gửi email',
+                data: { sentCount, failed, skipped }
+            });
+        }
+
+        res.json({
+            success: true,
+            message: `Đã gửi email thành công ${sentCount}/${recipients.length} sinh viên`,
+            data: {
+                sentCount,
+                totalRequested: recipients.length,
+                failed,
+                skipped
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
  * Tra cứu điểm công khai theo classId + mssv (không yêu cầu đăng nhập)
  */
 const getPublicStudentGrade = async (req, res, next) => {
@@ -415,24 +669,7 @@ const getPublicStudentGrade = async (req, res, next) => {
             ? Object.fromEntries(profile.weights)
             : Object.fromEntries(new Map(Object.entries(profile.weights || {})));
 
-        let studentGrades = {};
-        const gradeStudents = grades.students || {};
-
-        if (gradeStudents instanceof Map) {
-            for (const [key, value] of gradeStudents.entries()) {
-                if (String(key || '').trim().toUpperCase() === mssv) {
-                    studentGrades = value || {};
-                    break;
-                }
-            }
-        } else {
-            for (const [key, value] of Object.entries(gradeStudents)) {
-                if (String(key || '').trim().toUpperCase() === mssv) {
-                    studentGrades = value || {};
-                    break;
-                }
-            }
-        }
+        const studentGrades = getStudentGradesByMssv(grades.students || {}, mssv);
 
         res.json({
             success: true,
@@ -472,5 +709,6 @@ module.exports = {
     archiveClass,
     unarchiveClass,
     syncGradesToGoogleSheet,
+    sendScoreEmail,
     getPublicStudentGrade
 };

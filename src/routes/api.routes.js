@@ -80,6 +80,7 @@ router.get('/classes/:classId', authenticate, asyncHandler(classController.getCl
 router.post('/classes', authenticate, asyncHandler(classController.createClass));
 router.put('/classes/:classId', authenticate, asyncHandler(classController.updateClass));
 router.post('/classes/:classId/sync-google-sheet', authenticate, asyncHandler(classController.syncGradesToGoogleSheet));
+router.post('/classes/:classId/send-score-email', authenticate, asyncHandler(classController.sendScoreEmail));
 router.delete('/classes/:classId', authenticate, asyncHandler(classController.deleteClass));
 
 // Student management within a class (Protected)
