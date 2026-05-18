@@ -15,6 +15,9 @@ const brandingService = require('./services/branding.service');
 const { notFoundHandler, errorHandler } = require('./middleware/error.middleware');
 const { optionalAuth } = require('./middleware/auth.middleware');
 
+// Controllers
+const dashboardController = require('./controllers/dashboard.controller');
+
 // Routes
 const apiRoutes = require('./routes/api.routes');
 
@@ -208,6 +211,9 @@ app.get('/grade-check', optionalAuth, async (req, res, next) => {
         next(error);
     }
 });
+
+// Grade Entry Dashboard (lecturer) - requires authentication, controller handles layout.
+app.get('/dashboard', optionalAuth, dashboardController.renderDashboard);
 
 app.get('/profiles', optionalAuth, async (req, res, next) => {
     try {

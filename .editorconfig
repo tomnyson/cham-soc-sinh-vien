@@ -1,0 +1,39 @@
+# EditorConfig helps maintain consistent coding styles across different editors and IDEs
+# https://editorconfig.org
+#
+# This file enforces consistent code formatting across the project.
+# Semicolon usage is configured in ESLint/Prettier configuration files.
+#
+# Requirements: 10.1, 10.2, 10.3, 10.4
+# - Consistent indentation (2 spaces)
+# - Consistent quote style (single quotes for JS/TS)
+# - Consistent semicolon usage (configured in ESLint/Prettier)
+# - Consistent line length (100 characters)
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+max_line_length = 100
+
+[*.{js,jsx,ts,tsx}]
+indent_style = space
+indent_size = 2
+quote_type = single
+max_line_length = 100
+
+[*.{json,yml,yaml}]
+indent_style = space
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+max_line_length = off
+
+[Makefile]
+indent_style = tab

@@ -90,7 +90,65 @@ const validateExportResults = (req, res, next) => {
     next();
 };
 
+/**
+ * Validate a single grade update payload (PUT /api/classes/:id/student/:mssv/grade).
+ * Body shape: `{ assessment: string, score: number }` where score must be within
+ * [0, 10]. The `_bonus` column has a tighter range of [0, 2] and `_note` is a
+ * free-form string.
+ */
+const validateGradeUpdate = (req, res, next) => {
+    const { assessment, score } = req.body || {};
+
+    if (!assessment || typeof assessment !== 'string' || !assessment.trim()) {
+        return res.status(400).json({
+            success: false,
+            error: 'Tên cột điểm (assessment) là bắt buộc!'
+        });
+    }
+
+    const column = assessment.trim();
+
+    // Note column accepts free-form text.
+    if (column === '_note') {
+        if (score !== undefined && score !== null && typeof score !== 'string' && typeof score !== 'number') {
+            return res.status(400).json({
+                success: false,
+                error: 'Ghi chú phải là chuỗi văn bản.'
+            });
+        }
+        req.body.assessment = column;
+        return next();
+    }
+
+    const numeric = Number.parseFloat(score);
+    if (!Number.isFinite(numeric)) {
+        return res.status(400).json({
+            success: false,
+            error: 'Điểm phải là số!'
+        });
+    }
+
+    if (column === '_bonus') {
+        if (numeric < 0 || numeric > 2) {
+            return res.status(400).json({
+                success: false,
+                error: 'Điểm bonus phải nằm trong khoảng 0-2.'
+            });
+        }
+    } else if (numeric < 0 || numeric > 10) {
+        return res.status(400).json({
+            success: false,
+            error: `Điểm "${column}" phải nằm trong khoảng 0-10.`
+        });
+    }
+
+    req.body.assessment = column;
+    req.body.score = numeric;
+    next();
+};
+
 module.exports = {
     validateGenerateTemplate,
-    validateExportResults
+    validateExportResults,
+    validateGradeUpdate
 };

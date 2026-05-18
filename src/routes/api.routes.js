@@ -8,6 +8,8 @@ const profileController = require('../controllers/profile.controller');
 const classController = require('../controllers/class.controller');
 const brandingController = require('../controllers/branding.controller');
 
+const dashboardRoutes = require('./dashboard.routes');
+
 const { uploadSingle, cleanupFile } = require('../middleware/upload.middleware');
 const { validateGenerateTemplate, validateExportResults } = require('../middleware/validation.middleware');
 const { asyncHandler } = require('../middleware/error.middleware');
@@ -97,5 +99,8 @@ router.put('/classes/:classId/unarchive', authenticate, asyncHandler(classContro
 router.get('/branding', authenticate, requireAdmin, asyncHandler(brandingController.getBranding));
 router.put('/branding', authenticate, requireAdmin, asyncHandler(brandingController.updateBranding));
 router.post('/branding/reset', authenticate, requireAdmin, asyncHandler(brandingController.resetBranding));
+
+// ===== Grade Entry Dashboard JSON endpoints =====
+router.use('/', dashboardRoutes);
 
 module.exports = router;
