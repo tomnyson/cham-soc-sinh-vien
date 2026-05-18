@@ -143,33 +143,75 @@
     function bindGradeInputs() {
         var inputs = tableContainer.querySelectorAll('.grade-input');
         inputs.forEach(function (input) {
-            input.addEventListener('change', handleInputChange);
-            input.addEventListener('blur', handleInputChange);
+            input.addEventListener('input', handleInputLive);
+            input.addEventListener('change', handleInputCommit);
+            input.addEventListener('blur', handleInputCommit);
         });
     }
 
-    function handleInputChange(ev) {
+    /**
+     * Validate the raw input value against the [0, 10] range.
+     * Returns { state: 'empty' | 'valid' | 'invalid', value: number | null }.
+     */
+    function validateGradeValue(raw) {
+        if (raw === '' || raw == null) {
+            return { state: 'empty', value: null };
+        }
+        var num = Number(raw);
+        if (!isFinite(num) || num < 0 || num > 10) {
+            return { state: 'invalid', value: null };
+        }
+        return { state: 'valid', value: num };
+    }
+
+    function setInvalidState(input, isInvalid) {
+        if (isInvalid) {
+            input.classList.add('is-invalid');
+            input.setAttribute('aria-invalid', 'true');
+        } else {
+            input.classList.remove('is-invalid');
+            input.removeAttribute('aria-invalid');
+        }
+    }
+
+    /**
+     * Live validation as the user types. Toggles the invalid state without
+     * persisting; persistence happens on commit (change/blur).
+     */
+    function handleInputLive(ev) {
         var input = ev.target;
-        var classId = (tableContainer.querySelector('#dashboardStudentTable') || {}).getAttribute
-            ? tableContainer.querySelector('#dashboardStudentTable').getAttribute('data-class-id')
-            : null;
+        var result = validateGradeValue(input.value);
+        setInvalidState(input, result.state === 'invalid');
+    }
+
+    /**
+     * Commit handler: persists when the value is valid, clears invalid state,
+     * and surfaces an error message when the value is out of range.
+     */
+    function handleInputCommit(ev) {
+        var input = ev.target;
+        var table = tableContainer.querySelector('#dashboardStudentTable');
+        var classId = table ? table.getAttribute('data-class-id') : null;
         var mssv = input.getAttribute('data-mssv');
         var column = input.getAttribute('data-column');
-        var raw = input.value;
 
         if (!classId || !mssv || !column) return;
 
-        if (raw === '') {
-            // Empty value is treated as "no score yet" - skip persisting.
+        var result = validateGradeValue(input.value);
+
+        if (result.state === 'empty') {
+            setInvalidState(input, false);
             return;
         }
 
-        var num = Number(raw);
-        if (!isFinite(num) || num < 0 || num > 10) {
+        if (result.state === 'invalid') {
+            setInvalidState(input, true);
             showSaveIndicator('Điểm phải nằm trong khoảng 0-10', 'error');
             return;
         }
-        persistGrade(classId, mssv, column, num);
+
+        setInvalidState(input, false);
+        persistGrade(classId, mssv, column, result.value);
     }
 
     function renderDashboardData(dashboard) {

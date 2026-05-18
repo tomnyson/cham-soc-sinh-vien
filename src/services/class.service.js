@@ -77,6 +77,56 @@ function normalizeStudentUpdates(updates = {}) {
     return normalized;
 }
 
+const VALID_SEMESTERS = new Set(['', 'spring', 'summer', 'fall']);
+
+/**
+ * Normalize and validate the optional class metadata fields (year, block,
+ * semester, instructorCode). Returns a plain object containing only the
+ * fields that were explicitly provided so callers can spread them into an
+ * update without overwriting unset values.
+ */
+function normalizeClassMetadata(input = {}) {
+    const result = {};
+
+    if (input.year !== undefined) {
+        if (input.year === null || input.year === '') {
+            result.year = null;
+        } else {
+            const year = Number.parseInt(input.year, 10);
+            if (!Number.isFinite(year) || year < 2000 || year > 2100) {
+                throw new Error('Năm phải là số nguyên trong khoảng 2000-2100');
+            }
+            result.year = year;
+        }
+    }
+
+    if (input.block !== undefined) {
+        if (input.block === null || input.block === '') {
+            result.block = null;
+        } else {
+            const block = Number.parseInt(input.block, 10);
+            if (block !== 1 && block !== 2) {
+                throw new Error('Block chỉ nhận giá trị 1 hoặc 2');
+            }
+            result.block = block;
+        }
+    }
+
+    if (input.semester !== undefined) {
+        const semester = String(input.semester || '').trim().toLowerCase();
+        if (!VALID_SEMESTERS.has(semester)) {
+            throw new Error('Kỳ học chỉ chấp nhận spring, summer hoặc fall');
+        }
+        result.semester = semester || null;
+    }
+
+    if (input.instructorCode !== undefined) {
+        result.instructorCode = normalizeText(input.instructorCode);
+    }
+
+    return result;
+}
+
 function normalizeNumeric(value, fieldLabel) {
     const num = Number.parseFloat(value);
     if (!Number.isFinite(num)) {
@@ -119,12 +169,35 @@ function normalizeGradesPayload(grades) {
                 return;
             }
 
+            if (column === '_careNote') {
+                normalizedGradeRow[column] = String(rawValue);
+                return;
+            }
+
             if (column === '_bonus') {
                 const bonus = normalizeNumeric(rawValue, `Bonus của ${mssv}`);
                 if (bonus < 0 || bonus > 2) {
                     throw new Error(`Bonus của ${mssv} phải trong khoảng 0-2`);
                 }
                 normalizedGradeRow[column] = bonus;
+                return;
+            }
+
+            if (column === '_rating') {
+                const rating = Number.parseInt(rawValue, 10);
+                if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
+                    throw new Error(`Đánh giá của ${mssv} phải là số nguyên 1-5`);
+                }
+                normalizedGradeRow[column] = rating;
+                return;
+            }
+
+            if (column === '_absences') {
+                const absences = Number.parseInt(rawValue, 10);
+                if (!Number.isFinite(absences) || absences < 0 || absences > 4) {
+                    throw new Error(`Số buổi vắng của ${mssv} phải là số nguyên 0-4`);
+                }
+                normalizedGradeRow[column] = absences;
                 return;
             }
 
@@ -210,13 +283,16 @@ class ClassService {
                 throw new Error('Class with this ID already exists');
             }
 
+            const metadata = normalizeClassMetadata(classData);
+
             const newClass = new Class({
                 classId: normalizedClassId,
                 name: normalizedName,
                 description: normalizeText(description),
                 students: normalizeStudents(students || []),
                 grades: normalizeGradesPayload(grades ?? null),
-                userId
+                userId,
+                ...metadata
             });
 
             await newClass.save();
@@ -247,6 +323,11 @@ class ClassService {
             if (updates.description !== undefined) classData.description = normalizeText(updates.description);
             if (updates.students !== undefined) classData.students = normalizeStudents(updates.students);
             if (updates.grades !== undefined) classData.grades = normalizeGradesPayload(updates.grades);
+
+            const metadata = normalizeClassMetadata(updates);
+            Object.entries(metadata).forEach(([key, value]) => {
+                classData[key] = value;
+            });
 
             await classData.save();
             return classData;

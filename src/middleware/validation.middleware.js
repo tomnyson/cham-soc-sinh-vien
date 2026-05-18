@@ -1,4 +1,4 @@
-/**
+    /**
  * Validate request body cho generate template
  */
 const validateGenerateTemplate = (req, res, next) => {
@@ -108,12 +108,13 @@ const validateGradeUpdate = (req, res, next) => {
 
     const column = assessment.trim();
 
-    // Note column accepts free-form text.
-    if (column === '_note') {
+    // Free-form text columns: any string/number/null payload is fine.
+    const TEXT_COLUMNS = new Set(['_note', '_careNote']);
+    if (TEXT_COLUMNS.has(column)) {
         if (score !== undefined && score !== null && typeof score !== 'string' && typeof score !== 'number') {
             return res.status(400).json({
                 success: false,
-                error: 'Ghi chú phải là chuỗi văn bản.'
+                error: 'Trường ghi chú phải là chuỗi văn bản.'
             });
         }
         req.body.assessment = column;
@@ -135,6 +136,28 @@ const validateGradeUpdate = (req, res, next) => {
                 error: 'Điểm bonus phải nằm trong khoảng 0-2.'
             });
         }
+    } else if (column === '_rating') {
+        const rating = Number.parseInt(score, 10);
+        if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+            return res.status(400).json({
+                success: false,
+                error: 'Đánh giá phải là số nguyên 1-5.'
+            });
+        }
+        req.body.assessment = column;
+        req.body.score = rating;
+        return next();
+    } else if (column === '_absences') {
+        const absences = Number.parseInt(score, 10);
+        if (!Number.isInteger(absences) || absences < 0 || absences > 4) {
+            return res.status(400).json({
+                success: false,
+                error: 'Số buổi vắng phải là số nguyên 0-4.'
+            });
+        }
+        req.body.assessment = column;
+        req.body.score = absences;
+        return next();
     } else if (numeric < 0 || numeric > 10) {
         return res.status(400).json({
             success: false,

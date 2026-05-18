@@ -1,0 +1,388 @@
+<%
+/**
+ * Student Care Page
+ *
+ * Lists students across all of the lecturer's active classes who need
+ * follow-up: rating ≤ 3 stars, or absences > 2 sessions. The page is rendered
+ * server-side with the initial dataset; a small client script supports
+ * filtering and refreshing without a full reload.
+ *
+ * Locals expected:
+ *   - careData: { students, summary, thresholds, filterOptions, appliedFilters }
+ */
+const data = (typeof careData !== 'undefined' && careData) ? careData : null;
+const students = data && Array.isArray(data.students) ? data.students : [];
+const summary = data && data.summary ? data.summary : { totalFlagged: 0, classCount: 0, lowRatingCount: 0, tooManyAbsencesCount: 0 };
+const thresholds = data && data.thresholds ? data.thresholds : { rating: 3, absences: 2 };
+const filterOptions = data && data.filterOptions ? data.filterOptions : { classes: [], years: [], blocks: [], semesters: [] };
+const applied = data && data.appliedFilters ? data.appliedFilters : { classId: '', year: null, block: null, semester: '' };
+
+const SEMESTER_LABELS = { spring: 'Spring', summer: 'Summer', fall: 'Fall' };
+
+function renderStars(rating) {
+    if (rating == null) return '<span class="text-muted small">—</span>';
+    let html = '';
+    for (let i = 1; i <= 5; i += 1) {
+        const filled = i <= rating;
+        html += '<i class="bi ' + (filled ? 'bi-star-fill' : 'bi-star') + '" style="color: ' + (filled ? '#f59e0b' : '#d1d5db') + ';"></i>';
+    }
+    return html + ' <span class="text-muted small">' + rating + '/5</span>';
+}
+
+// Build the export URL with the same filter state as the page.
+const exportParams = [];
+if (applied.classId) exportParams.push('classId=' + encodeURIComponent(applied.classId));
+if (applied.year !== null && applied.year !== undefined) exportParams.push('year=' + encodeURIComponent(applied.year));
+if (applied.block !== null && applied.block !== undefined) exportParams.push('block=' + encodeURIComponent(applied.block));
+if (applied.semester) exportParams.push('semester=' + encodeURIComponent(applied.semester));
+const exportUrl = '/api/student-care/export' + (exportParams.length ? '?' + exportParams.join('&') : '');
+%>
+
+<div class="container-fluid py-3 student-care-page edu-page" id="studentCarePage"
+     data-rating-threshold="<%= thresholds.rating %>"
+     data-absences-threshold="<%= thresholds.absences %>">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-heart-pulse text-danger me-2"></i>
+                Chăm sóc sinh viên
+            </h1>
+            <p class="text-muted mb-0 small">
+                Sinh viên trong các lớp đang hoạt động có đánh giá ≤ <%= thresholds.rating %> sao
+                hoặc vắng nhiều hơn <%= thresholds.absences %> buổi.
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a class="btn btn-success" id="studentCareExportBtn" href="<%= exportUrl %>">
+                <i class="bi bi-file-earmark-excel me-1"></i> Xuất Excel
+            </a>
+            <button class="btn btn-outline-secondary" id="studentCareRefresh">
+                <i class="bi bi-arrow-clockwise me-1"></i> Tải lại
+            </button>
+        </div>
+    </div>
+
+    <form class="card border-0 shadow-sm mb-3" id="studentCareFilters" method="get">
+        <div class="card-body py-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-4 col-lg-3">
+                    <label class="form-label small text-muted mb-1" for="filterClassId">Lớp</label>
+                    <select class="form-select form-select-sm" id="filterClassId" name="classId">
+                        <option value="">Tất cả lớp</option>
+                        <% filterOptions.classes.forEach(function(opt) { %>
+                            <option value="<%= opt.classId %>" <%= applied.classId === opt.classId ? 'selected' : '' %>>
+                                <%= opt.name %><%= opt.year ? ' • ' + opt.year : '' %><%= opt.semester ? ' ' + (SEMESTER_LABELS[opt.semester] || opt.semester) : '' %>
+                            </option>
+                        <% }); %>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label small text-muted mb-1" for="filterYear">Năm</label>
+                    <select class="form-select form-select-sm" id="filterYear" name="year">
+                        <option value="">Tất cả</option>
+                        <% filterOptions.years.forEach(function(year) { %>
+                            <option value="<%= year %>" <%= applied.year === year ? 'selected' : '' %>>
+                                <%= year %>
+                            </option>
+                        <% }); %>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label small text-muted mb-1" for="filterBlock">Block</label>
+                    <select class="form-select form-select-sm" id="filterBlock" name="block">
+                        <option value="">Tất cả</option>
+                        <% filterOptions.blocks.forEach(function(block) { %>
+                            <option value="<%= block %>" <%= applied.block === block ? 'selected' : '' %>>
+                                Block <%= block %>
+                            </option>
+                        <% }); %>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label small text-muted mb-1" for="filterSemester">Kỳ</label>
+                    <select class="form-select form-select-sm" id="filterSemester" name="semester">
+                        <option value="">Tất cả</option>
+                        <% filterOptions.semesters.forEach(function(semester) { %>
+                            <option value="<%= semester %>" <%= applied.semester === semester ? 'selected' : '' %>>
+                                <%= SEMESTER_LABELS[semester] || semester %>
+                            </option>
+                        <% }); %>
+                    </select>
+                </div>
+                <div class="col-12 col-md-auto d-flex gap-2 ms-md-auto">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-funnel me-1"></i> Áp dụng
+                    </button>
+                    <a class="btn btn-outline-secondary btn-sm" href="/student-care">
+                        Xóa lọc
+                    </a>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm h-100 care-stat-card care-stat-card-danger">
+                <div class="card-body">
+                    <div class="text-muted small mb-1">Cần theo dõi</div>
+                    <div class="fs-3 fw-bold text-danger" id="careStatTotal"><%= summary.totalFlagged %></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm h-100 care-stat-card care-stat-card-primary">
+                <div class="card-body">
+                    <div class="text-muted small mb-1">Lớp đang theo dõi</div>
+                    <div class="fs-3 fw-bold" id="careStatClassCount"><%= summary.classCount %></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm h-100 care-stat-card care-stat-card-warning">
+                <div class="card-body">
+                    <div class="text-muted small mb-1">Đánh giá ≤ <%= thresholds.rating %> sao</div>
+                    <div class="fs-3 fw-bold text-warning" id="careStatLowRating"><%= summary.lowRatingCount %></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm h-100 care-stat-card care-stat-card-danger">
+                <div class="card-body">
+                    <div class="text-muted small mb-1">Vắng &gt; <%= thresholds.absences %> buổi</div>
+                    <div class="fs-3 fw-bold text-danger" id="careStatAbsences"><%= summary.tooManyAbsencesCount %></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm care-table-card">
+        <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <input type="search" class="form-control form-control-sm" id="careSearchInput"
+                       placeholder="Tìm theo MSSV, tên hoặc lớp..." style="min-width: 240px;">
+                <select class="form-select form-select-sm" id="careReasonFilter" style="min-width: 180px;">
+                    <option value="all">Tất cả</option>
+                    <option value="lowRating">Chỉ đánh giá thấp</option>
+                    <option value="tooManyAbsences">Chỉ vắng nhiều</option>
+                </select>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <span class="small" id="careSaveStatus" aria-live="polite"></span>
+                <span class="text-muted small" id="careResultCount"></span>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 48px;">#</th>
+                            <th>MSSV</th>
+                            <th>Họ và tên</th>
+                            <th>Lớp</th>
+                            <th class="text-nowrap">Năm/Block/Kỳ</th>
+                            <th class="text-center">Đánh giá</th>
+                            <th class="text-center">Vắng</th>
+                            <th>Lý do theo dõi</th>
+                            <th>Ghi chú chăm sóc</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentCareTableBody">
+                        <% if (students.length === 0) { %>
+                            <tr>
+                                <td colspan="9" class="text-center text-muted py-5">
+                                    <i class="bi bi-emoji-smile fs-3 d-block mb-2"></i>
+                                    Không có sinh viên nào cần theo dõi đặc biệt.
+                                </td>
+                            </tr>
+                        <% } else { %>
+                            <% students.forEach(function(student, idx) { %>
+                                <tr class="student-care-row"
+                                    data-mssv="<%= student.mssv %>"
+                                    data-class-id="<%= student.classId %>"
+                                    data-name="<%= student.name.toLowerCase() %>"
+                                    data-class="<%= (student.className || '').toLowerCase() %>"
+                                    data-low-rating="<%= student.reasons.lowRating ? '1' : '0' %>"
+                                    data-too-many-absences="<%= student.reasons.tooManyAbsences ? '1' : '0' %>">
+                                    <td><%= idx + 1 %></td>
+                                    <td><strong><%= student.mssv %></strong></td>
+                                    <td>
+                                        <div><%= student.name %></div>
+                                        <% if (student.email) { %>
+                                            <small class="text-muted d-block"><%= student.email %></small>
+                                        <% } %>
+                                    </td>
+                                    <td>
+                                        <a href="/classes/<%= student.classId %>"
+                                           class="text-decoration-none"
+                                           title="Mở lớp">
+                                            <%= student.className %>
+                                        </a>
+                                    </td>
+                                    <td class="small text-nowrap">
+                                        <% const metaParts = []; %>
+                                        <% if (student.year) metaParts.push(student.year); %>
+                                        <% if (student.block) metaParts.push('Block ' + student.block); %>
+                                        <% if (student.semester) metaParts.push(SEMESTER_LABELS[student.semester] || student.semester); %>
+                                        <% if (metaParts.length === 0) { %>
+                                            <span class="text-muted">—</span>
+                                        <% } else { %>
+                                            <%= metaParts.join(' • ') %>
+                                        <% } %>
+                                        <% if (student.instructorCode) { %>
+                                            <div class="text-muted">GV: <%= student.instructorCode %></div>
+                                        <% } %>
+                                    </td>
+                                    <td class="text-center"><%- renderStars(student.rating) %></td>
+                                    <td class="text-center">
+                                        <% if (student.absences != null && student.absences > 0) { %>
+                                            <span class="badge <%= student.reasons.tooManyAbsences ? 'bg-danger' : 'bg-warning text-dark' %>">
+                                                <%= student.absences %> / 4
+                                            </span>
+                                        <% } else { %>
+                                            <span class="text-muted small">—</span>
+                                        <% } %>
+                                    </td>
+                                    <td>
+                                        <% if (student.reasons.lowRating) { %>
+                                            <span class="badge bg-warning text-dark me-1">Đánh giá thấp</span>
+                                        <% } %>
+                                        <% if (student.reasons.tooManyAbsences) { %>
+                                            <span class="badge bg-danger">Vắng nhiều</span>
+                                        <% } %>
+                                    </td>
+                                    <td style="min-width: 220px;">
+                                        <textarea
+                                            class="form-control form-control-sm care-note-input"
+                                            rows="2"
+                                            data-mssv="<%= student.mssv %>"
+                                            data-class-id="<%= student.classId %>"
+                                            placeholder="Ghi chú chăm sóc..."><%= student.careNote || '' %></textarea>
+                                        <% if (student.teacherNote) { %>
+                                            <small class="text-muted d-block mt-1">
+                                                <i class="bi bi-journal-text me-1"></i>
+                                                GV ghi: <%= student.teacherNote %>
+                                            </small>
+                                        <% } %>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        'use strict';
+
+        var page = document.getElementById('studentCarePage');
+        if (!page) return;
+
+        var searchInput = document.getElementById('careSearchInput');
+        var reasonFilter = document.getElementById('careReasonFilter');
+        var resultCount = document.getElementById('careResultCount');
+        var refreshBtn = document.getElementById('studentCareRefresh');
+        var saveStatusEl = document.getElementById('careSaveStatus');
+
+        var saveTimers = {};
+        var saveStatusTimer = null;
+
+        function showSaveStatus(message, type) {
+            if (!saveStatusEl) return;
+            saveStatusEl.textContent = message;
+            saveStatusEl.className = 'small ' + (type === 'error' ? 'text-danger' : 'text-success');
+            clearTimeout(saveStatusTimer);
+            if (message) {
+                saveStatusTimer = setTimeout(function () {
+                    saveStatusEl.textContent = '';
+                }, 2000);
+            }
+        }
+
+        function persistCareNote(classId, mssv, value) {
+            return fetch(
+                '/api/classes/' + encodeURIComponent(classId) + '/student/' + encodeURIComponent(mssv) + '/grade',
+                {
+                    method: 'PUT',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ assessment: '_careNote', score: value })
+                }
+            ).then(function (res) {
+                return res.json().then(function (body) { return { ok: res.ok, body: body }; });
+            });
+        }
+
+        function handleCareNoteInput(event) {
+            var target = event.target;
+            if (!target || !target.classList || !target.classList.contains('care-note-input')) return;
+
+            var classId = target.dataset.classId;
+            var mssv = target.dataset.mssv;
+            if (!classId || !mssv) return;
+
+            var key = classId + '::' + mssv;
+            var value = target.value;
+            target.classList.remove('is-invalid');
+
+            clearTimeout(saveTimers[key]);
+            saveTimers[key] = setTimeout(function () {
+                showSaveStatus('Đang lưu...', 'info');
+                persistCareNote(classId, mssv, value).then(function (result) {
+                    if (!result.ok || !result.body || result.body.success === false) {
+                        target.classList.add('is-invalid');
+                        var msg = (result.body && (result.body.error || result.body.message)) || 'Lưu thất bại';
+                        showSaveStatus(msg, 'error');
+                        return;
+                    }
+                    showSaveStatus('Đã lưu ghi chú cho ' + mssv, 'success');
+                }).catch(function (err) {
+                    target.classList.add('is-invalid');
+                    showSaveStatus('Lỗi kết nối khi lưu', 'error');
+                    console.error('Care note save failed:', err);
+                });
+            }, 400);
+        }
+
+        document.addEventListener('input', handleCareNoteInput);
+
+        function applyFilters() {
+            var query = (searchInput.value || '').trim().toLowerCase();
+            var reason = reasonFilter.value;
+            var rows = document.querySelectorAll('.student-care-row');
+            var visible = 0;
+
+            rows.forEach(function (row) {
+                var matchesQuery = !query
+                    || (row.dataset.mssv || '').toLowerCase().indexOf(query) !== -1
+                    || (row.dataset.name || '').indexOf(query) !== -1
+                    || (row.dataset.class || '').indexOf(query) !== -1;
+
+                var matchesReason = reason === 'all'
+                    || (reason === 'lowRating' && row.dataset.lowRating === '1')
+                    || (reason === 'tooManyAbsences' && row.dataset.tooManyAbsences === '1');
+
+                var show = matchesQuery && matchesReason;
+                row.style.display = show ? '' : 'none';
+                if (show) visible += 1;
+            });
+
+            resultCount.textContent = visible + ' sinh viên';
+        }
+
+        searchInput.addEventListener('input', applyFilters);
+        reasonFilter.addEventListener('change', applyFilters);
+
+        refreshBtn.addEventListener('click', function () {
+            window.location.reload();
+        });
+
+        applyFilters();
+    })();
+</script>

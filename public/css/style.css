@@ -9,15 +9,21 @@
 
 :root {
     /* Typography */
-    --font-display: 'Space Grotesk', sans-serif;
-    --font-body: 'Manrope', sans-serif;
+    --font-display: 'Sora', sans-serif;
+    --font-body: 'Be Vietnam Pro', sans-serif;
 
     /* Brand Colors */
-    --fpt-orange: #FF6C00;
-    --fpt-orange-dark: #E65100;
-    --fpt-orange-light: #FFE0CC;
-    --fpt-blue: #0B2F9F;
-    --fpt-blue-light: #E8EDFF;
+    --fpt-orange: #f26a21;
+    --fpt-orange-dark: #c94b12;
+    --fpt-orange-light: #fff0e7;
+    --fpt-blue: #2346a0;
+    --fpt-blue-light: #e8eefc;
+    --edu-ink: #17324d;
+    --edu-surface: #fffaf5;
+    --edu-paper: #ffffff;
+    --edu-line: #e7dccf;
+    --edu-mint: #0f9f8c;
+    --edu-mint-light: #e4f7f4;
 
     /* Modern Accent Colors */
     --accent-success: #10b981;
@@ -64,8 +70,8 @@
     /* Border Radius */
     --radius-sm: 6px;
     --radius-md: 10px;
-    --radius-lg: 14px;
-    --radius-xl: 18px;
+    --radius-lg: 8px;
+    --radius-xl: 8px;
     --radius-full: 9999px;
 
     /* Transitions */
@@ -75,12 +81,52 @@
     --transition-bounce: 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
+:root[data-theme="dark"] {
+    --fpt-orange: #ff7a2f;
+    --fpt-orange-dark: #ff9a5f;
+    --fpt-orange-light: rgba(255, 122, 47, 0.16);
+    --fpt-blue: #8fb4ff;
+    --fpt-blue-light: rgba(143, 180, 255, 0.16);
+    --edu-ink: #f3f7fb;
+    --edu-surface: #0f172a;
+    --edu-paper: #162033;
+    --edu-line: #2c3a51;
+    --edu-mint: #47d5c6;
+    --edu-mint-light: rgba(71, 213, 198, 0.16);
+    --gray-50: #111827;
+    --gray-100: #182235;
+    --gray-200: #263449;
+    --gray-300: #34445c;
+    --gray-400: #94a3b8;
+    --gray-500: #b6c2d2;
+    --gray-600: #cbd5e1;
+    --gray-700: #dbe6f3;
+    --gray-800: #edf3fa;
+    --gray-900: #ffffff;
+    --accent-success-light: rgba(16, 185, 129, 0.17);
+    --accent-danger-light: rgba(239, 68, 68, 0.17);
+    --accent-warning-light: rgba(245, 158, 11, 0.18);
+    --accent-info-light: rgba(59, 130, 246, 0.18);
+    --glass-bg: #162033;
+    --glass-border: #2c3a51;
+}
+
 * {
+    box-sizing: border-box;
     font-family: var(--font-body);
 }
 
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
 body {
-    background-color: var(--gray-50);
+    background:
+        linear-gradient(90deg, rgba(35, 70, 160, 0.035) 1px, transparent 1px),
+        linear-gradient(rgba(242, 106, 33, 0.03) 1px, transparent 1px),
+        linear-gradient(180deg, #fffaf5 0%, #f6f8fb 46%, #f8fafc 100%);
+    background-size: 40px 40px, 40px 40px, auto;
     color: var(--gray-800);
     overflow-x: hidden;
     margin: 0;
@@ -391,7 +437,7 @@ h6,
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    letter-spacing: -0.03em;
+    letter-spacing: 0;
 }
 
 .header-title i {
@@ -414,6 +460,68 @@ h6,
     align-items: center;
     gap: 0.5rem;
     flex-shrink: 0;
+}
+
+.theme-mode-switch {
+    min-width: 116px;
+    height: 40px;
+    padding: 4px;
+    border: 1px solid var(--gray-200);
+    border-radius: 999px;
+    background: var(--edu-paper);
+    color: var(--edu-ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.theme-mode-switch:hover {
+    border-color: rgba(242, 106, 33, 0.45);
+    color: var(--fpt-orange-dark);
+    transform: translateY(-1px);
+}
+
+.theme-toggle-btn.theme-mode-option {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.theme-mode-switch i {
+    font-size: 0.9rem;
+}
+
+.theme-mode-option {
+    min-width: 52px;
+    height: 30px;
+    padding: 0 0.5rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--gray-500);
+    transition: all var(--transition-fast);
+}
+
+.theme-mode-switch.is-light .theme-mode-light,
+.theme-mode-switch.is-dark .theme-mode-dark,
+.theme-mode-option.active {
+    background: var(--fpt-orange);
+    color: #ffffff;
+    box-shadow: 0 8px 18px rgba(242, 106, 33, 0.24);
+}
+
+.theme-mode-switch.is-dark .theme-mode-light,
+.theme-mode-switch.is-light .theme-mode-dark {
+    opacity: 0.78;
 }
 
 .header-right>.btn {
@@ -632,7 +740,7 @@ h6,
     font-weight: 700;
     color: var(--gray-900);
     margin-bottom: 1.25rem;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -804,7 +912,7 @@ input[type="file"] {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
 }
 
 .stat-card p {
@@ -1440,6 +1548,7 @@ input.grade-input {
     box-shadow: 0 0 0 3px rgba(255, 108, 0, 0.12);
 }
 
+input.grade-input.is-invalid,
 #gradesTable input.grade-input.is-invalid {
     border-color: var(--accent-danger);
     box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
@@ -1857,4 +1966,1451 @@ input.grade-input {
 .branding-preview-header p {
     margin: 0;
     opacity: 0.92;
+}
+
+/* ========================================
+   EDU CARE UI REFRESH
+   ======================================== */
+
+.page-content {
+    position: relative;
+}
+
+.edu-page {
+    max-width: 1480px;
+    margin: 0 auto;
+}
+
+.edu-page>.row:first-child,
+.student-care-page>.d-flex:first-child {
+    background:
+        linear-gradient(135deg, rgba(255, 250, 245, 0.96), rgba(255, 255, 255, 0.9)),
+        linear-gradient(90deg, rgba(242, 106, 33, 0.14), rgba(35, 70, 160, 0.12));
+    border: 1px solid var(--edu-line);
+    border-left: 5px solid var(--fpt-orange);
+    border-radius: var(--radius-lg);
+    padding: 1.1rem 1.2rem;
+    box-shadow: 0 14px 34px rgba(23, 50, 77, 0.08);
+}
+
+.edu-page>.row:first-child {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.edu-page h1,
+.edu-page .h3 {
+    color: var(--edu-ink);
+    font-weight: 800;
+}
+
+.edu-page h1 i,
+.edu-page .h3 i {
+    color: var(--fpt-orange) !important;
+}
+
+.top-header {
+    background: rgba(255, 250, 245, 0.96);
+    box-shadow: 0 10px 26px rgba(23, 50, 77, 0.07);
+}
+
+.header-title {
+    color: var(--edu-ink);
+}
+
+.sidebar {
+    background: linear-gradient(180deg, #fffaf5 0%, #ffffff 46%, #f5f8fb 100%);
+}
+
+.sidebar-header {
+    background: transparent;
+}
+
+.nav-item {
+    border: 1px solid transparent;
+}
+
+.nav-item:hover {
+    background: rgba(242, 106, 33, 0.08);
+    border-color: rgba(242, 106, 33, 0.18);
+}
+
+.nav-item.active {
+    background: #fff0e7;
+    border-color: #ffd6bd;
+    box-shadow: inset 3px 0 0 var(--fpt-orange);
+}
+
+.card,
+.profile-card,
+.class-card {
+    border-color: var(--edu-line) !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: 0 12px 30px rgba(23, 50, 77, 0.07) !important;
+}
+
+.card:hover,
+.profile-card:hover,
+.class-card:hover {
+    border-color: #ffc49d !important;
+    box-shadow: 0 18px 42px rgba(23, 50, 77, 0.1) !important;
+}
+
+.stat-card,
+.care-stat-card {
+    text-align: left;
+    border-left: 4px solid var(--fpt-orange);
+    background: linear-gradient(180deg, #ffffff 0%, #fffaf5 100%);
+}
+
+.stat-card .stat-icon {
+    margin: 0 0 1rem;
+    border-radius: 8px;
+}
+
+.stat-card h3,
+.care-stat-card .fs-3 {
+    color: var(--edu-ink);
+    background: none;
+    -webkit-text-fill-color: currentColor;
+}
+
+.care-stat-card-primary {
+    border-left-color: var(--fpt-blue);
+}
+
+.care-stat-card-warning {
+    border-left-color: var(--accent-warning);
+}
+
+.care-stat-card-danger {
+    border-left-color: var(--accent-danger);
+}
+
+.table-responsive {
+    border-radius: var(--radius-lg);
+}
+
+.table thead {
+    background: #fff6ef;
+}
+
+.table thead th {
+    color: var(--edu-ink);
+    border-bottom: 1px solid var(--edu-line);
+}
+
+.table tbody tr:hover {
+    background-color: #fffaf5;
+}
+
+.badge-pass {
+    background: var(--edu-mint-light);
+    color: #0c766a;
+}
+
+.badge-fail {
+    background: #ffe8e5;
+    color: #b42318;
+}
+
+.btn {
+    min-height: 38px;
+}
+
+.btn-primary,
+.btn-success {
+    box-shadow: 0 8px 18px rgba(242, 106, 33, 0.18);
+}
+
+.btn-primary {
+    background: var(--fpt-orange);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background: var(--fpt-orange-dark);
+}
+
+.btn-outline-primary {
+    border-color: #f7a270;
+    color: var(--fpt-orange-dark);
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus {
+    background: #fff0e7;
+    border-color: var(--fpt-orange);
+    color: var(--fpt-orange-dark);
+}
+
+.form-control,
+.form-select {
+    border-color: #dfd5ca;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--fpt-orange);
+    box-shadow: 0 0 0 4px rgba(242, 106, 33, 0.12);
+}
+
+.class-tabs-container {
+    background: #fff8f2 !important;
+    border: 1px solid var(--edu-line);
+    border-radius: var(--radius-lg) !important;
+    box-shadow: 0 10px 24px rgba(23, 50, 77, 0.06) !important;
+}
+
+.class-tab {
+    border-radius: 6px !important;
+    color: #6b5d50 !important;
+}
+
+.class-tab:hover {
+    background: #ffeadb !important;
+}
+
+.class-tab.active {
+    color: var(--fpt-orange-dark) !important;
+    box-shadow: 0 8px 18px rgba(242, 106, 33, 0.12) !important;
+}
+
+.tab-count,
+.class-tab.active .tab-count {
+    background: var(--fpt-orange) !important;
+}
+
+.tab-count.archived,
+.class-tab.active .tab-count.archived {
+    background: #718096 !important;
+}
+
+.classes-grid {
+    gap: 18px !important;
+}
+
+.classes-grid .class-card {
+    background: linear-gradient(180deg, #ffffff 0%, #fffaf5 100%) !important;
+    overflow: hidden;
+    position: relative;
+}
+
+.classes-grid .class-card::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 4px;
+    background: linear-gradient(90deg, var(--fpt-orange), var(--edu-mint), var(--fpt-blue));
+}
+
+.class-card [data-role="card-header"] {
+    padding-top: 1.35rem !important;
+}
+
+.class-card [data-role="student-count"] {
+    background:
+        linear-gradient(135deg, rgba(242, 106, 33, 0.08), rgba(15, 159, 140, 0.08)) !important;
+    border: 1px solid #f4dfcd;
+    border-radius: 8px !important;
+}
+
+.class-card [data-role="student-count"]>div:first-child {
+    color: var(--fpt-orange-dark) !important;
+}
+
+.class-card [data-role="student-preview"] {
+    min-height: 136px !important;
+}
+
+.class-card [data-role="student-preview"]>div {
+    color: #334155 !important;
+}
+
+.class-card [data-role="card-actions"] {
+    background: rgba(255, 250, 245, 0.7) !important;
+}
+
+.class-card button[onclick^="viewClassDetails"],
+.profile-card button[onclick^="editProfile"] {
+    background: var(--fpt-orange) !important;
+    box-shadow: 0 8px 18px rgba(242, 106, 33, 0.18) !important;
+}
+
+.class-card button[onclick^="viewClassDetails"]:hover,
+.profile-card button[onclick^="editProfile"]:hover {
+    background: var(--fpt-orange-dark) !important;
+}
+
+.profile-card {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
+    position: relative;
+}
+
+.profile-card::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 4px;
+    background: linear-gradient(90deg, var(--fpt-blue), var(--edu-mint), var(--fpt-orange));
+}
+
+.profile-card>div:first-child {
+    background: transparent !important;
+    padding-top: 1.35rem !important;
+}
+
+.profile-card>div:nth-child(2) {
+    background: #f2f7fb !important;
+}
+
+.profile-card span[style*="background: #2563EB"] {
+    background: var(--fpt-blue) !important;
+}
+
+.profile-card button[onclick^="duplicateProfile"] {
+    background: #ffffff !important;
+    border-color: #d8e2ea !important;
+}
+
+.dashboard-page .btn-group,
+.care-table-card .card-header,
+.class-detail-filter-row {
+    background: #fffaf5;
+    border-radius: var(--radius-lg);
+}
+
+.dashboard-page .btn-group {
+    border: 1px solid var(--edu-line);
+    padding: 0.25rem;
+}
+
+.dashboard-page .btn-group .btn {
+    border-radius: 6px !important;
+    border-width: 0;
+}
+
+.dashboard-page .btn-check:checked+.btn {
+    box-shadow: 0 6px 14px rgba(23, 50, 77, 0.1);
+}
+
+.student-care-page .bi-star-fill {
+    color: #f6a21a !important;
+}
+
+.care-table-card .card-header {
+    border-bottom: 1px solid var(--edu-line);
+}
+
+.template-step-card {
+    border-left: 4px solid var(--fpt-blue) !important;
+}
+
+.template-step-card:nth-of-type(2) {
+    border-left-color: var(--fpt-orange) !important;
+}
+
+.template-generate-panel {
+    background: linear-gradient(135deg, #17324d, #2346a0);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    box-shadow: 0 18px 42px rgba(23, 50, 77, 0.16);
+}
+
+.template-generate-panel .btn {
+    box-shadow: none;
+}
+
+.class-detail-tools-row .card {
+    min-height: 86px;
+    background: linear-gradient(135deg, #ffffff 0%, #fff7ef 100%);
+}
+
+.class-detail-tools-row .card h5 {
+    color: var(--edu-ink);
+    font-weight: 800;
+}
+
+.branding-preview {
+    border-color: var(--edu-line);
+}
+
+@media (max-width: 768px) {
+    .edu-page>.row:first-child,
+    .student-care-page>.d-flex:first-child {
+        padding: 0.9rem;
+    }
+
+    .page-content {
+        padding: 0.85rem;
+    }
+
+    .edu-page h1,
+    .edu-page .h3 {
+        font-size: 1.22rem;
+        line-height: 1.35;
+    }
+
+    .stat-card,
+    .care-stat-card {
+        padding: 1rem;
+    }
+
+    .care-table-card .card-header>div:first-child {
+        width: 100%;
+    }
+
+    .care-table-card .form-control,
+    .care-table-card .form-select {
+        min-width: 100% !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .classes-page {
+        max-width: 100%;
+        overflow-x: hidden;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    .classes-page-header {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+
+    .classes-page-actions {
+        display: grid !important;
+        grid-template-columns: 1fr;
+        width: 100%;
+        align-items: stretch !important;
+    }
+
+    .classes-page-actions #viewModeToggle {
+        width: 100%;
+    }
+
+    .classes-page-actions>button.btn-primary {
+        width: 100%;
+        min-width: 0;
+        white-space: nowrap;
+    }
+
+    .classes-page .class-tabs-container {
+        width: 100%;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .classes-page .class-tabs {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        width: 100%;
+    }
+
+    .classes-page .class-tab {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 390px) {
+    .classes-page-actions #viewModeToggle,
+    .classes-page-actions>button.btn-primary {
+        width: 100%;
+    }
+
+    .classes-page-actions {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ========================================
+   CLASS ROSTER CARD REDESIGN
+   ======================================== */
+
+.class-roster-grid {
+    align-items: stretch;
+    min-width: 0;
+}
+
+.class-roster-card {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 360px;
+    padding: 0 !important;
+    background:
+        radial-gradient(circle at 92% 8%, rgba(15, 159, 140, 0.12), transparent 26%),
+        linear-gradient(180deg, #ffffff 0%, #fffaf5 100%) !important;
+    overflow: hidden;
+    position: relative;
+}
+
+.class-roster-card::before {
+    display: none;
+}
+
+.class-roster-accent {
+    height: 5px;
+    background: linear-gradient(90deg, var(--fpt-orange), var(--edu-mint), var(--fpt-blue));
+}
+
+.class-roster-header,
+.class-card .class-roster-header[data-role="card-header"] {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 1.1rem 1.1rem 0.9rem !important;
+}
+
+.class-roster-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    background: #eef7ff;
+    color: var(--fpt-blue);
+    font-size: 1.25rem;
+}
+
+.class-roster-title {
+    min-width: 0;
+}
+
+.class-roster-title h3 {
+    margin: 0 0 0.2rem;
+    color: var(--edu-ink);
+    font-family: var(--font-display);
+    font-size: 1.03rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.class-roster-title p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.class-roster-count,
+.class-card .class-roster-count[data-role="student-count"] {
+    min-width: 64px;
+    margin: 0 !important;
+    padding: 0.55rem 0.65rem !important;
+    border: 1px solid #f3d6c3;
+    border-radius: 8px !important;
+    background: #fff4ec !important;
+    text-align: center;
+}
+
+.class-roster-count strong {
+    display: block;
+    color: var(--fpt-orange-dark);
+    font-family: var(--font-display);
+    font-size: 1.45rem;
+    line-height: 1;
+}
+
+.class-roster-count span {
+    display: block;
+    margin-top: 0.15rem;
+    color: #7a5b48;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+
+.class-roster-body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    padding: 0 1.1rem 1rem;
+}
+
+.class-roster-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-bottom: 0.9rem;
+}
+
+.class-roster-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.32rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(23, 50, 77, 0.06);
+    color: #475569;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.class-roster-students,
+.class-card .class-roster-students[data-role="student-preview"] {
+    display: grid;
+    gap: 0.55rem;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border-bottom: 0 !important;
+}
+
+.class-roster-student {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid rgba(231, 220, 207, 0.9);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.student-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    background: #e8f3ff;
+    color: var(--fpt-blue);
+    font-weight: 800;
+    font-size: 0.84rem;
+}
+
+.student-info {
+    min-width: 0;
+}
+
+.student-info strong,
+.student-info span {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.student-info strong {
+    color: #52647a;
+    font-size: 0.75rem;
+}
+
+.student-info span {
+    color: var(--edu-ink);
+    font-size: 0.83rem;
+    font-weight: 700;
+}
+
+.class-roster-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--fpt-orange-dark);
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.class-roster-empty,
+.class-card .class-roster-empty[data-role="student-preview"] {
+    min-height: 132px !important;
+    padding: 1rem !important;
+    border: 1px dashed #dfd5ca;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 0.45rem;
+    color: #94a3b8;
+    background: rgba(255, 255, 255, 0.55);
+}
+
+.class-roster-empty i {
+    font-size: 1.7rem;
+}
+
+.class-roster-actions,
+.class-card .class-roster-actions[data-role="card-actions"] {
+    display: grid !important;
+    grid-template-columns: 48px minmax(0, 1fr) 48px 48px;
+    gap: 0.55rem !important;
+    padding: 0.95rem 1.1rem 1.1rem !important;
+    border-top: 1px solid rgba(231, 220, 207, 0.9);
+    background: rgba(255, 250, 245, 0.86) !important;
+    min-width: 0;
+}
+
+.class-action {
+    min-height: 44px;
+    border: 1px solid #dbe4ee;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #536276;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    font-weight: 800;
+    transition: all var(--transition-fast);
+}
+
+.class-action:hover {
+    transform: translateY(-1px);
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+
+.class-action-primary {
+    border-color: transparent;
+    background: var(--fpt-orange);
+    color: #ffffff;
+    box-shadow: 0 10px 20px rgba(242, 106, 33, 0.2);
+}
+
+.class-action-primary:hover {
+    background: var(--fpt-orange-dark);
+    color: #ffffff;
+}
+
+.class-action-danger {
+    border-color: #fecaca;
+    color: #dc2626;
+}
+
+.class-action-danger:hover {
+    border-color: #fca5a5;
+    background: #fff1f1;
+}
+
+.class-roster-card.is-archived .class-roster-accent {
+    background: linear-gradient(90deg, #94a3b8, #cbd5e1);
+}
+
+.class-roster-card.is-archived .class-roster-icon,
+.class-roster-card.is-archived .student-avatar {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.class-roster-card.is-archived .class-roster-count {
+    background: #f8fafc !important;
+    border-color: #e2e8f0;
+}
+
+.class-roster-card.is-archived .class-roster-actions {
+    grid-template-columns: minmax(0, 1fr) 48px;
+}
+
+@media (max-width: 768px) {
+    .class-roster-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    .class-roster-card {
+        min-height: 0;
+    }
+
+    .class-roster-header,
+    .class-card .class-roster-header[data-role="card-header"] {
+        padding: 1rem 0.95rem 0.8rem !important;
+        grid-template-columns: 40px minmax(0, 1fr) auto;
+    }
+
+    .class-roster-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .class-roster-body {
+        padding: 0 0.95rem 0.9rem;
+    }
+
+    .class-roster-actions,
+    .class-card .class-roster-actions[data-role="card-actions"] {
+        padding: 0.85rem 0.95rem 0.95rem !important;
+        grid-template-columns: 44px minmax(0, 1fr) 44px 44px;
+        gap: 0.45rem !important;
+    }
+
+    .class-action {
+        min-height: 42px;
+    }
+}
+
+@media (max-width: 430px) {
+    .class-roster-header,
+    .class-card .class-roster-header[data-role="card-header"] {
+        grid-template-columns: 38px minmax(0, 1fr) 58px;
+        gap: 0.65rem;
+    }
+
+    .class-roster-icon {
+        width: 38px;
+        height: 38px;
+    }
+
+    .class-roster-count,
+    .class-card .class-roster-count[data-role="student-count"] {
+        min-width: 58px;
+        padding: 0.48rem 0.52rem !important;
+    }
+
+    .class-roster-count strong {
+        font-size: 1.25rem;
+    }
+
+    .class-roster-actions,
+    .class-card .class-roster-actions[data-role="card-actions"] {
+        display: flex !important;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .class-roster-actions .class-action {
+        flex: 0 0 44px;
+    }
+
+    .class-roster-actions .class-action-primary {
+        flex: 1 1 150px;
+    }
+}
+
+/* ========================================
+   DARK MODE SURFACES
+   ======================================== */
+
+:root[data-theme="dark"] body {
+    background:
+        linear-gradient(90deg, rgba(143, 180, 255, 0.045) 1px, transparent 1px),
+        linear-gradient(rgba(255, 122, 47, 0.035) 1px, transparent 1px),
+        linear-gradient(180deg, #0b1020 0%, #101827 48%, #0f172a 100%);
+    background-size: 40px 40px, 40px 40px, auto;
+    color: var(--gray-800);
+}
+
+:root[data-theme="dark"] .top-header {
+    background: rgba(15, 23, 42, 0.96);
+    border-bottom-color: var(--edu-line);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.26);
+}
+
+:root[data-theme="dark"] .top-header::after {
+    opacity: 0.55;
+}
+
+:root[data-theme="dark"] .header-title,
+:root[data-theme="dark"] .header-right .btn,
+:root[data-theme="dark"] .header-right .dropdown-toggle {
+    color: var(--edu-ink) !important;
+}
+
+:root[data-theme="dark"] .header-subtitle,
+:root[data-theme="dark"] .text-muted,
+:root[data-theme="dark"] small.text-muted {
+    color: #aebbd0 !important;
+}
+
+:root[data-theme="dark"] .sidebar {
+    background: linear-gradient(180deg, #0d1424 0%, #111a2d 52%, #0f172a 100%);
+    border-right-color: var(--edu-line);
+}
+
+:root[data-theme="dark"] .sidebar-header {
+    border-bottom-color: var(--edu-line);
+}
+
+:root[data-theme="dark"] .sidebar-nav-title,
+:root[data-theme="dark"] .nav-item i {
+    color: #8ea0b8;
+}
+
+:root[data-theme="dark"] .nav-item {
+    color: #dbe6f3;
+}
+
+:root[data-theme="dark"] .nav-item:hover {
+    background: rgba(255, 122, 47, 0.11);
+    border-color: rgba(255, 122, 47, 0.24);
+    color: #ffffff;
+}
+
+:root[data-theme="dark"] .nav-item.active {
+    background: rgba(255, 122, 47, 0.16);
+    border-color: rgba(255, 122, 47, 0.36);
+    color: #ffffff;
+}
+
+:root[data-theme="dark"] .nav-item.active i {
+    color: var(--fpt-orange);
+}
+
+:root[data-theme="dark"] .btn-toggle-sidebar,
+:root[data-theme="dark"] .theme-mode-switch {
+    background: #162033;
+    border-color: var(--edu-line);
+    color: var(--gray-800);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+}
+
+:root[data-theme="dark"] .edu-page>.row:first-child,
+:root[data-theme="dark"] .student-care-page>.d-flex:first-child {
+    background:
+        linear-gradient(135deg, rgba(22, 32, 51, 0.96), rgba(17, 24, 39, 0.92)),
+        linear-gradient(90deg, rgba(255, 122, 47, 0.18), rgba(143, 180, 255, 0.12));
+    border-color: var(--edu-line);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.24);
+}
+
+:root[data-theme="dark"] .card,
+:root[data-theme="dark"] .profile-card,
+:root[data-theme="dark"] .class-card,
+:root[data-theme="dark"] .modal-content,
+:root[data-theme="dark"] .dropdown-menu {
+    background: var(--edu-paper) !important;
+    border-color: var(--edu-line) !important;
+    color: var(--gray-800);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.24) !important;
+}
+
+:root[data-theme="dark"] .card-header,
+:root[data-theme="dark"] .card-footer,
+:root[data-theme="dark"] .modal-header,
+:root[data-theme="dark"] .modal-footer,
+:root[data-theme="dark"] .dropdown-header {
+    background: #111a2d !important;
+    border-color: var(--edu-line) !important;
+}
+
+:root[data-theme="dark"] .dropdown-item {
+    color: var(--gray-800);
+}
+
+:root[data-theme="dark"] .dropdown-item:hover {
+    background: #1f2b40;
+}
+
+:root[data-theme="dark"] .table {
+    color: var(--gray-800);
+}
+
+:root[data-theme="dark"] .table thead,
+:root[data-theme="dark"] .table-light {
+    background: #111a2d !important;
+    color: var(--gray-800) !important;
+}
+
+:root[data-theme="dark"] .table thead th,
+:root[data-theme="dark"] .table tbody tr {
+    border-color: var(--edu-line);
+}
+
+:root[data-theme="dark"] .table tbody td {
+    color: var(--gray-700);
+}
+
+:root[data-theme="dark"] .table tbody tr:hover {
+    background-color: rgba(143, 180, 255, 0.08);
+}
+
+:root[data-theme="dark"] .form-control,
+:root[data-theme="dark"] .form-select,
+:root[data-theme="dark"] .input-group-text,
+:root[data-theme="dark"] textarea {
+    background-color: #101827;
+    border-color: var(--edu-line);
+    color: var(--gray-800);
+}
+
+:root[data-theme="dark"] .form-control::placeholder {
+    color: #7f8da4;
+}
+
+:root[data-theme="dark"] .form-control:disabled,
+:root[data-theme="dark"] .form-select:disabled,
+:root[data-theme="dark"] .btn:disabled {
+    background-color: #172134;
+    border-color: #29364c;
+    color: #7f8da4;
+}
+
+:root[data-theme="dark"] .btn-outline-secondary,
+:root[data-theme="dark"] .btn-outline-dark {
+    border-color: #3a4b63;
+    color: #dbe6f3;
+}
+
+:root[data-theme="dark"] .btn-outline-secondary:hover,
+:root[data-theme="dark"] .btn-outline-dark:hover {
+    background: #223047;
+    color: #ffffff;
+}
+
+:root[data-theme="dark"] .btn-outline-primary {
+    border-color: rgba(255, 122, 47, 0.56);
+    color: #ffb084;
+}
+
+:root[data-theme="dark"] .btn-outline-primary:hover {
+    background: rgba(255, 122, 47, 0.16);
+    color: #ffffff;
+}
+
+:root[data-theme="dark"] .alert-info {
+    background: rgba(59, 130, 246, 0.15);
+    color: #bfdbfe;
+}
+
+:root[data-theme="dark"] .alert-warning {
+    background: rgba(245, 158, 11, 0.16);
+    color: #fde68a;
+}
+
+:root[data-theme="dark"] .alert-success {
+    background: rgba(16, 185, 129, 0.16);
+    color: #a7f3d0;
+}
+
+:root[data-theme="dark"] .alert-danger {
+    background: rgba(239, 68, 68, 0.16);
+    color: #fecaca;
+}
+
+:root[data-theme="dark"] .class-tabs-container {
+    background: #111a2d !important;
+    border-color: var(--edu-line);
+}
+
+:root[data-theme="dark"] .class-tab {
+    color: #cbd5e1 !important;
+}
+
+:root[data-theme="dark"] .class-tab:hover {
+    background: rgba(255, 122, 47, 0.12) !important;
+}
+
+:root[data-theme="dark"] .class-tab.active {
+    background: #1f2b40 !important;
+    color: #ffffff !important;
+}
+
+:root[data-theme="dark"] .stat-card,
+:root[data-theme="dark"] .care-stat-card,
+:root[data-theme="dark"] .class-roster-card,
+:root[data-theme="dark"] .profile-card {
+    background:
+        radial-gradient(circle at 92% 8%, rgba(71, 213, 198, 0.1), transparent 26%),
+        linear-gradient(180deg, #162033 0%, #111827 100%) !important;
+}
+
+:root[data-theme="dark"] .class-roster-title h3,
+:root[data-theme="dark"] .student-info span,
+:root[data-theme="dark"] .class-detail-tools-row .card h5,
+:root[data-theme="dark"] .modal-title,
+:root[data-theme="dark"] .card-title {
+    color: var(--edu-ink);
+}
+
+:root[data-theme="dark"] .class-roster-title p,
+:root[data-theme="dark"] .student-info strong {
+    color: #aebbd0;
+}
+
+:root[data-theme="dark"] .class-roster-icon,
+:root[data-theme="dark"] .student-avatar {
+    background: rgba(143, 180, 255, 0.15);
+    color: #a9c8ff;
+}
+
+:root[data-theme="dark"] .class-roster-count,
+:root[data-theme="dark"] .class-card .class-roster-count[data-role="student-count"] {
+    background: rgba(255, 122, 47, 0.13) !important;
+    border-color: rgba(255, 122, 47, 0.32);
+}
+
+:root[data-theme="dark"] .class-roster-count strong,
+:root[data-theme="dark"] .class-roster-more {
+    color: #ff9a5f;
+}
+
+:root[data-theme="dark"] .class-roster-count span {
+    color: #ffd0b5;
+}
+
+:root[data-theme="dark"] .class-roster-meta span {
+    background: rgba(219, 230, 243, 0.08);
+    color: #dbe6f3;
+}
+
+:root[data-theme="dark"] .class-roster-student {
+    background: rgba(15, 23, 42, 0.62);
+    border-color: var(--edu-line);
+}
+
+:root[data-theme="dark"] .class-roster-actions,
+:root[data-theme="dark"] .class-card .class-roster-actions[data-role="card-actions"] {
+    background: rgba(15, 23, 42, 0.72) !important;
+    border-top-color: var(--edu-line);
+}
+
+:root[data-theme="dark"] .class-action {
+    background: #101827;
+    border-color: #33435a;
+    color: #dbe6f3;
+}
+
+:root[data-theme="dark"] .class-action:hover {
+    background: #1f2b40;
+}
+
+:root[data-theme="dark"] .class-action-primary {
+    background: var(--fpt-orange);
+    color: #1b0d04;
+}
+
+:root[data-theme="dark"] .class-action-primary:hover {
+    background: #ff9a5f;
+    color: #1b0d04;
+}
+
+:root[data-theme="dark"] .class-action-danger {
+    border-color: rgba(248, 113, 113, 0.4);
+    color: #fca5a5;
+}
+
+:root[data-theme="dark"] .class-action-danger:hover {
+    background: rgba(239, 68, 68, 0.14);
+}
+
+:root[data-theme="dark"] .class-roster-empty,
+:root[data-theme="dark"] .class-card .class-roster-empty[data-role="student-preview"] {
+    background: rgba(15, 23, 42, 0.48);
+    border-color: #33435a;
+    color: #aebbd0;
+}
+
+:root[data-theme="dark"] .badge-pass {
+    background: rgba(16, 185, 129, 0.18);
+    color: #86efac;
+}
+
+:root[data-theme="dark"] .badge-fail {
+    background: rgba(239, 68, 68, 0.18);
+    color: #fca5a5;
+}
+
+:root[data-theme="dark"] .dashboard-page .btn-group,
+:root[data-theme="dark"] .care-table-card .card-header,
+:root[data-theme="dark"] .class-detail-filter-row,
+:root[data-theme="dark"] .template-generate-panel {
+    background: #111a2d;
+    border-color: var(--edu-line);
+}
+
+:root[data-theme="dark"] .branding-preview {
+    background: #101827;
+    border-color: var(--edu-line);
+}
+
+/* ========================================
+   DARK MODE DATA TABLE CONTRAST
+   ======================================== */
+
+:root[data-theme="dark"] .theme-mode-switch {
+    background: #0f172a;
+    border-color: #3a4b63;
+    color: #dbe6f3;
+}
+
+:root[data-theme="dark"] .theme-mode-option {
+    color: #b8c6d9;
+}
+
+:root[data-theme="dark"] .theme-mode-switch.is-light .theme-mode-light,
+:root[data-theme="dark"] .theme-mode-switch.is-dark .theme-mode-dark,
+:root[data-theme="dark"] .theme-mode-option.active {
+    background: linear-gradient(135deg, #ff7a2f, #ff9a5f);
+    color: #101827;
+    box-shadow: 0 10px 22px rgba(255, 122, 47, 0.3);
+}
+
+:root[data-theme="dark"] #classDetailTableWrapper,
+:root[data-theme="dark"] #dashboardTableContainer,
+:root[data-theme="dark"] .care-table-card .table-responsive {
+    background: #0f172a !important;
+    border: 1px solid #33435a;
+    border-radius: var(--radius-md);
+}
+
+:root[data-theme="dark"] #classDetailTableWrapper table,
+:root[data-theme="dark"] #dashboardStudentTable,
+:root[data-theme="dark"] .care-table-card table,
+:root[data-theme="dark"] .student-care-page table {
+    background: #0f172a !important;
+    color: #e8f1ff !important;
+}
+
+:root[data-theme="dark"] #classDetailTableHeader th,
+:root[data-theme="dark"] #classDetailTableHeader th[style],
+:root[data-theme="dark"] #dashboardStudentTable thead th,
+:root[data-theme="dark"] .care-table-card thead th,
+:root[data-theme="dark"] .student-care-page thead th {
+    background: #172033 !important;
+    color: #f8fafc !important;
+    border-color: #42536d !important;
+    box-shadow: inset 0 -1px 0 #42536d !important;
+}
+
+:root[data-theme="dark"] #classDetailTableHeader th *,
+:root[data-theme="dark"] #dashboardStudentTable thead th *,
+:root[data-theme="dark"] .care-table-card thead th *,
+:root[data-theme="dark"] .student-care-page thead th * {
+    color: #f8fafc !important;
+}
+
+:root[data-theme="dark"] #classDetailTableHeader th small,
+:root[data-theme="dark"] #dashboardStudentTable thead th small,
+:root[data-theme="dark"] .care-table-card thead th small {
+    color: #b8c6d9 !important;
+}
+
+:root[data-theme="dark"] #classDetailTableBody tr,
+:root[data-theme="dark"] #dashboardStudentTable tbody tr,
+:root[data-theme="dark"] .care-table-card tbody tr,
+:root[data-theme="dark"] .student-care-page tbody tr {
+    background: #0f172a !important;
+}
+
+:root[data-theme="dark"] #classDetailTableBody tr:nth-child(even),
+:root[data-theme="dark"] #dashboardStudentTable tbody tr:nth-child(even),
+:root[data-theme="dark"] .care-table-card tbody tr:nth-child(even),
+:root[data-theme="dark"] .student-care-page tbody tr:nth-child(even) {
+    background: #121c2f !important;
+}
+
+:root[data-theme="dark"] #classDetailTableBody td,
+:root[data-theme="dark"] #classDetailTableBody td[style],
+:root[data-theme="dark"] #dashboardStudentTable tbody td,
+:root[data-theme="dark"] .care-table-card tbody td,
+:root[data-theme="dark"] .student-care-page tbody td,
+:root[data-theme="dark"] .student-care-row td {
+    background: transparent !important;
+    color: #e8f1ff !important;
+    border-color: #42536d !important;
+}
+
+:root[data-theme="dark"] #classDetailTableBody td *,
+:root[data-theme="dark"] #dashboardStudentTable tbody td *,
+:root[data-theme="dark"] .care-table-card tbody td *,
+:root[data-theme="dark"] .student-care-page tbody td * {
+    color: inherit;
+}
+
+:root[data-theme="dark"] #classDetailTableBody td:nth-child(1),
+:root[data-theme="dark"] #classDetailTableBody td:nth-child(2),
+:root[data-theme="dark"] #classDetailTableBody td:nth-child(3) {
+    background: #13203a !important;
+    color: #f8fafc !important;
+}
+
+:root[data-theme="dark"] #classDetailTableBody tr:nth-child(even) td:nth-child(1),
+:root[data-theme="dark"] #classDetailTableBody tr:nth-child(even) td:nth-child(2),
+:root[data-theme="dark"] #classDetailTableBody tr:nth-child(even) td:nth-child(3) {
+    background: #162640 !important;
+}
+
+:root[data-theme="dark"] #classDetailTableBody tr.pass td:nth-child(1),
+:root[data-theme="dark"] #classDetailTableBody tr.pass td:nth-child(2),
+:root[data-theme="dark"] #classDetailTableBody tr.pass td:nth-child(3) {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.24), #13203a 72%) !important;
+}
+
+:root[data-theme="dark"] #classDetailTableBody tr.fail td:nth-child(1),
+:root[data-theme="dark"] #classDetailTableBody tr.fail td:nth-child(2),
+:root[data-theme="dark"] #classDetailTableBody tr.fail td:nth-child(3) {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.26), #13203a 72%) !important;
+}
+
+:root[data-theme="dark"] #classDetailTableBody td:nth-child(3)::after {
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.28), transparent) !important;
+}
+
+:root[data-theme="dark"] #classDetailTableBody .badge,
+:root[data-theme="dark"] #dashboardStudentTable .badge,
+:root[data-theme="dark"] .care-table-card .badge,
+:root[data-theme="dark"] .student-care-page .badge {
+    color: #ffffff !important;
+    opacity: 1;
+}
+
+:root[data-theme="dark"] #classDetailTableBody .badge.bg-primary,
+:root[data-theme="dark"] #dashboardStudentTable .badge.bg-primary,
+:root[data-theme="dark"] .student-care-page .badge.bg-primary {
+    background-color: #2f6fed !important;
+}
+
+:root[data-theme="dark"] .student-care-page .badge.bg-warning,
+:root[data-theme="dark"] .student-care-page .badge.text-dark,
+:root[data-theme="dark"] #dashboardStudentTable .badge.bg-warning,
+:root[data-theme="dark"] #dashboardStudentTable .badge.text-dark {
+    background-color: #fbbf24 !important;
+    color: #172033 !important;
+}
+
+:root[data-theme="dark"] #classDetailTableWrapper .grade-input,
+:root[data-theme="dark"] #classDetailTableWrapper .extra-input,
+:root[data-theme="dark"] #dashboardStudentTable .grade-input,
+:root[data-theme="dark"] .care-note-input,
+:root[data-theme="dark"] .student-care-page textarea,
+:root[data-theme="dark"] .student-care-page input,
+:root[data-theme="dark"] .student-care-page select {
+    background: #1d2940 !important;
+    border: 1px solid #5b708d !important;
+    color: #f8fafc !important;
+    box-shadow: inset 0 0 0 1px rgba(143, 180, 255, 0.08);
+}
+
+:root[data-theme="dark"] #classDetailTableWrapper .grade-input::placeholder,
+:root[data-theme="dark"] #classDetailTableWrapper .extra-input::placeholder,
+:root[data-theme="dark"] #dashboardStudentTable .grade-input::placeholder,
+:root[data-theme="dark"] .care-note-input::placeholder,
+:root[data-theme="dark"] .student-care-page textarea::placeholder,
+:root[data-theme="dark"] .student-care-page input::placeholder {
+    color: #aebbd0 !important;
+}
+
+:root[data-theme="dark"] #classDetailTableWrapper .grade-input:focus,
+:root[data-theme="dark"] #classDetailTableWrapper .extra-input:focus,
+:root[data-theme="dark"] #dashboardStudentTable .grade-input:focus,
+:root[data-theme="dark"] .care-note-input:focus,
+:root[data-theme="dark"] .student-care-page textarea:focus,
+:root[data-theme="dark"] .student-care-page input:focus,
+:root[data-theme="dark"] .student-care-page select:focus {
+    background: #22314c !important;
+    border-color: #ff9a5f !important;
+    box-shadow: 0 0 0 3px rgba(255, 122, 47, 0.22) !important;
+}
+
+:root[data-theme="dark"] .student-care-page a,
+:root[data-theme="dark"] #dashboardStudentTable a,
+:root[data-theme="dark"] #classDetailTableWrapper a {
+    color: #7db3ff !important;
+}
+
+:root[data-theme="dark"] #classDetailTableBody .btn,
+:root[data-theme="dark"] #dashboardStudentTable .btn,
+:root[data-theme="dark"] .student-care-page .btn {
+    opacity: 1;
+}
+
+:root[data-theme="dark"] #classDetailTableBody .btn-outline-secondary,
+:root[data-theme="dark"] #classDetailTableBody .btn-outline-primary,
+:root[data-theme="dark"] #classDetailTableBody .btn-outline-success,
+:root[data-theme="dark"] #dashboardStudentTable .btn-outline-secondary,
+:root[data-theme="dark"] #dashboardStudentTable .btn-outline-primary,
+:root[data-theme="dark"] #dashboardStudentTable .btn-outline-success {
+    background: #24334d;
+    border-color: #536681;
+    color: #e8f1ff;
+}
+
+#classDetailTableHeader .grade-meta-head,
+#classDetailTableBody .grade-meta-cell {
+    border-left: 1px solid rgba(23, 50, 77, 0.08);
+}
+
+#classDetailTableHeader .grade-meta-bonus,
+#classDetailTableBody .grade-meta-bonus,
+#classDetailTableHeader .grade-meta-rating,
+#classDetailTableBody .grade-meta-rating {
+    background: #fffbeb !important;
+}
+
+#classDetailTableHeader .grade-meta-final,
+#classDetailTableBody .grade-meta-final {
+    background: #f0fdf4 !important;
+}
+
+#classDetailTableHeader .grade-meta-note,
+#classDetailTableBody .grade-meta-note {
+    background: #faf5ff !important;
+}
+
+#classDetailTableHeader .grade-meta-care,
+#classDetailTableBody .grade-meta-care {
+    background: #fef2f2 !important;
+}
+
+#classDetailTableHeader .grade-meta-absence,
+#classDetailTableBody .grade-meta-absence {
+    background: #fff7ed !important;
+}
+
+:root[data-theme="dark"] #classDetailTableHeader .grade-meta-head,
+:root[data-theme="dark"] #classDetailTableHeader .grade-meta-head[style] {
+    background: #1b2941 !important;
+    color: #f8fafc !important;
+    border-left-color: #4c5f7a !important;
+}
+
+:root[data-theme="dark"] #classDetailTableBody .grade-meta-cell {
+    background: #111c2f !important;
+    color: #e8f1ff !important;
+    border-left-color: #42536d !important;
+}
+
+:root[data-theme="dark"] #classDetailTableBody tr:nth-child(even) .grade-meta-cell {
+    background: #14223a !important;
+}
+
+:root[data-theme="dark"] #classDetailTableHeader .grade-meta-bonus,
+:root[data-theme="dark"] #classDetailTableHeader .grade-meta-rating,
+:root[data-theme="dark"] #classDetailTableBody .grade-meta-bonus,
+:root[data-theme="dark"] #classDetailTableBody .grade-meta-rating {
+    box-shadow: inset 3px 0 0 rgba(251, 191, 36, 0.72);
+}
+
+:root[data-theme="dark"] #classDetailTableHeader .grade-meta-final,
+:root[data-theme="dark"] #classDetailTableBody .grade-meta-final {
+    box-shadow: inset 3px 0 0 rgba(16, 185, 129, 0.72);
+}
+
+:root[data-theme="dark"] #classDetailTableHeader .grade-meta-note,
+:root[data-theme="dark"] #classDetailTableBody .grade-meta-note {
+    box-shadow: inset 3px 0 0 rgba(168, 85, 247, 0.72);
+}
+
+:root[data-theme="dark"] #classDetailTableHeader .grade-meta-care,
+:root[data-theme="dark"] #classDetailTableBody .grade-meta-care {
+    box-shadow: inset 3px 0 0 rgba(248, 113, 113, 0.72);
+}
+
+:root[data-theme="dark"] #classDetailTableHeader .grade-meta-absence,
+:root[data-theme="dark"] #classDetailTableBody .grade-meta-absence {
+    box-shadow: inset 3px 0 0 rgba(251, 146, 60, 0.72);
+}
+
+@media (max-width: 575.98px) {
+    .theme-mode-switch {
+        min-width: 88px;
+    }
+
+    .theme-mode-option {
+        min-width: 38px;
+        padding: 0 0.35rem;
+    }
+
+    .theme-mode-option span {
+        display: none;
+    }
 }

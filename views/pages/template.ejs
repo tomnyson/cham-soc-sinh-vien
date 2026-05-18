@@ -10,7 +10,7 @@
     %>
 
     <!-- Template Generation Page -->
-    <div class="container-fluid py-4">
+    <div class="container-fluid py-4 template-page edu-page">
         <div class="row mb-4">
             <div class="col-12">
                 <h1 class="h3 mb-0">
@@ -21,7 +21,7 @@
         </div>
 
         <!-- Profile Selection -->
-        <div class="card mb-4">
+        <div class="card mb-4 template-step-card">
             <div class="card-body">
                 <h5 class="card-title">Chọn Profile điểm</h5>
                 <select class="form-select" id="templateProfileSelect" onchange="updateTemplateProfile()">
@@ -59,7 +59,7 @@
         </div>
 
         <!-- Data Source Selection -->
-        <div class="card mb-4">
+        <div class="card mb-4 template-step-card">
             <div class="card-body">
                 <h5 class="card-title">Chọn nguồn danh sách sinh viên</h5>
                 <div class="mb-3">
@@ -121,7 +121,7 @@
         </div>
 
         <!-- Generate Button -->
-        <div class="text-center">
+        <div class="template-generate-panel text-center">
             <button class="btn btn-success btn-lg" id="generateTemplateBtn" onclick="generateTemplate()" disabled>
                 <i class="bi bi-file-earmark-arrow-down me-2"></i>
                 Tạo Template

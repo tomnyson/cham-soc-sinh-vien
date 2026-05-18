@@ -107,6 +107,48 @@
                         placeholder="VD: Lập trình Java - Khóa 18">
                 </div>
 
+                <div class="row g-3 mb-3">
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <label class="form-label fw-semibold text-dark mb-1" style="font-size: 0.875rem;">
+                            <i class="bi bi-calendar3 text-primary me-1"></i>
+                            Năm:
+                        </label>
+                        <input type="number" class="form-control" id="classYear"
+                            min="2000" max="2100" step="1" placeholder="VD: 2025">
+                    </div>
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <label class="form-label fw-semibold text-dark mb-1" style="font-size: 0.875rem;">
+                            <i class="bi bi-grid-1x2 text-warning me-1"></i>
+                            Block:
+                        </label>
+                        <select class="form-select" id="classBlock">
+                            <option value="">-- Chọn block --</option>
+                            <option value="1">Block 1</option>
+                            <option value="2">Block 2</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <label class="form-label fw-semibold text-dark mb-1" style="font-size: 0.875rem;">
+                            <i class="bi bi-cloud-sun text-success me-1"></i>
+                            Kỳ:
+                        </label>
+                        <select class="form-select" id="classSemester">
+                            <option value="">-- Chọn kỳ --</option>
+                            <option value="spring">Spring</option>
+                            <option value="summer">Summer</option>
+                            <option value="fall">Fall</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <label class="form-label fw-semibold text-dark mb-1" style="font-size: 0.875rem;">
+                            <i class="bi bi-person-badge text-info me-1"></i>
+                            Mã giảng viên:
+                        </label>
+                        <input type="text" class="form-control" id="classInstructorCode"
+                            placeholder="VD: HungNX">
+                    </div>
+                </div>
+
                 <div class="mb-3">
                     <label class="form-label fw-semibold text-dark" style="font-size: 0.875rem;">
                         <i class="bi bi-clipboard-data text-warning me-1"></i>

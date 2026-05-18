@@ -193,6 +193,53 @@
                     <div id="studentNoteText" class="mb-0"></div>
                 </div>
 
+                <div id="studentExtraInfo" class="card shadow mb-4 border-0" style="display: none;">
+                    <div class="card-body">
+                        <h6 class="text-muted text-uppercase small mb-3" style="letter-spacing: 0.06em;">
+                            <i class="bi bi-info-circle me-1"></i> Thông tin theo dõi
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-4" id="studentRatingItem" style="display: none;">
+                                <div class="border rounded p-3 h-100 bg-white">
+                                    <div class="text-muted small mb-1">
+                                        <i class="bi bi-stars text-warning me-1"></i> Đánh giá của GV
+                                    </div>
+                                    <div id="studentRatingStars" class="fs-5"></div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4" id="studentAbsencesItem" style="display: none;">
+                                <div class="border rounded p-3 h-100 bg-white">
+                                    <div class="text-muted small mb-1">
+                                        <i class="bi bi-calendar-x text-warning me-1"></i> Số buổi vắng
+                                    </div>
+                                    <div class="fs-5 fw-bold">
+                                        <span id="studentAbsencesValue">0</span>
+                                        <span class="text-muted small fw-normal">/ 4 buổi</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4" id="studentBonusItem" style="display: none;">
+                                <div class="border rounded p-3 h-100 bg-white">
+                                    <div class="text-muted small mb-1">
+                                        <i class="bi bi-star-fill text-warning me-1"></i> Điểm bonus
+                                    </div>
+                                    <div class="fs-5 fw-bold">
+                                        +<span id="studentBonusValue">0</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12" id="studentCareItem" style="display: none;">
+                                <div class="border rounded p-3 bg-white">
+                                    <div class="text-muted small mb-1">
+                                        <i class="bi bi-heart-pulse text-danger me-1"></i> Ghi chú chăm sóc
+                                    </div>
+                                    <div id="studentCareText"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
                         <div class="stat-card">
@@ -414,6 +461,8 @@
                 }
             }
 
+            renderStudentExtraInfo(studentGrades);
+
             // Calculate total
             let total = 0;
             const gradesBody = document.getElementById('gradesBody');
@@ -442,14 +491,97 @@
                 gradesBody.appendChild(row);
             });
 
+            // Apply bonus to the displayed total (capped at 10) so the student
+            // sees the same "Tổng cuối" the lecturer sees.
+            const bonus = Number.parseFloat(studentGrades._bonus);
+            const finalTotal = Number.isFinite(bonus) && bonus > 0
+                ? Math.min(total + bonus, 10)
+                : total;
+
             // Display total
-            const passed = total >= (profile.passThreshold || 3);
-            document.getElementById('totalScore').textContent = total.toFixed(2);
-            document.getElementById('totalScoreFoot').textContent = total.toFixed(2);
+            const passed = finalTotal >= (profile.passThreshold || 3);
+            document.getElementById('totalScore').textContent = finalTotal.toFixed(2);
+            document.getElementById('totalScoreFoot').textContent = finalTotal.toFixed(2);
 
             const statusEl = document.getElementById('statusText');
             statusEl.textContent = passed ? '✓ Đạt' : '✗ Chưa đạt';
             statusEl.className = passed ? 'status-pass' : 'status-fail';
+        }
+
+        /**
+         * Render the optional teacher tracking fields: rating (1-5 stars),
+         * absences (0-4), bonus, and care note. Each one only appears when the
+         * lecturer has filled it in.
+         */
+        function renderStudentExtraInfo(studentGrades) {
+            const wrapper = document.getElementById('studentExtraInfo');
+            if (!wrapper) return;
+
+            const rating = parseInt(studentGrades._rating, 10);
+            const absences = parseInt(studentGrades._absences, 10);
+            const bonus = parseFloat(studentGrades._bonus);
+            const careNote = String(studentGrades._careNote || '').trim();
+
+            const ratingItem = document.getElementById('studentRatingItem');
+            const ratingStarsEl = document.getElementById('studentRatingStars');
+            if (ratingItem && ratingStarsEl) {
+                if (Number.isFinite(rating) && rating >= 1 && rating <= 5) {
+                    ratingStarsEl.innerHTML = renderStarMarkup(rating);
+                    ratingItem.style.display = '';
+                } else {
+                    ratingItem.style.display = 'none';
+                }
+            }
+
+            const absencesItem = document.getElementById('studentAbsencesItem');
+            const absencesValue = document.getElementById('studentAbsencesValue');
+            if (absencesItem && absencesValue) {
+                if (Number.isFinite(absences) && absences > 0) {
+                    absencesValue.textContent = String(Math.min(Math.max(absences, 0), 4));
+                    absencesItem.style.display = '';
+                } else {
+                    absencesItem.style.display = 'none';
+                }
+            }
+
+            const bonusItem = document.getElementById('studentBonusItem');
+            const bonusValue = document.getElementById('studentBonusValue');
+            if (bonusItem && bonusValue) {
+                if (Number.isFinite(bonus) && bonus > 0) {
+                    bonusValue.textContent = bonus.toFixed(2);
+                    bonusItem.style.display = '';
+                } else {
+                    bonusItem.style.display = 'none';
+                }
+            }
+
+            const careItem = document.getElementById('studentCareItem');
+            const careTextEl = document.getElementById('studentCareText');
+            if (careItem && careTextEl) {
+                if (careNote) {
+                    careTextEl.textContent = careNote;
+                    careItem.style.display = '';
+                } else {
+                    careTextEl.textContent = '';
+                    careItem.style.display = 'none';
+                }
+            }
+
+            // Hide the whole panel if nothing inside is visible.
+            const anyVisible = [ratingItem, absencesItem, bonusItem, careItem]
+                .some((el) => el && el.style.display !== 'none');
+            wrapper.style.display = anyVisible ? '' : 'none';
+        }
+
+        function renderStarMarkup(rating) {
+            const safe = Math.min(Math.max(rating | 0, 0), 5);
+            let html = '';
+            for (let i = 1; i <= 5; i += 1) {
+                const filled = i <= safe;
+                html += `<i class="bi ${filled ? 'bi-star-fill' : 'bi-star'}" style="color: ${filled ? '#f59e0b' : '#d1d5db'};"></i> `;
+            }
+            html += `<span class="text-muted small ms-1">${safe}/5</span>`;
+            return html;
         }
 
         function logout() {
@@ -461,6 +593,14 @@
             const noteText = document.getElementById('studentNoteText');
             if (noteSection) noteSection.style.display = 'none';
             if (noteText) noteText.textContent = '';
+
+            const extraInfo = document.getElementById('studentExtraInfo');
+            if (extraInfo) extraInfo.style.display = 'none';
+            ['studentRatingItem', 'studentAbsencesItem', 'studentBonusItem', 'studentCareItem']
+                .forEach((id) => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.display = 'none';
+                });
 
             // Clear URL params
             window.history.replaceState({}, document.title, window.location.pathname);

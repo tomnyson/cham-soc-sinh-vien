@@ -8,11 +8,96 @@
 
     // Initialize layout when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
+        initializeThemeMode();
         initializeSidebar();
         initializeNavigation();
         initializeModals();
         initializeAuth();
     });
+
+    /**
+     * Initialize light/dark theme mode.
+     */
+    function initializeThemeMode() {
+        const storageKey = 'studentCareTheme';
+        const root = document.documentElement;
+        const toggle = document.getElementById('themeModeToggle');
+        const mediaQuery = window.matchMedia
+            ? window.matchMedia('(prefers-color-scheme: dark)')
+            : null;
+
+        const getSavedTheme = () => {
+            try {
+                const savedTheme = localStorage.getItem(storageKey);
+                return savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : null;
+            } catch (error) {
+                return null;
+            }
+        };
+
+        const getPreferredTheme = () => {
+            const savedTheme = getSavedTheme();
+            if (savedTheme) return savedTheme;
+            return mediaQuery && mediaQuery.matches ? 'dark' : 'light';
+        };
+
+        const updateToggle = (theme) => {
+            if (!toggle) return;
+            const isDark = theme === 'dark';
+            toggle.dataset.themeMode = theme;
+            toggle.classList.toggle('is-dark', isDark);
+            toggle.classList.toggle('is-light', !isDark);
+            toggle.querySelectorAll('[data-theme-choice]').forEach((option) => {
+                const isActive = option.dataset.themeChoice === theme;
+                option.classList.toggle('active', isActive);
+                option.setAttribute('aria-pressed', String(isActive));
+            });
+            toggle.setAttribute(
+                'aria-label',
+                isDark ? 'Đang dùng giao diện tối' : 'Đang dùng giao diện sáng'
+            );
+            toggle.setAttribute(
+                'title',
+                isDark ? 'Đang dùng giao diện tối' : 'Đang dùng giao diện sáng'
+            );
+        };
+
+        const applyTheme = (theme) => {
+            root.dataset.theme = theme;
+            updateToggle(theme);
+        };
+
+        applyTheme(getPreferredTheme());
+
+        if (toggle) {
+            toggle.addEventListener('click', (event) => {
+                const choice = event.target.closest('[data-theme-choice]');
+                const nextTheme = choice
+                    ? choice.dataset.themeChoice
+                    : (root.dataset.theme === 'dark' ? 'light' : 'dark');
+                if (nextTheme !== 'light' && nextTheme !== 'dark') return;
+                try {
+                    localStorage.setItem(storageKey, nextTheme);
+                } catch (error) {
+                    // Theme still applies for this page view when storage is unavailable.
+                }
+                applyTheme(nextTheme);
+            });
+        }
+
+        if (mediaQuery) {
+            const onSystemThemeChange = (event) => {
+                if (getSavedTheme()) return;
+                applyTheme(event.matches ? 'dark' : 'light');
+            };
+
+            if (typeof mediaQuery.addEventListener === 'function') {
+                mediaQuery.addEventListener('change', onSystemThemeChange);
+            } else if (typeof mediaQuery.addListener === 'function') {
+                mediaQuery.addListener(onSystemThemeChange);
+            }
+        }
+    }
 
     /**
      * Initialize sidebar toggle

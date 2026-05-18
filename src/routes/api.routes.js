@@ -10,6 +10,8 @@ const brandingController = require('../controllers/branding.controller');
 
 const dashboardRoutes = require('./dashboard.routes');
 
+const studentCareController = require('../controllers/student-care.controller');
+
 const { uploadSingle, cleanupFile } = require('../middleware/upload.middleware');
 const { validateGenerateTemplate, validateExportResults } = require('../middleware/validation.middleware');
 const { asyncHandler } = require('../middleware/error.middleware');
@@ -102,5 +104,9 @@ router.post('/branding/reset', authenticate, requireAdmin, asyncHandler(branding
 
 // ===== Grade Entry Dashboard JSON endpoints =====
 router.use('/', dashboardRoutes);
+
+// ===== Student Care list =====
+router.get('/student-care', authenticate, asyncHandler(studentCareController.getStudentCareList));
+router.get('/student-care/export', authenticate, asyncHandler(studentCareController.exportStudentCareList));
 
 module.exports = router;

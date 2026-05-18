@@ -27,6 +27,105 @@
 })();
 
 // ========================================
+// THEME MODE SWITCH
+// ========================================
+(function initThemeModeSwitch() {
+    if (window.__themeModeSwitchInitialized) {
+        return;
+    }
+    window.__themeModeSwitchInitialized = true;
+
+    const STORAGE_KEY = 'studentCareTheme';
+
+    function getSavedTheme() {
+        try {
+            const savedTheme = localStorage.getItem(STORAGE_KEY);
+            return savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function getPreferredTheme() {
+        const savedTheme = getSavedTheme();
+        if (savedTheme) return savedTheme;
+        return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+            ? 'dark'
+            : 'light';
+    }
+
+    function updateThemeSwitch(theme) {
+        const toggle = document.getElementById('themeModeToggle');
+        if (!toggle) return;
+
+        const isDark = theme === 'dark';
+        toggle.dataset.themeMode = theme;
+        toggle.classList.toggle('is-dark', isDark);
+        toggle.classList.toggle('is-light', !isDark);
+        toggle.setAttribute('aria-label', isDark ? 'Đang dùng giao diện tối' : 'Đang dùng giao diện sáng');
+        toggle.setAttribute('title', isDark ? 'Đang dùng giao diện tối' : 'Đang dùng giao diện sáng');
+
+        toggle.querySelectorAll('[data-theme-choice]').forEach((option) => {
+            const isActive = option.dataset.themeChoice === theme;
+            option.classList.toggle('active', isActive);
+            option.setAttribute('aria-pressed', String(isActive));
+        });
+    }
+
+    function applyTheme(theme) {
+        const normalizedTheme = theme === 'dark' ? 'dark' : 'light';
+        document.documentElement.dataset.theme = normalizedTheme;
+        updateThemeSwitch(normalizedTheme);
+    }
+
+    function saveTheme(theme) {
+        try {
+            localStorage.setItem(STORAGE_KEY, theme);
+        } catch (error) {
+            // Keep the selected theme for this page view when storage is unavailable.
+        }
+    }
+
+    function bindThemeSwitch() {
+        const toggle = document.getElementById('themeModeToggle');
+        if (!toggle) return;
+
+        applyTheme(getPreferredTheme());
+
+        toggle.addEventListener('click', (event) => {
+            const choice = event.target.closest('[data-theme-choice]');
+            if (!choice) return;
+
+            const nextTheme = choice.dataset.themeChoice;
+            if (nextTheme !== 'light' && nextTheme !== 'dark') return;
+
+            saveTheme(nextTheme);
+            applyTheme(nextTheme);
+        });
+
+        if (window.matchMedia) {
+            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            const onSystemThemeChange = (event) => {
+                if (getSavedTheme()) return;
+                applyTheme(event.matches ? 'dark' : 'light');
+            };
+
+            if (typeof mediaQuery.addEventListener === 'function') {
+                mediaQuery.addEventListener('change', onSystemThemeChange);
+            } else if (typeof mediaQuery.addListener === 'function') {
+                mediaQuery.addListener(onSystemThemeChange);
+            }
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bindThemeSwitch);
+    } else {
+        bindThemeSwitch();
+    }
+})();
+
+// ========================================
 // SIDEBAR TOGGLE
 // ========================================
 (function initSidebarToggle() {
@@ -956,6 +1055,7 @@ async function createNewClass() {
     // Reset modal fields
     document.getElementById('className').value = '';
     document.getElementById('classDescription').value = '';
+    populateClassMetadataFields(null);
     document.getElementById('studentEditor').innerHTML = '';
     document.getElementById('classStudentCount').textContent = '0';
 
@@ -1040,6 +1140,7 @@ function editClass() {
     isCreatingClass = false;
     document.getElementById('className').value = classData.name;
     document.getElementById('classDescription').value = classData.description || '';
+    populateClassMetadataFields(classData);
 
     // Set selected profile if class has one
     const profileSelect = document.getElementById('classProfileSelect');
@@ -1061,6 +1162,32 @@ function editClass() {
 }
 
 // Removed - use closeClassModal() instead
+
+/**
+ * Populate the class metadata fields (year, block, semester, instructor code)
+ * inside the class modal. Pass `null` to reset all fields.
+ */
+function populateClassMetadataFields(classData) {
+    const yearEl = document.getElementById('classYear');
+    const blockEl = document.getElementById('classBlock');
+    const semesterEl = document.getElementById('classSemester');
+    const instructorEl = document.getElementById('classInstructorCode');
+
+    if (yearEl) {
+        yearEl.value = classData && Number.isFinite(classData.year) ? classData.year : '';
+    }
+    if (blockEl) {
+        blockEl.value = classData && (classData.block === 1 || classData.block === 2)
+            ? String(classData.block)
+            : '';
+    }
+    if (semesterEl) {
+        semesterEl.value = classData && classData.semester ? classData.semester : '';
+    }
+    if (instructorEl) {
+        instructorEl.value = classData && classData.instructorCode ? classData.instructorCode : '';
+    }
+}
 
 function renderStudentEditor(students) {
     const editor = document.getElementById('studentEditor');
@@ -1844,91 +1971,87 @@ async function renderClassesList() {
         }
 
         // GRID VIEW mode (existing)
-        let html = '<div class="classes-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 16px;">';
+        let html = '<div class="classes-grid class-roster-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 18px;">';
 
         filteredClasses.forEach(cls => {
             const studentCount = cls.students ? cls.students.length : 0;
             const isArchived = cls.isArchived;
 
             html += `
-                <div class="class-card" style="background: #ffffff; border: 1px solid ${isArchived ? '#e2e8f0' : '#f1f5f9'}; border-radius: 12px; overflow: hidden; ${isArchived ? 'opacity: 0.8;' : ''}">
-                    <!-- Card Header -->
-                    <div data-role="card-header" style="padding: 24px 24px 16px 24px;">
-                        <div style="display: flex; align-items: flex-start; gap: 16px;">
-                            <div style="width: 48px; height: 48px; background: ${isArchived ? '#f1f5f9' : '#eff6ff'}; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                <i class="bi bi-${isArchived ? 'archive' : 'people-fill'}" style="color: ${isArchived ? '#64748b' : '#3b82f6'}; font-size: 1.5rem;"></i>
-                            </div>
-                            <div style="flex: 1; min-width: 0;">
-                                <h3 style="margin: 0 0 4px 0; font-size: 1.125rem; font-weight: 700; color: #1e293b; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                    ${cls.name}
-                                </h3>
-                                ${cls.description ? `
-                                    <p style="margin: 0; color: #64748b; font-size: 0.875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase;">
-                                        ${cls.description}
-                                    </p>
+                <article class="class-card class-roster-card ${isArchived ? 'is-archived' : ''}" style="${isArchived ? 'opacity: 0.82;' : ''}">
+                    <div class="class-roster-accent"></div>
+                    <div data-role="card-header" class="class-roster-header">
+                        <div class="class-roster-icon">
+                            <i class="bi bi-${isArchived ? 'archive' : 'people-fill'}"></i>
+                        </div>
+                        <div class="class-roster-title">
+                            <h3>${cls.name}</h3>
+                            <p>${cls.description || 'Lớp học chưa có mô tả'}</p>
+                        </div>
+                        <div class="class-roster-count" data-role="student-count">
+                            <strong>${studentCount}</strong>
+                            <span>SV</span>
+                        </div>
+                    </div>
+
+                    <div class="class-roster-body">
+                        <div class="class-roster-meta">
+                            <span><i class="bi bi-calendar2-week"></i> Đang học</span>
+                            ${isArchived ? '<span><i class="bi bi-archive"></i> Lưu trữ</span>' : '<span><i class="bi bi-journal-check"></i> Sổ điểm mở</span>'}
+                        </div>
+
+                        ${studentCount > 0 ? `
+                            <div data-role="student-preview" class="class-roster-students">
+                                ${cls.students.slice(0, 3).map(student => `
+                                    <div class="class-roster-student">
+                                        <span class="student-avatar">${(student.name || student.mssv || '?').trim().charAt(0).toUpperCase()}</span>
+                                        <span class="student-info">
+                                            <strong>${student.mssv}</strong>
+                                            <span>${student.name}</span>
+                                        </span>
+                                    </div>
+                                `).join('')}
+                                ${studentCount > 3 ? `
+                                    <div class="class-roster-more">
+                                        <i class="bi bi-plus-circle"></i>
+                                        ${studentCount - 3} sinh viên khác
+                                    </div>
                                 ` : ''}
                             </div>
-                            ${isArchived ? '<span class="badge bg-secondary" style="font-weight: 500; padding: 6px 10px;">Lưu trữ</span>' : ''}
-                        </div>
-                    </div>
-                    
-                    <!-- Student Count -->
-                    <div data-role="student-count" style="padding: 32px 24px; text-align: center; background: #f8fafc; margin: 0 24px 16px 24px; border-radius: 8px;">
-                        <div style="font-size: 3rem; font-weight: 700; color: ${isArchived ? '#64748b' : '#3b82f6'}; line-height: 1; margin-bottom: 8px;">
-                            ${studentCount}
-                        </div>
-                        <div style="font-size: 0.95rem; color: #64748b; font-weight: 500;">
-                            sinh viên
-                        </div>
+                        ` : `
+                            <div data-role="student-preview" class="class-roster-empty">
+                                <i class="bi bi-inbox"></i>
+                                <span>Chưa có sinh viên</span>
+                            </div>
+                        `}
                     </div>
 
-                    <!-- Student List Preview -->
-                    ${studentCount > 0 ? `
-                        <div data-role="student-preview" style="padding: 0 24px 24px 24px; border-bottom: 1px solid #f1f5f9; min-height: 160px;">
-                            ${cls.students.slice(0, 3).map(student => `
-                                <div style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.95rem; color: #475569; display: flex; align-items: center; gap: 8px;">
-                                    <span style="color: #64748b; font-weight: 500;">${student.mssv}</span> - <span>${student.name}</span>
-                                </div>
-                            `).join('')}
-                            ${studentCount > 3 ? `
-                                <div style="padding: 12px 0 0 0; color: #64748b; font-size: 0.9rem; font-style: italic;">
-                                    + ${studentCount - 3} sinh viên khác
-                                </div>
-                            ` : ''}
-                        </div>
-                    ` : `
-                        <div data-role="student-preview" style="padding: 0 24px 24px 24px; border-bottom: 1px solid #f1f5f9; text-align: center; min-height: 160px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                            <i class="bi bi-inbox" style="color: #cbd5e1; font-size: 2rem; margin-bottom: 12px;"></i>
-                            <span style="color: #94a3b8; font-size: 0.9rem;">Chưa có sinh viên</span>
-                        </div>
-                    `}
-
-                    <!-- Action Buttons -->
-                    <div data-role="card-actions" style="display: flex; flex-wrap: wrap; gap: 10px; padding: 20px 24px; background: #ffffff;">
+                    <div data-role="card-actions" class="class-roster-actions">
                         ${isArchived ? `
-                            <button onclick="unarchiveClassById('${cls.classId}')" style="flex: 1 1 130px; min-width: 0; padding: 12px; background: #3b82f6; border: none; border-radius: 8px; color: #ffffff; font-size: 0.95rem; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transition: background-color 200ms ease;">
-                                <i class="bi bi-arrow-counterclockwise" style="font-size: 1.1rem;"></i>
+                            <button class="class-action class-action-primary" onclick="unarchiveClassById('${cls.classId}')" title="Khôi phục lớp">
+                                <i class="bi bi-arrow-counterclockwise"></i>
                                 <span>Khôi phục</span>
                             </button>
-                            <button onclick="deleteClassById('${cls.classId}')" style="width: 48px; flex: 0 0 48px; background: #ffffff; border: 1px solid #fecaca; border-radius: 8px; color: #ef4444; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 200ms ease;">
+                            <button class="class-action class-action-danger" onclick="deleteClassById('${cls.classId}')" title="Xóa lớp">
                                 <i class="bi bi-trash"></i>
                             </button>
                         ` : `
-                            <button onclick="editClassById('${cls.classId}')" style="flex: 1 1 90px; min-width: 0; padding: 12px 8px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; color: #475569; font-size: 0.95rem; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; transition: all 200ms ease;">
-                                <i class="bi bi-pencil" style="font-size: 1.1rem;"></i>
+                            <button class="class-action" onclick="editClassById('${cls.classId}')" title="Chỉnh sửa lớp">
+                                <i class="bi bi-pencil"></i>
                             </button>
-                            <button onclick="viewClassDetails('${cls.classId}')" style="flex: 1.2 1 110px; min-width: 0; padding: 12px 8px; background: #2563eb; border: none; border-radius: 8px; color: #ffffff; font-size: 0.95rem; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; transition: background-color 200ms ease; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2), 0 2px 4px -1px rgba(37, 99, 235, 0.1);">
-                                <i class="bi bi-eye" style="font-size: 1.1rem;"></i>
+                            <button class="class-action class-action-primary" onclick="viewClassDetails('${cls.classId}')" title="Mở lớp">
+                                <i class="bi bi-eye"></i>
+                                <span>Mở lớp</span>
                             </button>
-                            <button onclick="archiveClassById('${cls.classId}')" title="Lưu trữ" style="width: 48px; flex: 0 0 48px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; color: #64748b; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 200ms ease;">
+                            <button class="class-action" onclick="archiveClassById('${cls.classId}')" title="Lưu trữ lớp">
                                 <i class="bi bi-archive"></i>
                             </button>
-                            <button onclick="deleteClassById('${cls.classId}')" title="Xóa" style="width: 48px; flex: 0 0 48px; background: #ffffff; border: 1px solid #fecaca; border-radius: 8px; color: #ef4444; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 200ms ease;">
+                            <button class="class-action class-action-danger" onclick="deleteClassById('${cls.classId}')" title="Xóa lớp">
                                 <i class="bi bi-trash"></i>
                             </button>
                         `}
                     </div>
-                </div>
+                </article>
             `;
         });
 
@@ -2319,6 +2442,7 @@ async function editClassById(classId) {
 
         document.getElementById('className').value = classData.name;
         document.getElementById('classDescription').value = classData.description || '';
+        populateClassMetadataFields(classData);
 
         const editor = document.getElementById('studentEditor');
         editor.innerHTML = '';
@@ -2438,6 +2562,20 @@ async function saveClass() {
         return;
     }
 
+    // Optional class metadata. Empty values are sent as null/'' so the server
+    // can clear them on update.
+    const yearRaw = document.getElementById('classYear')?.value || '';
+    const blockRaw = document.getElementById('classBlock')?.value || '';
+    const semesterRaw = document.getElementById('classSemester')?.value || '';
+    const instructorCode = (document.getElementById('classInstructorCode')?.value || '').trim();
+
+    const metadata = {
+        year: yearRaw === '' ? null : Number.parseInt(yearRaw, 10),
+        block: blockRaw === '' ? null : Number.parseInt(blockRaw, 10),
+        semester: semesterRaw,
+        instructorCode
+    };
+
     const rows = document.querySelectorAll('#studentEditor .weight-row');
     const students = [];
     rows.forEach(row => {
@@ -2459,7 +2597,8 @@ async function saveClass() {
                 name: name,
                 description: description,
                 students: students,
-                grades: profileId ? { profileId: profileId } : null
+                grades: profileId ? { profileId: profileId } : null,
+                ...metadata
             };
 
             const result = await API.createClass(classData);
@@ -2482,7 +2621,8 @@ async function saveClass() {
                 name: name,
                 description: description,
                 students: students,
-                grades: profileId ? { profileId: profileId } : null
+                grades: profileId ? { profileId: profileId } : null,
+                ...metadata
             };
 
             const result = await API.updateClass(selectedClassId, classData);

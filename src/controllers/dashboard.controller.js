@@ -195,8 +195,11 @@ const updateStudentGrade = async (req, res, next) => {
 
         // Defense in depth: validation middleware already enforced this, but the
         // controller should remain safe even when called from elsewhere.
-        if (assessment !== '_note' && assessment !== '_bonus') {
-            assertScoreInRange(rawScore, `Điểm "${assessment}"`);
+        const TEXT_FIELDS = new Set(['_note', '_careNote']);
+        const NUMERIC_EXTRA_FIELDS = new Set(['_bonus', '_rating', '_absences']);
+
+        if (TEXT_FIELDS.has(assessment)) {
+            // Free-form text columns: nothing to validate here.
         } else if (assessment === '_bonus') {
             const bonus = Number.parseFloat(rawScore);
             if (!Number.isFinite(bonus) || bonus < BONUS_MIN || bonus > BONUS_MAX) {
@@ -205,6 +208,24 @@ const updateStudentGrade = async (req, res, next) => {
                     error: `Bonus phải nằm trong khoảng ${BONUS_MIN}-${BONUS_MAX}.`
                 });
             }
+        } else if (assessment === '_rating') {
+            const rating = Number.parseInt(rawScore, 10);
+            if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Đánh giá phải là số nguyên 1-5.'
+                });
+            }
+        } else if (assessment === '_absences') {
+            const absences = Number.parseInt(rawScore, 10);
+            if (!Number.isFinite(absences) || absences < 0 || absences > 4) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Số buổi vắng phải là số nguyên 0-4.'
+                });
+            }
+        } else {
+            assertScoreInRange(rawScore, `Điểm "${assessment}"`);
         }
 
         const classDoc = await classService.getClassById(classId, userId);
@@ -229,8 +250,10 @@ const updateStudentGrade = async (req, res, next) => {
         })();
 
         const studentRow = { ...(existingStudents[targetMssv] || {}) };
-        if (assessment === '_note') {
-            studentRow._note = String(rawScore == null ? '' : rawScore);
+        if (assessment === '_note' || assessment === '_careNote') {
+            studentRow[assessment] = String(rawScore == null ? '' : rawScore);
+        } else if (assessment === '_rating' || assessment === '_absences') {
+            studentRow[assessment] = Number.parseInt(rawScore, 10);
         } else {
             studentRow[assessment] = Number.parseFloat(rawScore);
         }

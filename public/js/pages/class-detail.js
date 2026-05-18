@@ -613,6 +613,70 @@ function ensureStudentGrade(mssv) {
 }
 
 /**
+ * Render a 1-5 star rating widget for a student. Clicking a star sets the
+ * value; clicking the same star again clears it. The current value is read
+ * from `state.grades[mssv]._rating` (1..5 or undefined).
+ */
+function renderRatingStars(mssv, rawValue) {
+    const current = clampRating(rawValue);
+    const safeMssv = escapeHtml(String(mssv));
+    const stars = [1, 2, 3, 4, 5].map((n) => {
+        const filled = current >= n;
+        return `
+            <button
+                type="button"
+                class="btn btn-link p-0 rating-star"
+                data-mssv="${safeMssv}"
+                data-rating="${n}"
+                title="${n} sao"
+                style="line-height: 1; font-size: 1.05rem; color: ${filled ? '#f59e0b' : '#d1d5db'};">
+                <i class="bi ${filled ? 'bi-star-fill' : 'bi-star'}"></i>
+            </button>
+        `;
+    }).join('');
+    return `<div class="d-inline-flex align-items-center gap-1" data-rating-mssv="${safeMssv}">${stars}</div>`;
+}
+
+function clampRating(value) {
+    const n = Number.parseInt(value, 10);
+    if (!Number.isFinite(n)) return 0;
+    if (n < 1) return 0;
+    if (n > 5) return 5;
+    return n;
+}
+
+function clampAbsences(value) {
+    const n = Number.parseInt(value, 10);
+    if (!Number.isFinite(n)) return null;
+    if (n < 0) return 0;
+    if (n > 4) return 4;
+    return n;
+}
+
+/**
+ * Click handler for the rating stars. Toggles off if the user clicks the same
+ * value that's already set.
+ */
+function handleRatingClick(event) {
+    const btn = event.target.closest('.rating-star');
+    if (!btn) return;
+    const mssv = btn.dataset.mssv;
+    const rating = clampRating(btn.dataset.rating);
+    if (!mssv || !rating) return;
+
+    ensureStudentGrade(mssv);
+    const existing = clampRating(state.grades[mssv]._rating);
+    const next = existing === rating ? 0 : rating;
+    state.grades[mssv]._rating = next || undefined;
+    markDirty();
+
+    const container = document.querySelector(`[data-rating-mssv="${mssv}"]`);
+    if (container) {
+        container.outerHTML = renderRatingStars(mssv, next);
+    }
+}
+
+/**
  * Handle input for extra fields (bonus, dates, note)
  * These fields don't count towards the main total
  */
@@ -633,7 +697,12 @@ function handleExtraInput(event) {
             value = Math.min(Math.max(value, 0), 2); // Bonus max 2 points
         }
         target.value = value === '' ? '' : value;
+    } else if (field === '_absences') {
+        const clamped = clampAbsences(target.value);
+        value = clamped === null ? '' : clamped;
+        target.value = value === '' ? '' : value;
     } else {
+        // Free-form text fields: _note, _careNote
         value = target.value;
     }
 
@@ -702,6 +771,12 @@ function renderContactIcons(email = '', phone = '') {
 }
 
 function handleTableBodyClick(event) {
+    // Rating stars take precedence (icons are nested inside a button).
+    if (event.target.closest('.rating-star')) {
+        handleRatingClick(event);
+        return;
+    }
+
     const emailBtn = event.target.closest('.send-score-mail-btn');
     if (!emailBtn) return;
 
@@ -1072,17 +1147,29 @@ function renderGradesTable() {
             `).join('')}
             <th class="text-center">Tổng</th>
             <th class="text-center">Trạng thái</th>
-            <th class="text-center" style="background: #fef3c7 !important; border-left: 2px solid #f59e0b;">
+            <th class="text-center grade-meta-head grade-meta-bonus">
                 <div><i class="bi bi-star-fill text-warning"></i> Bonus</div>
                 <div style="font-size: 0.7rem; color: #9ca3af;">Điểm cộng</div>
             </th>
-            <th class="text-center" style="background: #dcfce7 !important;">
+            <th class="text-center grade-meta-head grade-meta-final">
                 <div><i class="bi bi-trophy text-success"></i> Tổng cuối</div>
                 <div style="font-size: 0.7rem; color: #9ca3af;">Có bonus</div>
             </th>
-            <th class="text-center" style="min-width: 150px; background: #f3e8ff !important;">
+            <th class="text-center grade-meta-head grade-meta-note" style="min-width: 150px;">
                 <div><i class="bi bi-journal-text text-purple"></i> Ghi chú</div>
                 <div style="font-size: 0.7rem; color: #9ca3af;">Đánh giá GV</div>
+            </th>
+            <th class="text-center grade-meta-head grade-meta-rating" style="min-width: 130px;">
+                <div><i class="bi bi-stars text-warning"></i> Đánh giá</div>
+                <div style="font-size: 0.7rem; color: #9ca3af;">1-5 sao</div>
+            </th>
+            <th class="text-center grade-meta-head grade-meta-care" style="min-width: 160px;">
+                <div><i class="bi bi-heart-pulse text-danger"></i> Chăm sóc</div>
+                <div style="font-size: 0.7rem; color: #9ca3af;">Tình trạng</div>
+            </th>
+            <th class="text-center grade-meta-head grade-meta-absence">
+                <div><i class="bi bi-calendar-x text-warning"></i> Vắng</div>
+                <div style="font-size: 0.7rem; color: #9ca3af;">Số buổi (0-4)</div>
             </th>
         </tr>
     `;
@@ -1161,7 +1248,7 @@ function renderGradesTable() {
                         ${passed ? '✓ Đạt' : '✗ Chưa đạt'}
                     </span>
                 </td>
-                <td class="text-center" style="background: #fffbeb;">
+                <td class="text-center grade-meta-cell grade-meta-bonus">
                     <input
                         type="number"
                         class="form-control form-control-sm extra-input"
@@ -1175,18 +1262,46 @@ function renderGradesTable() {
                         style="width: 70px; margin: auto; text-align: center;"
                     />
                 </td>
-                <td class="text-center fw-bold" style="background: #f0fdf4;" data-final-mssv="${student.mssv}">
+                <td class="text-center fw-bold grade-meta-cell grade-meta-final" data-final-mssv="${student.mssv}">
                     <span class="${finalTotal > total ? 'text-success' : ''}">${finalTotal.toFixed(2)}</span>
                 </td>
-                <td class="text-center" style="background: #faf5ff;">
+                <td class="text-center grade-meta-cell grade-meta-note">
                     <input
                         type="text"
                         class="form-control form-control-sm extra-input"
                         data-mssv="${student.mssv}"
                         data-field="_note"
-                        value="${studentGrades._note ?? ''}"
+                        value="${escapeHtml(studentGrades._note ?? '')}"
                         placeholder="Ghi chú..."
                         style="min-width: 120px;"
+                    />
+                </td>
+                <td class="text-center grade-meta-cell grade-meta-rating">
+                    ${renderRatingStars(student.mssv, studentGrades._rating)}
+                </td>
+                <td class="text-center grade-meta-cell grade-meta-care">
+                    <input
+                        type="text"
+                        class="form-control form-control-sm extra-input"
+                        data-mssv="${student.mssv}"
+                        data-field="_careNote"
+                        value="${escapeHtml(studentGrades._careNote ?? '')}"
+                        placeholder="VD: Cần hỗ trợ thêm..."
+                        style="min-width: 140px;"
+                    />
+                </td>
+                <td class="text-center grade-meta-cell grade-meta-absence">
+                    <input
+                        type="number"
+                        class="form-control form-control-sm extra-input"
+                        data-mssv="${student.mssv}"
+                        data-field="_absences"
+                        min="0"
+                        max="4"
+                        step="1"
+                        value="${studentGrades._absences ?? ''}"
+                        placeholder="0"
+                        style="width: 70px; margin: auto; text-align: center;"
                     />
                 </td>
             </tr>

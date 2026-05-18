@@ -77,6 +77,33 @@ const classSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
         index: true
+    },
+
+    // Năm học (VD: 2025).
+    year: {
+        type: Number,
+        default: null
+    },
+
+    // Block trong kỳ (1 hoặc 2). Để trống nếu không áp dụng.
+    block: {
+        type: Number,
+        enum: [null, 1, 2],
+        default: null
+    },
+
+    // Kỳ học: spring | summer | fall.
+    semester: {
+        type: String,
+        enum: [null, '', 'spring', 'summer', 'fall'],
+        default: null
+    },
+
+    // Mã giảng viên phụ trách (VD: HungNX).
+    instructorCode: {
+        type: String,
+        default: '',
+        trim: true
     }
 }, {
     timestamps: true,

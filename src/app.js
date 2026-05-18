@@ -144,6 +144,11 @@ function serializeClass(classDoc = {}) {
         description: classDoc.description || '',
         students: normalizedStudents,
         grades: normalizedGrades,
+        year: typeof classDoc.year === 'number' ? classDoc.year : null,
+        block: classDoc.block === 1 || classDoc.block === 2 ? classDoc.block : null,
+        semester: classDoc.semester || '',
+        instructorCode: classDoc.instructorCode || '',
+        isArchived: Boolean(classDoc.isArchived),
         createdAt: classDoc.createdAt,
         updatedAt: classDoc.updatedAt
     };
@@ -214,6 +219,26 @@ app.get('/grade-check', optionalAuth, async (req, res, next) => {
 
 // Grade Entry Dashboard (lecturer) - requires authentication, controller handles layout.
 app.get('/dashboard', optionalAuth, dashboardController.renderDashboard);
+
+// Student Care - lists students from active classes that need follow-up.
+const studentCareController = require('./controllers/student-care.controller');
+app.get('/student-care', optionalAuth, async (req, res, next) => {
+    try {
+        if (!req.user) {
+            return res.redirect('/?login=required');
+        }
+        const filters = studentCareController.normalizeFilters(req.query);
+        const careData = await studentCareController.buildStudentCareList(req.user._id, filters);
+        await renderLayoutPage(req, res, 'student-care', {
+            title: 'Chăm sóc sinh viên - FPT Polytechnic',
+            currentRoute: '/student-care',
+            pageData: { careData }
+        });
+    } catch (error) {
+        console.error('Error rendering student-care:', error);
+        next(error);
+    }
+});
 
 app.get('/profiles', optionalAuth, async (req, res, next) => {
     try {
