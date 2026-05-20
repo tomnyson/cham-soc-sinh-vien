@@ -43,14 +43,28 @@ function assertScoreInRange(value, columnLabel = 'score') {
 
 /**
  * Convert profile.weights (Map | object | undefined) to a plain numeric map.
+ * Non-number columns (text, link) are automatically excluded so they don't
+ * contribute zero weight to the score calculation.
+ *
+ * @param {Map|Object} weights
+ * @param {Map|Object} [columnTypes] - optional column types map
  */
-function toWeightsMap(weights) {
+function toWeightsMap(weights, columnTypes) {
     if (!weights) return {};
     const entries = weights instanceof Map
         ? Array.from(weights.entries())
         : Object.entries(weights);
 
+    const typesObj = !columnTypes ? {}
+        : columnTypes instanceof Map
+            ? Object.fromEntries(columnTypes.entries())
+            : columnTypes;
+
     return entries.reduce((acc, [key, value]) => {
+        // Skip columns that are not numeric types
+        const colType = typesObj[key] || 'number';
+        if (colType !== 'number') return acc;
+
         const numeric = Number.parseFloat(value);
         if (key && Number.isFinite(numeric)) {
             acc[key] = numeric;
@@ -120,7 +134,7 @@ function determineStatus(finalScore, passThreshold = 0) {
  * Compute the dashboard view-model for a single student row.
  */
 function calculateStudentScore(student, gradeRow = {}, profile = {}) {
-    const weights = toWeightsMap(profile.weights);
+    const weights = toWeightsMap(profile.weights, profile.columnTypes);
     const passThreshold = Number.parseFloat(profile.passThreshold) || 0;
     const total = calculateTotal(gradeRow, weights);
     const bonus = clampNumber(gradeRow._bonus, BONUS_MIN, BONUS_MAX) || 0;

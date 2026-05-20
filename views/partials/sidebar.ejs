@@ -28,6 +28,10 @@
             <span>Tạo Template</span>
         </a>
         <% if (user && user.role === 'admin') { %>
+            <a href="/admin/lecturers" data-route="/admin/lecturers" class="nav-item <%= activeClass(currentRoute, '/admin/lecturers') %>">
+                <i class="bi bi-person-badge"></i>
+                <span>Quản lý giảng viên</span>
+            </a>
             <a href="/branding" data-route="/branding" class="nav-item <%= activeClass(currentRoute, '/branding') %>">
                 <i class="bi bi-palette"></i>
                 <span>Cài đặt</span>

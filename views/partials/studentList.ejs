@@ -47,7 +47,7 @@ const columns = Object.keys(weights);
                 <% data.students.forEach(function(student, idx) { %>
                     <tr class="dashboard-student-row" data-mssv="<%= student.mssv %>" data-status="<%= student.status %>">
                         <td><%= idx + 1 %></td>
-                        <td><strong><%= student.mssv %></strong></td>
+                        <td><strong class="copyable-mssv" data-mssv="<%= student.mssv %>" title="Click để copy MSSV" style="cursor:pointer;"><%= student.mssv %> <i class="bi bi-clipboard text-muted" style="font-size:0.65rem;"></i></strong></td>
                         <td>
                             <%= student.name %>
                             <% if (student.email) { %>

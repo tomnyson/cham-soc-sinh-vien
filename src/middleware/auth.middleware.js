@@ -72,6 +72,58 @@ exports.authenticate = async (req, res, next) => {
 };
 
 /**
+ * Compute the access state for the given user.
+ *
+ * @returns {{allowed: boolean, reason?: string, message?: string}}
+ */
+function evaluateLecturerAccess(user) {
+    if (!user) {
+        return { allowed: false, reason: 'unauthenticated', message: 'Authentication required' };
+    }
+    if (user.role === 'admin') {
+        return { allowed: true };
+    }
+    if (user.status === 'pending') {
+        return {
+            allowed: false,
+            reason: 'pending_approval',
+            message: 'Tài khoản đang chờ super admin duyệt.'
+        };
+    }
+    if (user.status === 'rejected') {
+        return {
+            allowed: false,
+            reason: 'rejected',
+            message: 'Tài khoản đã bị từ chối. Vui lòng liên hệ quản trị viên.'
+        };
+    }
+    if (user.status === 'suspended') {
+        return {
+            allowed: false,
+            reason: 'suspended',
+            message: 'Tài khoản đã bị tạm khoá. Vui lòng liên hệ quản trị viên.'
+        };
+    }
+    if (user.status !== 'active') {
+        return {
+            allowed: false,
+            reason: 'inactive',
+            message: 'Tài khoản chưa được kích hoạt.'
+        };
+    }
+    if (user.serviceExpiresAt && new Date(user.serviceExpiresAt).getTime() < Date.now()) {
+        return {
+            allowed: false,
+            reason: 'expired',
+            message: 'Tài khoản đã hết hạn sử dụng. Vui lòng liên hệ quản trị viên để gia hạn.'
+        };
+    }
+    return { allowed: true };
+}
+
+exports.evaluateLecturerAccess = evaluateLecturerAccess;
+
+/**
  * Check if user has admin role
  */
 exports.requireAdmin = (req, res, next) => {
@@ -90,6 +142,27 @@ exports.requireAdmin = (req, res, next) => {
     }
 
     next();
+};
+
+/**
+ * Require an active, non-expired lecturer (or admin) account.
+ *
+ * Used for internal feature endpoints (classes, profiles, dashboard, ...).
+ * Pending/rejected/suspended/expired accounts get a structured 403 so the
+ * client can display the appropriate message.
+ */
+exports.requireActiveLecturer = (req, res, next) => {
+    const verdict = evaluateLecturerAccess(req.user);
+    if (verdict.allowed) {
+        return next();
+    }
+
+    const status = verdict.reason === 'unauthenticated' ? 401 : 403;
+    return res.status(status).json({
+        success: false,
+        message: verdict.message,
+        reason: verdict.reason
+    });
 };
 
 /**

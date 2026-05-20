@@ -155,6 +155,181 @@
 })();
 
 // ========================================
+// MSSV MULTI-SELECT — bulk copy
+// ========================================
+/**
+ * Wire up a "select many → copy all MSSV" feature on a table.
+ *
+ * Conventions expected in the DOM:
+ *   - Checkbox in each data row:   <input class="mssv-row-check" data-mssv="PK01234">
+ *   - Select-all checkbox:         <input class="mssv-select-all">  (anywhere in the table/page)
+ *   - Copy button:                 any element with `data-mssv-copy-btn` attribute,
+ *                                  OR pass an explicit `copyBtn` element.
+ *   - Count display inside btn:    <span data-mssv-copy-count> or pass `countEl`.
+ *
+ * @param {Object} opts
+ *   scope       — HTMLElement  root element to scope queries (default: document)
+ *   copyBtn     — HTMLElement  the "Copy MSSV đã chọn" button
+ *   countEl     — HTMLElement  the <span> showing selected count
+ *   separator   — string       separator between MSSVs (default: '\n')
+ */
+function initMssvMultiSelect(opts = {}) {
+    const scope = opts.scope || document;
+    const copyBtn = opts.copyBtn;
+    const countEl = opts.countEl;
+    const separator = opts.separator ?? '\n';
+
+    function getChecked() {
+        return Array.from(scope.querySelectorAll('.mssv-row-check:checked'));
+    }
+
+    function getVisible() {
+        return Array.from(scope.querySelectorAll('.mssv-row-check')).filter(cb => {
+            const row = cb.closest('tr');
+            return row && row.style.display !== 'none';
+        });
+    }
+
+    function updateCopyBtn() {
+        const checked = getChecked();
+        const n = checked.length;
+        if (copyBtn) {
+            copyBtn.classList.toggle('d-none', n === 0);
+        }
+        if (countEl) {
+            countEl.textContent = n;
+        }
+    }
+
+    // Row checkboxes
+    scope.addEventListener('change', function (e) {
+        if (!e.target.classList.contains('mssv-row-check')) return;
+        updateCopyBtn();
+
+        // Sync select-all state
+        const all = getVisible();
+        const checked = all.filter(cb => cb.checked);
+        const selectAlls = scope.querySelectorAll('.mssv-select-all');
+        selectAlls.forEach(sa => {
+            sa.indeterminate = checked.length > 0 && checked.length < all.length;
+            sa.checked = checked.length === all.length && all.length > 0;
+        });
+    });
+
+    // Select-all checkbox
+    scope.addEventListener('change', function (e) {
+        if (!e.target.classList.contains('mssv-select-all')) return;
+        const checked = e.target.checked;
+        getVisible().forEach(cb => { cb.checked = checked; });
+        updateCopyBtn();
+    });
+
+    // Copy button
+    if (copyBtn) {
+        copyBtn.addEventListener('click', function () {
+            const mssvList = getChecked()
+                .map(cb => (cb.dataset.mssv || '').trim())
+                .filter(Boolean);
+            if (mssvList.length === 0) return;
+
+            const text = mssvList.join(separator);
+            const copyFn = navigator.clipboard && window.isSecureContext
+                ? () => navigator.clipboard.writeText(text)
+                : () => {
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.style.cssText = 'position:fixed;opacity:0';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    try { document.execCommand('copy'); } catch (_) {}
+                    ta.remove();
+                    return Promise.resolve();
+                };
+
+            copyFn().then(() => {
+                const orig = copyBtn.innerHTML;
+                copyBtn.innerHTML = `<i class="bi bi-check2 me-1"></i> Đã copy ${mssvList.length} MSSV!`;
+                copyBtn.classList.add('btn-success');
+                copyBtn.classList.remove('btn-outline-primary');
+                setTimeout(() => {
+                    copyBtn.innerHTML = orig;
+                    copyBtn.classList.remove('btn-success');
+                    copyBtn.classList.add('btn-outline-primary');
+                }, 1800);
+            });
+        });
+    }
+
+    // Re-run updateCopyBtn when rows are filtered (call manually or export as method)
+    return { updateCopyBtn, getChecked };
+}
+
+// ========================================
+// COPY MSSV — global click handler
+// ========================================
+// Any element with class `copyable-mssv` and a `data-mssv` attribute (or
+// whose text content is the MSSV) will copy to clipboard on click.
+(function installMssvCopyHandler() {
+    function showCopyFlash(el, text) {
+        // Swap icon briefly
+        const icon = el.querySelector('i.bi-clipboard');
+        if (icon) {
+            icon.className = 'bi bi-check2 ms-1 text-success';
+            setTimeout(() => { icon.className = 'bi bi-clipboard ms-1 text-muted'; }, 1400);
+        }
+
+        // Small toast-style tip near element
+        const tip = document.createElement('div');
+        tip.textContent = 'Đã copy!';
+        tip.style.cssText = [
+            'position:fixed',
+            'z-index:9999',
+            'background:#1f2937',
+            'color:#fff',
+            'padding:4px 10px',
+            'border-radius:6px',
+            'font-size:0.78rem',
+            'pointer-events:none',
+            'opacity:1',
+            'transition:opacity 0.4s ease'
+        ].join(';');
+
+        const rect = el.getBoundingClientRect();
+        tip.style.left = Math.min(rect.left, window.innerWidth - 100) + 'px';
+        tip.style.top = (rect.top - 32 + window.scrollY) + 'px';
+        document.body.appendChild(tip);
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                tip.style.opacity = '0';
+                setTimeout(() => tip.remove(), 400);
+            }, 900);
+        });
+    }
+
+    document.addEventListener('click', function (e) {
+        const el = e.target.closest('.copyable-mssv');
+        if (!el) return;
+
+        const mssv = (el.dataset.mssv || el.textContent || '').trim();
+        if (!mssv) return;
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(mssv).then(() => showCopyFlash(el, mssv));
+        } else {
+            // Fallback for non-HTTPS
+            const ta = document.createElement('textarea');
+            ta.value = mssv;
+            ta.style.cssText = 'position:fixed;opacity:0';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); } catch (_) {}
+            ta.remove();
+            showCopyFlash(el, mssv);
+        }
+    });
+})();
+
+// ========================================
 // TAB MANAGEMENT
 // ========================================
 // Note: switchTab function is now defined at the end of the file with data loading
@@ -606,7 +781,8 @@ function copyFromProfile() {
     editor.innerHTML = '';
 
     for (const [key, value] of Object.entries(sourceProfile.weights)) {
-        addWeightRowWithData(key, value);
+        const colType = (sourceProfile.columnTypes || {})[key] || 'number';
+        addWeightRowWithData(key, value, colType);
     }
 
     calculateTotalWeight();
@@ -623,26 +799,46 @@ function renderWeightEditor() {
     editor.innerHTML = '';
 
     const profile = profiles[currentProfile];
+    const columnTypes = profile.columnTypes || {};
     for (const [key, value] of Object.entries(profile.weights)) {
-        addWeightRowWithData(key, value);
+        addWeightRowWithData(key, value, columnTypes[key] || 'number');
     }
     calculateTotalWeight();
 }
 
 function addWeightRow() {
-    addWeightRowWithData('', 0);
+    addWeightRowWithData('', 0, 'number');
 }
 
-function addWeightRowWithData(name, weight) {
+function addWeightRowWithData(name, weight, colType) {
+    const type = colType || 'number';
     const editor = document.getElementById('weightEditor');
     const row = document.createElement('div');
     row.className = 'weight-row';
+
+    const isNumeric = type === 'number';
     row.innerHTML = `
         <input type="text" placeholder="Tên cột (VD: Lab 1)" value="${name}" class="weight-name">
-        <input type="number" placeholder="Trọng số (%)" value="${weight}" step="0.1" class="weight-value" oninput="calculateTotalWeight()">
+        <select class="weight-type form-select form-select-sm" onchange="onWeightTypeChange(this)" title="Kiểu dữ liệu">
+            <option value="number" ${type === 'number' ? 'selected' : ''}>🔢 Điểm số</option>
+            <option value="text" ${type === 'text' ? 'selected' : ''}>📝 Văn bản</option>
+            <option value="link" ${type === 'link' ? 'selected' : ''}>🔗 Link</option>
+        </select>
+        <input type="number" placeholder="Trọng số (%)" value="${isNumeric ? weight : ''}"
+            step="0.1" class="weight-value" oninput="calculateTotalWeight()"
+            style="${isNumeric ? '' : 'display:none;'}">
         <button onclick="removeWeightRow(this)">Xóa</button>
     `;
     editor.appendChild(row);
+    calculateTotalWeight();
+}
+
+function onWeightTypeChange(select) {
+    const row = select.closest('.weight-row');
+    const weightInput = row.querySelector('.weight-value');
+    const isNumeric = select.value === 'number';
+    weightInput.style.display = isNumeric ? '' : 'none';
+    if (!isNumeric) weightInput.value = '';
     calculateTotalWeight();
 }
 
@@ -655,6 +851,9 @@ function calculateTotalWeight() {
     const rows = document.querySelectorAll('.weight-row');
     let total = 0;
     rows.forEach(row => {
+        const typeEl = row.querySelector('.weight-type');
+        const colType = typeEl ? typeEl.value : 'number';
+        if (colType !== 'number') return;
         const value = parseFloat(row.querySelector('.weight-value').value) || 0;
         total += value;
     });
@@ -1354,6 +1553,16 @@ window.addEventListener('DOMContentLoaded', () => {
     // Legacy initialization removed - now handled by init.js
     // The init.js module will call initDefaultProfiles() and initClasses()
     // with proper error handling, retry logic, and user notifications
+
+    // ── Multi-select MSSV: student-care page ──────────────────────────────
+    const studentCarePage = document.getElementById('studentCarePage');
+    if (studentCarePage) {
+        initMssvMultiSelect({
+            scope: studentCarePage,
+            copyBtn: document.getElementById('careCopySelectedBtn'),
+            countEl: document.getElementById('careCopySelectedCount')
+        });
+    }
 });
 
 // Hàm loại bỏ dấu tiếng Việt
@@ -2159,8 +2368,15 @@ async function editProfile(profileId) {
         const editor = document.getElementById('weightEditor');
         editor.innerHTML = '';
 
+        const columnTypes = profile.columnTypes || {};
         for (const [key, value] of Object.entries(profile.weights)) {
-            addWeightRowWithData(key, value);
+            addWeightRowWithData(key, value, columnTypes[key] || 'number');
+        }
+        // Also add text/link columns that have no weight entry
+        for (const [key, type] of Object.entries(columnTypes)) {
+            if ((type === 'text' || type === 'link') && !(key in profile.weights)) {
+                addWeightRowWithData(key, 0, type);
+            }
         }
 
         calculateTotalWeight();
@@ -2194,7 +2410,8 @@ async function duplicateProfile(profileId) {
             profileId: 'profile_' + Date.now(),
             name: newName,
             passThreshold: sourceProfile.passThreshold,
-            weights: { ...sourceProfile.weights }
+            weights: { ...sourceProfile.weights },
+            columnTypes: { ...(sourceProfile.columnTypes || {}) }
         };
 
         const result = await API.createProfile(newProfileData);
@@ -2263,19 +2480,26 @@ async function saveProfile() {
 
     const rows = document.querySelectorAll('#weightEditor .weight-row');
     const newWeights = {};
+    const newColumnTypes = {};
+
     rows.forEach(row => {
         const key = row.querySelector('.weight-name').value.trim();
-        const value = parseFloat(row.querySelector('.weight-value').value) || 0;
-        if (key) {
-            newWeights[key] = value;
+        if (!key) return;
+        const typeEl = row.querySelector('.weight-type');
+        const colType = typeEl ? typeEl.value : 'number';
+        newColumnTypes[key] = colType;
+        if (colType === 'number') {
+            newWeights[key] = parseFloat(row.querySelector('.weight-value').value) || 0;
         }
+        // text/link columns are omitted from weights but tracked in columnTypes
     });
 
     const profileData = {
         profileId: getCurrentProfileId(),
         name: name,
         passThreshold: threshold,
-        weights: newWeights
+        weights: newWeights,
+        columnTypes: newColumnTypes
     };
 
     try {

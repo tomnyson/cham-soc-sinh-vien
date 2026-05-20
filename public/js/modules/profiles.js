@@ -94,16 +94,12 @@ export const profileManager = {
                     // Save to localStorage for offline use
                     storage.saveProfiles(this.profiles);
                     
-                    // Requirement 6: Success notification with count
                     const lastSync = storage.getProfilesLastSync();
                     const syncTime = storage.getTimeSinceSync(lastSync);
-                    uiState.showNotification(
-                        `Đã tải ${apiProfiles.length} profiles thành công (${syncTime})`,
-                        'success'
-                    );
                     
                     logger.logSuccess('initProfiles', {
                         count: apiProfiles.length,
+                        syncTime,
                         source: 'API'
                     });
                 } else {

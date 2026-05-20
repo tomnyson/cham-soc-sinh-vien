@@ -77,6 +77,19 @@
           "!public/js/**/*.test.js",
           "!public/js/**/*.spec.js"
         ]
+      },
+      {
+        "displayName": "chrome-extension",
+        "testEnvironment": "jest-environment-jsdom",
+        "testMatch": [
+          "**/chrome-extension/**/*.test.js",
+          "**/chrome-extension/**/*.spec.js"
+        ],
+        "collectCoverageFrom": [
+          "chrome-extension/**/*.js",
+          "!chrome-extension/**/*.test.js",
+          "!chrome-extension/**/*.spec.js"
+        ]
       }
     ],
     "coverageThreshold": {

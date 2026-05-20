@@ -95,16 +95,12 @@ export const classManager = {
                     // Save to localStorage for offline use
                     storage.saveClasses(this.classes);
                     
-                    // Requirement 6: Success notification with count
                     const lastSync = storage.getClassesLastSync();
                     const syncTime = storage.getTimeSinceSync(lastSync);
-                    uiState.showNotification(
-                        `Đã tải ${apiClasses.length} lớp học thành công (${syncTime})`,
-                        'success'
-                    );
                     
                     logger.logSuccess('initClasses', {
                         count: apiClasses.length,
+                        syncTime,
                         source: 'API'
                     });
                 } else {

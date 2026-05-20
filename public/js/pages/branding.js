@@ -14,6 +14,13 @@ if (pageEl) {
     const elements = {
         logoInput: document.getElementById('brandingLogoInput'),
         logoPreview: document.getElementById('brandingLogoPreview'),
+        uploadLogoPreview: document.getElementById('brandingUploadLogoPreview'),
+        logoDropzone: document.getElementById('brandingLogoDropzone'),
+        clearLogoBtn: document.getElementById('brandingClearLogoBtn'),
+        logoMeta: document.getElementById('brandingLogoMeta'),
+        readiness: document.getElementById('brandingReadiness'),
+        colorReadout: document.getElementById('brandingColorReadout'),
+        logoReadout: document.getElementById('brandingLogoReadout'),
         subtextInput: document.getElementById('brandingSubtextInput'),
         subtextPreview: document.getElementById('brandingSubtextPreview'),
         colorPicker: document.getElementById('brandingPrimaryColorPicker'),
@@ -28,6 +35,8 @@ if (pageEl) {
         logoDataUrl: defaults.logoDataUrl,
         subtext: defaults.subtext,
         primaryColor: defaults.primaryColor,
+        logoFileName: 'Mặc định',
+        logoFileSize: '',
         isSubmitting: false
     };
 
@@ -41,6 +50,39 @@ if (pageEl) {
 
     function bindEvents() {
         elements.logoInput?.addEventListener('change', handleLogoInputChange);
+        elements.clearLogoBtn?.addEventListener('click', () => {
+            if (elements.logoInput) {
+                elements.logoInput.value = '';
+            }
+            state.logoDataUrl = defaults.logoDataUrl;
+            state.logoFileName = 'Mặc định';
+            state.logoFileSize = '';
+            renderPreview();
+            setStatus('Đã bỏ logo đang chọn, quay về logo mặc định.', 'info');
+        });
+
+        if (elements.logoDropzone) {
+            ['dragenter', 'dragover'].forEach((eventName) => {
+                elements.logoDropzone.addEventListener(eventName, (event) => {
+                    event.preventDefault();
+                    elements.logoDropzone.classList.add('is-dragging');
+                });
+            });
+
+            ['dragleave', 'drop'].forEach((eventName) => {
+                elements.logoDropzone.addEventListener(eventName, (event) => {
+                    event.preventDefault();
+                    elements.logoDropzone.classList.remove('is-dragging');
+                });
+            });
+
+            elements.logoDropzone.addEventListener('drop', (event) => {
+                const file = event.dataTransfer?.files?.[0];
+                if (file) {
+                    handleLogoFile(file);
+                }
+            });
+        }
 
         elements.subtextInput?.addEventListener('input', () => {
             state.subtext = String(elements.subtextInput.value || '').trimStart().slice(0, 80);
@@ -96,6 +138,8 @@ if (pageEl) {
         state.logoDataUrl = String(data.logoDataUrl || defaults.logoDataUrl).trim();
         state.subtext = String(data.subtext || defaults.subtext).trim();
         state.primaryColor = normalizeColor(data.primaryColor, defaults.primaryColor);
+        state.logoFileName = state.logoDataUrl === defaults.logoDataUrl ? 'Mặc định' : 'Đã lưu';
+        state.logoFileSize = '';
 
         if (elements.subtextInput) {
             elements.subtextInput.value = state.subtext;
@@ -113,25 +157,34 @@ if (pageEl) {
     async function handleLogoInputChange(event) {
         const file = event.target.files?.[0];
         if (!file) return;
+        await handleLogoFile(file);
+    }
 
+    async function handleLogoFile(file) {
         const mimeType = String(file.type || '').toLowerCase();
         if (!['image/png', 'image/jpeg', 'image/webp'].includes(mimeType)) {
             setStatus('Logo chỉ nhận PNG/JPG/WEBP.', 'error');
-            event.target.value = '';
+            if (elements.logoInput) {
+                elements.logoInput.value = '';
+            }
             return;
         }
 
         if (file.size > MAX_LOGO_BYTES) {
             setStatus('Logo vượt quá 500KB.', 'error');
-            event.target.value = '';
+            if (elements.logoInput) {
+                elements.logoInput.value = '';
+            }
             return;
         }
 
         try {
             const dataUrl = await readFileAsDataURL(file);
             state.logoDataUrl = dataUrl;
+            state.logoFileName = file.name || 'Logo đã chọn';
+            state.logoFileSize = formatBytes(file.size);
             renderPreview();
-            setStatus('Đã cập nhật logo preview.', 'success');
+            setStatus('Đã cập nhật logo preview. Bấm Lưu Branding để áp dụng.', 'success');
         } catch (error) {
             setStatus(`Không đọc được file logo: ${error.message}`, 'error');
         }
@@ -163,6 +216,7 @@ if (pageEl) {
             }
 
             applyBrandingToState(result.data || payload);
+            state.logoFileName = state.logoFileName === 'Mặc định' ? 'Mặc định' : 'Đã lưu';
             setStatus('Lưu branding thành công.', 'success');
         } catch (error) {
             setStatus(`Lỗi lưu branding: ${error.message}`, 'error');
@@ -196,6 +250,8 @@ if (pageEl) {
             if (elements.logoInput) {
                 elements.logoInput.value = '';
             }
+            state.logoFileName = 'Mặc định';
+            state.logoFileSize = '';
             setStatus('Đã reset branding về mặc định.', 'success');
         } catch (error) {
             setStatus(`Lỗi reset branding: ${error.message}`, 'error');
@@ -244,15 +300,41 @@ if (pageEl) {
     }
 
     function renderPreview() {
+        const branding = {
+            logoDataUrl: state.logoDataUrl || defaults.logoDataUrl,
+            subtext: state.subtext || defaults.subtext,
+            primaryColor: state.primaryColor || defaults.primaryColor
+        };
+
         if (elements.logoPreview) {
-            elements.logoPreview.src = state.logoDataUrl || defaults.logoDataUrl;
+            elements.logoPreview.src = branding.logoDataUrl;
+        }
+        if (elements.uploadLogoPreview) {
+            elements.uploadLogoPreview.src = branding.logoDataUrl;
         }
         if (elements.subtextPreview) {
-            elements.subtextPreview.textContent = state.subtext || defaults.subtext;
+            elements.subtextPreview.textContent = branding.subtext;
         }
         if (elements.preview) {
-            elements.preview.style.setProperty('--branding-preview-color', state.primaryColor || defaults.primaryColor);
+            elements.preview.style.setProperty('--branding-preview-color', branding.primaryColor);
         }
+        if (elements.logoMeta) {
+            elements.logoMeta.textContent = state.logoFileSize
+                ? `${state.logoFileName} · ${state.logoFileSize}`
+                : 'Chỉ nhận PNG/JPG/WEBP, tối đa 500KB.';
+        }
+        if (elements.readiness) {
+            elements.readiness.textContent = state.logoDataUrl && state.subtext && HEX_COLOR_REGEX.test(state.primaryColor)
+                ? 'Sẵn sàng lưu'
+                : 'Thiếu thông tin';
+        }
+        if (elements.colorReadout) {
+            elements.colorReadout.textContent = state.primaryColor || defaults.primaryColor;
+        }
+        if (elements.logoReadout) {
+            elements.logoReadout.textContent = state.logoFileName || 'Mặc định';
+        }
+        applyAppChromeBranding(branding);
     }
 
     function setStatus(message, type = 'info') {
@@ -277,5 +359,30 @@ if (pageEl) {
             reader.onerror = () => reject(reader.error || new Error('Không thể đọc file'));
             reader.readAsDataURL(file);
         });
+    }
+
+    function formatBytes(bytes) {
+        if (!Number.isFinite(bytes) || bytes <= 0) return '';
+        if (bytes < 1024) return `${bytes}B`;
+        return `${(bytes / 1024).toFixed(1)}KB`;
+    }
+
+    function applyAppChromeBranding(branding) {
+        window.__APP_BRANDING__ = { ...branding };
+
+        const logoTargets = [
+            document.getElementById('appSidebarLogo'),
+            document.getElementById('appHeaderLogo')
+        ];
+        logoTargets.forEach((logo) => {
+            if (!logo) return;
+            logo.src = branding.logoDataUrl;
+            logo.alt = branding.subtext;
+        });
+
+        const subtextEl = document.getElementById('appHeaderSubtext');
+        if (subtextEl) {
+            subtextEl.textContent = branding.subtext;
+        }
     }
 }

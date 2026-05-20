@@ -14,6 +14,7 @@ const ejs = require('ejs');
 
 const classService = require('../services/class.service');
 const profileService = require('../services/profile.service');
+const brandingService = require('../services/branding.service');
 const { buildStudentViewModel } = require('../models/student.model');
 const {
     summarizeStudents,
@@ -148,6 +149,7 @@ const renderDashboard = async (req, res, next) => {
             currentRoute: '/dashboard',
             body,
             user: userData,
+            branding: await brandingService.getGlobalBranding(),
             initialData: {
                 currentUser: userData,
                 dashboard,

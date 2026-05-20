@@ -10,7 +10,7 @@ const express = require('express');
 const router = express.Router({ mergeParams: true });
 
 const dashboardController = require('../controllers/dashboard.controller');
-const { authenticate } = require('../middleware/auth.middleware');
+const { authenticate, requireActiveLecturer } = require('../middleware/auth.middleware');
 const { validateGradeUpdate } = require('../middleware/validation.middleware');
 const { asyncHandler } = require('../middleware/error.middleware');
 
@@ -18,6 +18,7 @@ const { asyncHandler } = require('../middleware/error.middleware');
 router.get(
     '/classes/:classId/grades',
     authenticate,
+    requireActiveLecturer,
     asyncHandler(dashboardController.getClassGrades)
 );
 
@@ -25,6 +26,7 @@ router.get(
 router.put(
     '/classes/:classId/student/:mssv/grade',
     authenticate,
+    requireActiveLecturer,
     validateGradeUpdate,
     asyncHandler(dashboardController.updateStudentGrade)
 );

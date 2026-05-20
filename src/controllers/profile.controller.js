@@ -5,28 +5,29 @@ const profileService = require('../services/profile.service');
  */
 
 /**
+ * Helper: serialize a profile document to a plain response object.
+ */
+function serializeProfile(profile) {
+    return {
+        profileId: profile.profileId,
+        name: profile.name,
+        passThreshold: profile.passThreshold,
+        weights: Object.fromEntries(profile.weights || new Map()),
+        columnTypes: Object.fromEntries(profile.columnTypes || new Map()),
+        isDefault: profile.isDefault,
+        createdAt: profile.createdAt,
+        updatedAt: profile.updatedAt
+    };
+}
+
+/**
  * Lấy tất cả profiles
  */
 const getAllProfiles = async (req, res, next) => {
     try {
-        const userId = req.user._id; // Use authenticated user's ID
+        const userId = req.user._id;
         const profiles = await profileService.getAllProfiles(userId);
-
-        // Convert Map to Object cho JSON response
-        const formattedProfiles = profiles.map(profile => ({
-            profileId: profile.profileId,
-            name: profile.name,
-            passThreshold: profile.passThreshold,
-            weights: Object.fromEntries(profile.weights),
-            isDefault: profile.isDefault,
-            createdAt: profile.createdAt,
-            updatedAt: profile.updatedAt
-        }));
-
-        res.json({
-            success: true,
-            data: formattedProfiles
-        });
+        res.json({ success: true, data: profiles.map(serializeProfile) });
     } catch (error) {
         next(error);
     }
@@ -38,20 +39,9 @@ const getAllProfiles = async (req, res, next) => {
 const getProfileById = async (req, res, next) => {
     try {
         const { profileId } = req.params;
-        const userId = req.user._id; // Use authenticated user's ID
-
+        const userId = req.user._id;
         const profile = await profileService.getProfileById(profileId, userId);
-
-        res.json({
-            success: true,
-            data: {
-                profileId: profile.profileId,
-                name: profile.name,
-                passThreshold: profile.passThreshold,
-                weights: Object.fromEntries(profile.weights),
-                isDefault: profile.isDefault
-            }
-        });
+        res.json({ success: true, data: serializeProfile(profile) });
     } catch (error) {
         next(error);
     }
@@ -62,26 +52,12 @@ const getProfileById = async (req, res, next) => {
  */
 const getDefaultProfile = async (req, res, next) => {
     try {
-        const userId = req.user._id; // Use authenticated user's ID
+        const userId = req.user._id;
         const profile = await profileService.getDefaultProfile(userId);
-
         if (!profile) {
-            return res.json({
-                success: true,
-                data: null
-            });
+            return res.json({ success: true, data: null });
         }
-
-        res.json({
-            success: true,
-            data: {
-                profileId: profile.profileId,
-                name: profile.name,
-                passThreshold: profile.passThreshold,
-                weights: Object.fromEntries(profile.weights),
-                isDefault: profile.isDefault
-            }
-        });
+        res.json({ success: true, data: serializeProfile(profile) });
     } catch (error) {
         next(error);
     }
@@ -92,18 +68,11 @@ const getDefaultProfile = async (req, res, next) => {
  */
 const createProfile = async (req, res, next) => {
     try {
-        const userId = req.user._id; // Use authenticated user's ID
+        const userId = req.user._id;
         const profile = await profileService.createProfile(req.body, userId);
-
         res.status(201).json({
             success: true,
-            data: {
-                profileId: profile.profileId,
-                name: profile.name,
-                passThreshold: profile.passThreshold,
-                weights: Object.fromEntries(profile.weights),
-                isDefault: profile.isDefault
-            },
+            data: serializeProfile(profile),
             message: 'Profile created successfully'
         });
     } catch (error) {
@@ -118,16 +87,9 @@ const createDefaultProfile = async (req, res, next) => {
     try {
         const userId = req.user._id;
         const { profile, created } = await profileService.ensureDefaultProfile(userId);
-
         res.status(created ? 201 : 200).json({
             success: true,
-            data: {
-                profileId: profile.profileId,
-                name: profile.name,
-                passThreshold: profile.passThreshold,
-                weights: Object.fromEntries(profile.weights),
-                isDefault: profile.isDefault
-            },
+            data: serializeProfile(profile),
             message: created
                 ? 'Default profile created successfully'
                 : 'Default profile already exists'
@@ -143,19 +105,11 @@ const createDefaultProfile = async (req, res, next) => {
 const updateProfile = async (req, res, next) => {
     try {
         const { profileId } = req.params;
-        const userId = req.user._id; // Use authenticated user's ID
-
+        const userId = req.user._id;
         const profile = await profileService.updateProfile(profileId, req.body, userId);
-
         res.json({
             success: true,
-            data: {
-                profileId: profile.profileId,
-                name: profile.name,
-                passThreshold: profile.passThreshold,
-                weights: Object.fromEntries(profile.weights),
-                isDefault: profile.isDefault
-            },
+            data: serializeProfile(profile),
             message: 'Profile updated successfully'
         });
     } catch (error) {
@@ -169,14 +123,9 @@ const updateProfile = async (req, res, next) => {
 const deleteProfile = async (req, res, next) => {
     try {
         const { profileId } = req.params;
-        const userId = req.user._id; // Use authenticated user's ID
-
+        const userId = req.user._id;
         const result = await profileService.deleteProfile(profileId, userId);
-
-        res.json({
-            success: true,
-            message: result.message
-        });
+        res.json({ success: true, message: result.message });
     } catch (error) {
         next(error);
     }
@@ -188,19 +137,11 @@ const deleteProfile = async (req, res, next) => {
 const duplicateProfile = async (req, res, next) => {
     try {
         const { profileId } = req.params;
-        const userId = req.user._id; // Use authenticated user's ID
-
+        const userId = req.user._id;
         const profile = await profileService.duplicateProfile(profileId, req.body, userId);
-
         res.status(201).json({
             success: true,
-            data: {
-                profileId: profile.profileId,
-                name: profile.name,
-                passThreshold: profile.passThreshold,
-                weights: Object.fromEntries(profile.weights),
-                isDefault: profile.isDefault
-            },
+            data: serializeProfile(profile),
             message: 'Profile duplicated successfully'
         });
     } catch (error) {
@@ -214,17 +155,11 @@ const duplicateProfile = async (req, res, next) => {
 const importProfiles = async (req, res, next) => {
     try {
         const { profiles } = req.body;
-        const userId = req.user._id; // Use authenticated user's ID
-
+        const userId = req.user._id;
         if (!profiles || typeof profiles !== 'object') {
-            return res.status(400).json({
-                success: false,
-                error: 'Invalid profiles data'
-            });
+            return res.status(400).json({ success: false, error: 'Invalid profiles data' });
         }
-
         const results = await profileService.importProfiles(profiles, userId);
-
         res.json({
             success: true,
             data: results,
@@ -240,13 +175,9 @@ const importProfiles = async (req, res, next) => {
  */
 const exportProfiles = async (req, res, next) => {
     try {
-        const userId = req.user._id; // Use authenticated user's ID
+        const userId = req.user._id;
         const profiles = await profileService.exportProfiles(userId);
-
-        res.json({
-            success: true,
-            data: profiles
-        });
+        res.json({ success: true, data: profiles });
     } catch (error) {
         next(error);
     }

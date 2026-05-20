@@ -1,0 +1,53 @@
+<%
+    const access = typeof accessState !== 'undefined' && accessState ? accessState : {};
+    const reason = access.reason || 'pending_approval';
+    const message = access.message || 'Tài khoản đang chờ super admin duyệt.';
+    const iconMap = {
+        pending_approval: 'bi-hourglass-split',
+        rejected: 'bi-x-octagon',
+        suspended: 'bi-slash-circle',
+        expired: 'bi-clock-history',
+        inactive: 'bi-question-octagon'
+    };
+    const titleMap = {
+        pending_approval: 'Đang chờ duyệt',
+        rejected: 'Tài khoản bị từ chối',
+        suspended: 'Tài khoản bị tạm khoá',
+        expired: 'Tài khoản đã hết hạn',
+        inactive: 'Tài khoản chưa kích hoạt'
+    };
+    const icon = iconMap[reason] || 'bi-shield-exclamation';
+    const headline = titleMap[reason] || 'Chưa có quyền truy cập';
+    const expiresAt = typeof serviceExpiresAt !== 'undefined' && serviceExpiresAt
+        ? new Date(serviceExpiresAt).toLocaleString('vi-VN')
+        : '';
+%>
+<div class="container-fluid py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4 p-md-5 text-center">
+                    <div class="mb-3 text-warning" style="font-size: 3rem;">
+                        <i class="bi <%= icon %>"></i>
+                    </div>
+                    <h1 class="h4 mb-3"><%= headline %></h1>
+                    <p class="text-muted mb-3"><%= message %></p>
+                    <% if (reason === 'expired' && expiresAt) { %>
+                        <p class="text-muted small mb-4">Hết hạn lúc: <strong><%= expiresAt %></strong></p>
+                    <% } %>
+                    <p class="text-muted small mb-4">
+                        Vui lòng liên hệ quản trị viên để được hỗ trợ.
+                    </p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <a href="/grade-check" class="btn btn-outline-secondary">
+                            <i class="bi bi-search me-1"></i> Kiểm tra điểm
+                        </a>
+                        <a href="#" class="btn btn-danger btn-logout">
+                            <i class="bi bi-box-arrow-right me-1"></i> Đăng xuất
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

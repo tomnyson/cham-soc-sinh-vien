@@ -187,6 +187,10 @@
             </h5>
             <div class="d-flex align-items-center gap-2">
                 <span class="badge bg-primary-subtle text-primary" id="classDetailProfileSummary">-</span>
+                <button class="btn btn-outline-primary btn-sm d-none" id="gradeTableCopySelectedBtn">
+                    <i class="bi bi-clipboard-check me-1"></i>
+                    Copy MSSV đã chọn (<span id="gradeTableCopySelectedCount">0</span>)
+                </button>
                 <!-- Column Visibility Toggle -->
                 <div class="dropdown">
                     <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button"
@@ -228,6 +232,10 @@
                     <option value="pass">✓ Đạt</option>
                     <option value="fail">✗ Chưa đạt</option>
                 </select>
+                <select class="form-select form-select-sm shadow-none" id="gradeTextColFilter" style="max-width: 180px;" title="Lọc theo cột văn bản / nhóm">
+                    <option value="">-- Lọc theo nhóm --</option>
+                </select>
+                <input type="text" class="form-control form-control-sm" id="gradeTextColValue" style="max-width: 160px;" placeholder="Giá trị lọc..." title="Nhập giá trị cần lọc trong cột đã chọn">
                 <span class="small text-muted ms-auto" id="gradeFilterCount"></span>
             </div>
         </div>
@@ -405,83 +413,115 @@
 
 <!-- Lucky Wheel Modal -->
 <div class="modal fade" id="luckyWheelModal" tabindex="-1" aria-labelledby="luckyWheelModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header text-white" style="background-color: #E65100;">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content lucky-wheel-modal">
+            <div class="modal-header lucky-wheel-header">
                 <h5 class="modal-title" id="luckyWheelModalLabel">
                     <i class="bi bi-bullseye me-2"></i> Vòng Quay May Mắn
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
+                <div class="ms-auto d-flex align-items-center gap-3">
+                    <div class="lucky-wheel-counter" title="Còn lại / Tổng">
+                        <i class="bi bi-people-fill"></i>
+                        <span id="wheelRemaining">0</span>
+                        <span class="lucky-wheel-counter-sep">/</span>
+                        <span id="wheelTotalStudents"><%= classData.students.length %></span>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
             </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-lg-7 text-center">
-                        <!-- Wheel Container -->
-                        <div class="wheel-container position-relative mb-3" style="display: inline-block;">
-                            <canvas id="wheelCanvas" width="350" height="350"></canvas>
-                            <!-- Pointer -->
-                            <div class="wheel-pointer"
-                                style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); font-size: 1.8rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
-                                ▼
+            <div class="modal-body p-0">
+                <div class="row g-0 lucky-wheel-body">
+                    <!-- Wheel column -->
+                    <div class="col-lg-7 lucky-wheel-stage">
+                        <div class="wheel-container position-relative">
+                            <canvas id="wheelCanvas" width="380" height="380"></canvas>
+                            <div class="wheel-pointer" aria-hidden="true">
+                                <i class="bi bi-caret-down-fill"></i>
                             </div>
-                            <!-- Spin Button -->
-                            <button id="spinWheelBtn" class="btn position-absolute"
-                                style="top: 50%; left: 50%; transform: translate(-50%, -50%); border-radius: 50%; width: 70px; height: 70px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.3); background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%); border: 3px solid #ddd; color: #333; font-size: 11px; line-height: 1.2;">
-                                Click<br>to spin
+                            <button id="spinWheelBtn" type="button" class="wheel-spin-btn">
+                                <span class="wheel-spin-btn-label">SPIN</span>
                             </button>
                         </div>
 
-                        <!-- Winner Display -->
-                        <div id="wheelWinner" class="alert alert-success d-none" style="animation: pulse 1s infinite;">
-                            <h4 class="mb-0"><i class="bi bi-trophy-fill text-success me-2"></i><span
-                                    id="winnerName"></span></h4>
-                            <small id="winnerMssv" class="text-muted"></small>
+                        <!-- Winner -->
+                        <div id="wheelWinner" class="lucky-wheel-winner d-none" role="status" aria-live="polite">
+                            <div class="lucky-wheel-winner-trophy">
+                                <i class="bi bi-trophy-fill"></i>
+                            </div>
+                            <div class="lucky-wheel-winner-info">
+                                <div class="lucky-wheel-winner-label">Người trúng</div>
+                                <div class="lucky-wheel-winner-name" id="winnerName">—</div>
+                                <div class="lucky-wheel-winner-mssv" id="winnerMssv"></div>
+                            </div>
+                        </div>
+
+                        <!-- Empty state when all students drawn -->
+                        <div id="wheelEmptyState" class="lucky-wheel-empty d-none" role="status">
+                            <div class="lucky-wheel-empty-icon">
+                                <i class="bi bi-stars"></i>
+                            </div>
+                            <div class="lucky-wheel-empty-title">Đã quay hết tất cả sinh viên</div>
+                            <div class="lucky-wheel-empty-desc">Bấm "Đặt lại phiên" để bắt đầu lượt mới.</div>
+                            <button type="button" class="btn btn-warning mt-3" id="resetWheelBtnEmpty">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Đặt lại phiên
+                            </button>
                         </div>
                     </div>
 
-                    <div class="col-lg-5">
-                        <!-- Shuffle Button -->
-                        <div class="mb-3">
-                            <button id="shuffleWheelBtn" class="btn btn-primary w-100">
-                                <i class="bi bi-shuffle me-1"></i> Xáo trộn danh sách
+                    <!-- Side panel -->
+                    <div class="col-lg-5 lucky-wheel-side">
+                        <div class="lucky-wheel-tabs btn-group w-100" role="tablist">
+                            <button class="btn lucky-wheel-tab active" data-tab-target="upcoming" type="button">
+                                <i class="bi bi-list-ol me-1"></i>
+                                Sắp quay
+                                <span class="badge bg-light text-dark ms-1" id="shuffledCount">0</span>
+                            </button>
+                            <button class="btn lucky-wheel-tab" data-tab-target="history" type="button">
+                                <i class="bi bi-clock-history me-1"></i>
+                                Lịch sử
+                                <span class="badge bg-light text-dark ms-1" id="historyCount">0</span>
                             </button>
                         </div>
 
-                        <!-- Shuffled List View -->
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold d-flex justify-content-between align-items-center">
-                                <span><i class="bi bi-list-ol me-1"></i> Danh sách đã xáo trộn:</span>
-                                <span class="badge bg-primary" id="shuffledCount">0</span>
-                            </label>
-                            <div id="shuffledStudentsList" class="list-group list-group-flush border rounded"
-                                style="max-height: 280px; overflow-y: auto;">
-                                <div class="text-muted small text-center py-3">
-                                    Nhấn "Xáo trộn" để random thứ tự
+                        <div class="lucky-wheel-side-actions">
+                            <button id="shuffleWheelBtn" type="button" class="btn btn-outline-primary btn-sm flex-grow-1">
+                                <i class="bi bi-shuffle me-1"></i> Xáo trộn
+                            </button>
+                            <button id="resetWheelBtn" type="button" class="btn btn-outline-warning btn-sm flex-grow-1">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Đặt lại
+                            </button>
+                        </div>
+
+                        <!-- Upcoming tab -->
+                        <div class="lucky-wheel-tab-pane active" data-tab-pane="upcoming">
+                            <div id="shuffledStudentsList" class="lucky-wheel-list">
+                                <div class="lucky-wheel-list-empty">
+                                    Nhấn "Xáo trộn" để bắt đầu.
                                 </div>
                             </div>
                         </div>
 
-                        <!-- History -->
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold d-flex justify-content-between">
-                                <span>Lịch sử quay:</span>
-                                <button id="clearHistoryBtn" class="btn btn-link btn-sm p-0 text-danger">Xóa</button>
-                            </label>
-                            <div id="wheelHistory" class="list-group list-group-flush"
-                                style="max-height: 120px; overflow-y: auto;">
-                                <div class="text-muted small text-center py-2">Chưa có lịch sử</div>
+                        <!-- History tab -->
+                        <div class="lucky-wheel-tab-pane" data-tab-pane="history">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted small">
+                                    <i class="bi bi-trophy me-1"></i> Đã trúng
+                                </span>
+                                <button id="clearHistoryBtn" type="button" class="btn btn-link btn-sm p-0 text-danger">
+                                    <i class="bi bi-trash me-1"></i> Xoá lịch sử
+                                </button>
+                            </div>
+                            <div id="wheelHistory" class="lucky-wheel-list">
+                                <div class="lucky-wheel-list-empty">Chưa có lịch sử</div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer justify-content-between">
+            <div class="modal-footer lucky-wheel-footer">
                 <span class="text-muted small">
-                    <i class="bi bi-people me-1"></i>
-                    Tổng: <strong id="wheelTotalStudents">
-                        <%= classData.students.length %>
-                    </strong> sinh viên
+                    <i class="bi bi-info-circle me-1"></i>
+                    Sinh viên đã trúng sẽ tự loại khỏi vòng quay tiếp theo trong cùng phiên.
                 </span>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
             </div>
@@ -848,6 +888,69 @@
         }
     }
 
+    /* ===========================
+       Lucky Wheel Modal — modern UI
+       =========================== */
+    .lucky-wheel-modal {
+        border: 0;
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 30px 80px -20px rgba(15, 23, 42, 0.4);
+    }
+
+    .lucky-wheel-header {
+        background: linear-gradient(135deg, #ff6c00 0%, #e65100 60%, #b53a00 100%);
+        color: #fff;
+        border: 0;
+        padding: 16px 22px;
+    }
+
+    .lucky-wheel-header .btn-close {
+        opacity: 0.9;
+    }
+
+    .lucky-wheel-counter {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 12px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        background: rgba(255, 255, 255, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 999px;
+        color: #fff;
+        font-size: 0.95rem;
+    }
+
+    .lucky-wheel-counter i {
+        font-size: 0.95rem;
+    }
+
+    .lucky-wheel-counter-sep {
+        opacity: 0.7;
+    }
+
+    .lucky-wheel-body {
+        background: #fafafa;
+        min-height: 540px;
+    }
+
+    .lucky-wheel-stage {
+        padding: 28px 24px 24px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        background: radial-gradient(ellipse at top, #fff 0%, #f5f5f5 80%);
+        border-right: 1px solid #ececec;
+    }
+
+    .lucky-wheel-stage .wheel-container {
+        display: inline-block;
+        position: relative;
+    }
+
     .wheel-container canvas {
         transition: transform 0.1s ease-out;
     }
@@ -856,16 +959,323 @@
         animation: none;
     }
 
-    #wheelWinner {
-        transition: all 0.3s ease;
+    .wheel-pointer {
+        position: absolute;
+        top: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #d32f2f;
+        font-size: 2.2rem;
+        line-height: 1;
+        filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.25));
+        z-index: 2;
     }
 
-    #spinWheelBtn:hover:not(:disabled) {
-        transform: translate(-50%, -50%) scale(1.1);
+    .wheel-spin-btn {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 86px;
+        height: 86px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #ff8a3d 0%, #ff6c00 100%);
+        border: 4px solid #fff;
+        color: #fff;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        box-shadow:
+            0 8px 18px rgba(255, 108, 0, 0.4),
+            0 0 0 6px rgba(255, 108, 0, 0.12);
+        transition: transform 0.18s ease, box-shadow 0.2s ease;
+        cursor: pointer;
+        z-index: 3;
     }
 
-    #spinWheelBtn:disabled {
-        opacity: 0.7;
+    .wheel-spin-btn:hover:not(:disabled) {
+        transform: translate(-50%, -50%) scale(1.06);
+        box-shadow:
+            0 10px 24px rgba(255, 108, 0, 0.5),
+            0 0 0 8px rgba(255, 108, 0, 0.16);
+    }
+
+    .wheel-spin-btn:active:not(:disabled) {
+        transform: translate(-50%, -50%) scale(0.96);
+    }
+
+    .wheel-spin-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.85;
+        background: linear-gradient(135deg, #bdbdbd 0%, #9e9e9e 100%);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .wheel-spin-btn-label {
+        font-size: 1.05rem;
+    }
+
+    .lucky-wheel-winner {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-top: 22px;
+        padding: 14px 20px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #fff8e1 0%, #ffe082 100%);
+        border: 1px solid #ffd54f;
+        box-shadow: 0 8px 24px -10px rgba(255, 152, 0, 0.5);
+        animation: luckyWinnerPop 0.5s ease both;
+        max-width: 420px;
+        width: 100%;
+    }
+
+    @keyframes luckyWinnerPop {
+        0% {
+            transform: scale(0.85);
+            opacity: 0;
+        }
+
+        60% {
+            transform: scale(1.05);
+            opacity: 1;
+        }
+
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    .lucky-wheel-winner-trophy {
+        font-size: 2rem;
+        color: #f57c00;
+        flex-shrink: 0;
+        animation: pulse 1.4s ease-in-out infinite;
+    }
+
+    .lucky-wheel-winner-info {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .lucky-wheel-winner-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #b26b00;
+        font-weight: 700;
+    }
+
+    .lucky-wheel-winner-name {
+        font-size: 1.4rem;
+        font-weight: 800;
+        line-height: 1.15;
+        color: #1f1f1f;
+        word-break: break-word;
+    }
+
+    .lucky-wheel-winner-mssv {
+        font-size: 0.85rem;
+        color: #6d4c00;
+        font-weight: 600;
+    }
+
+    .lucky-wheel-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-top: 22px;
+        padding: 22px 24px;
+        border-radius: 14px;
+        background: #fff;
+        border: 1px dashed #cfcfcf;
+        max-width: 420px;
+        width: 100%;
+        text-align: center;
+    }
+
+    .lucky-wheel-empty-icon {
+        font-size: 2rem;
+        color: #ff8f00;
+    }
+
+    .lucky-wheel-empty-title {
+        font-weight: 700;
+        margin-top: 8px;
+        font-size: 1rem;
+    }
+
+    .lucky-wheel-empty-desc {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 4px;
+    }
+
+    .lucky-wheel-side {
+        padding: 22px 22px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        background: #fff;
+        min-height: 0;
+    }
+
+    .lucky-wheel-tabs {
+        background: #f1f3f5;
+        border-radius: 999px;
+        padding: 4px;
+        gap: 4px;
+    }
+
+    .lucky-wheel-tab {
+        flex: 1;
+        border-radius: 999px !important;
+        background: transparent;
+        color: #495057;
+        font-weight: 600;
+        font-size: 0.9rem;
+        border: 0;
+        padding: 8px 10px;
+        transition: all 0.18s ease;
+    }
+
+    .lucky-wheel-tab.active,
+    .lucky-wheel-tab:hover {
+        background: #fff;
+        color: #ff6c00;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .lucky-wheel-tab .badge {
+        font-weight: 600;
+    }
+
+    .lucky-wheel-side-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .lucky-wheel-tab-pane {
+        display: none;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .lucky-wheel-tab-pane.active {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .lucky-wheel-list {
+        flex: 1;
+        min-height: 240px;
+        max-height: 380px;
+        overflow-y: auto;
+        border: 1px solid #ececec;
+        border-radius: 12px;
+        background: #fafbfc;
+        padding: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .lucky-wheel-list-empty {
+        text-align: center;
+        padding: 28px 12px;
+        color: #adb5bd;
+        font-size: 0.85rem;
+    }
+
+    .lucky-wheel-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        border-radius: 10px;
+        background: #fff;
+        border: 1px solid transparent;
+        transition: background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .lucky-wheel-row:hover {
+        background: #fff;
+        border-color: #ffd1a8;
+    }
+
+    .lucky-wheel-row-index {
+        flex: 0 0 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: #eef2f7;
+        color: #495057;
+        font-size: 0.78rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .lucky-wheel-row-name {
+        flex: 1;
+        min-width: 0;
+        font-weight: 600;
+        font-size: 0.92rem;
+        color: #212529;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .lucky-wheel-row-mssv {
+        font-size: 0.75rem;
+        color: #6c757d;
+        font-weight: 600;
+        background: #eef2f7;
+        padding: 2px 8px;
+        border-radius: 999px;
+    }
+
+    .lucky-wheel-row-meta {
+        font-size: 0.72rem;
+        color: #868e96;
+    }
+
+    .lucky-wheel-row.is-winner {
+        background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+        border-color: #ffd54f;
+    }
+
+    .lucky-wheel-row.is-winner .lucky-wheel-row-index {
+        background: #ff8f00;
+        color: #fff;
+    }
+
+    .lucky-wheel-row.is-drawn {
+        opacity: 0.55;
+        background: #f8f9fa;
+    }
+
+    .lucky-wheel-row.is-drawn .lucky-wheel-row-name {
+        text-decoration: line-through;
+        color: #6c757d;
+    }
+
+    .lucky-wheel-footer {
+        background: #fafafa;
+        border-top: 1px solid #ececec;
+        padding: 14px 22px;
+    }
+
+    @media (max-width: 991.98px) {
+        .lucky-wheel-stage {
+            border-right: 0;
+            border-bottom: 1px solid #ececec;
+        }
+
+        .lucky-wheel-list {
+            max-height: 240px;
+        }
     }
 
     .timer-display {

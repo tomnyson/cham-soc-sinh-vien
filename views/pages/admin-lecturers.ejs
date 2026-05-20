@@ -1,0 +1,153 @@
+<div class="container-fluid py-4" id="adminLecturersPage">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-people-fill text-primary me-2"></i>
+                Quản lý giảng viên
+            </h1>
+            <p class="text-muted mb-0">Duyệt, gia hạn và quản lý các tài khoản giảng viên trong hệ thống.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm" id="adminLecturersRefresh">
+                <i class="bi bi-arrow-clockwise"></i>
+                <span class="d-none d-md-inline ms-1">Làm mới</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body py-3">
+                    <div class="text-muted small">Chờ duyệt</div>
+                    <div class="h4 mb-0 text-warning" data-stat="pending">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body py-3">
+                    <div class="text-muted small">Đang hoạt động</div>
+                    <div class="h4 mb-0 text-success" data-stat="active">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body py-3">
+                    <div class="text-muted small">Tạm khoá</div>
+                    <div class="h4 mb-0 text-secondary" data-stat="suspended">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body py-3">
+                    <div class="text-muted small">Đã từ chối</div>
+                    <div class="h4 mb-0 text-danger" data-stat="rejected">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <div class="btn-group" role="group" aria-label="Lọc trạng thái" id="adminLecturersFilter">
+                    <button type="button" class="btn btn-sm btn-outline-primary active" data-filter="">Tất cả</button>
+                    <button type="button" class="btn btn-sm btn-outline-warning" data-filter="pending">Chờ duyệt</button>
+                    <button type="button" class="btn btn-sm btn-outline-success" data-filter="active">Đang hoạt động</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-filter="suspended">Tạm khoá</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" data-filter="rejected">Đã từ chối</button>
+                </div>
+                <div class="ms-auto" style="min-width: 240px;">
+                    <input type="search" class="form-control form-control-sm" id="adminLecturersSearch"
+                           placeholder="Tìm theo email hoặc tên...">
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Giảng viên</th>
+                            <th>Email</th>
+                            <th>Trạng thái</th>
+                            <th>Hết hạn</th>
+                            <th>Đăng nhập gần nhất</th>
+                            <th class="text-end">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminLecturersTbody">
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">Đang tải...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Approve / Edit modal -->
+<div class="modal fade" id="adminLecturerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="adminLecturerForm">
+                <div class="modal-header">
+                    <h5 class="modal-title">Cập nhật tài khoản giảng viên</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="id">
+
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Email</label>
+                        <div class="form-control-plaintext" data-field="email"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Tên hiển thị</label>
+                        <input type="text" class="form-control" name="name" placeholder="Tên giảng viên">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Trạng thái</label>
+                        <select class="form-select" name="status">
+                            <option value="active">Đang hoạt động</option>
+                            <option value="pending">Chờ duyệt</option>
+                            <option value="suspended">Tạm khoá</option>
+                            <option value="rejected">Đã từ chối</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Ngày hết hạn sử dụng</label>
+                        <input type="date" class="form-control" name="serviceExpiresAt">
+                        <div class="d-flex flex-wrap gap-1 mt-2" id="adminLecturerQuickExpiry">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-quick-expiry="1m">+1 tháng</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-quick-expiry="3m">+3 tháng</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-quick-expiry="6m">+6 tháng</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-quick-expiry="1y">+1 năm</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-quick-expiry="clear">Xoá hạn</button>
+                        </div>
+                        <div class="form-text">Để trống nếu không giới hạn. Các nút trên cộng dồn từ ngày hôm nay.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Ghi chú</label>
+                        <textarea class="form-control" name="notes" rows="2" placeholder="Ghi chú nội bộ (tuỳ chọn)"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check2 me-1"></i> Lưu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="/js/pages/admin-lecturers.js" defer></script>

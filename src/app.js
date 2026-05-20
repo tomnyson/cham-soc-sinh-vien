@@ -13,7 +13,7 @@ const brandingService = require('./services/branding.service');
 
 // Middleware
 const { notFoundHandler, errorHandler } = require('./middleware/error.middleware');
-const { optionalAuth } = require('./middleware/auth.middleware');
+const { optionalAuth, evaluateLecturerAccess } = require('./middleware/auth.middleware');
 
 // Controllers
 const dashboardController = require('./controllers/dashboard.controller');
@@ -51,13 +51,15 @@ async function renderLayoutPage(req, res, viewName, {
     const viewPath = path.join(__dirname, '../views/pages', `${viewName}.ejs`);
     const template = await fsPromises.readFile(viewPath, 'utf8');
     const body = ejs.render(template, pageData, { filename: viewPath });
+    const branding = await brandingService.getGlobalBranding();
 
     res.render('layouts/master', {
         title,
         currentRoute,
         body,
         initialData: safeInitialData,
-        user: userData
+        user: userData,
+        branding
     });
 }
 
@@ -200,6 +202,38 @@ app.use(express.static(path.join(__dirname, '../public')));
 // API routes (must be before page routes)
 app.use('/api', apiRoutes);
 
+/**
+ * Page-level guard for internal lecturer features.
+ *
+ * Enforces:
+ *   - User must be logged in (redirects to login when missing).
+ *   - Account must be active and not expired (renders the account-status
+ *     page otherwise so the user understands why they cannot proceed).
+ *
+ * Super admins always pass through.
+ */
+function ensureLecturerAccess(req, res) {
+    if (!req.user) {
+        res.redirect('/?login=required');
+        return false;
+    }
+    const verdict = evaluateLecturerAccess(req.user);
+    if (verdict.allowed) return true;
+
+    renderLayoutPage(req, res, 'account-status', {
+        title: 'Tài khoản chưa được duyệt - FPT Polytechnic',
+        currentRoute: req.path,
+        pageData: {
+            accessState: verdict,
+            serviceExpiresAt: req.user.serviceExpiresAt || null
+        }
+    }).catch(error => {
+        console.error('Failed to render account-status page:', error);
+        res.status(500).send('Internal Server Error');
+    });
+    return false;
+}
+
 // Page routes - Server-side rendering with EJS
 app.get('/', (req, res) => {
     res.redirect('/grade-check');
@@ -218,15 +252,16 @@ app.get('/grade-check', optionalAuth, async (req, res, next) => {
 });
 
 // Grade Entry Dashboard (lecturer) - requires authentication, controller handles layout.
-app.get('/dashboard', optionalAuth, dashboardController.renderDashboard);
+app.get('/dashboard', optionalAuth, (req, res, next) => {
+    if (!ensureLecturerAccess(req, res)) return;
+    return dashboardController.renderDashboard(req, res, next);
+});
 
 // Student Care - lists students from active classes that need follow-up.
 const studentCareController = require('./controllers/student-care.controller');
 app.get('/student-care', optionalAuth, async (req, res, next) => {
     try {
-        if (!req.user) {
-            return res.redirect('/?login=required');
-        }
+        if (!ensureLecturerAccess(req, res)) return;
         const filters = studentCareController.normalizeFilters(req.query);
         const careData = await studentCareController.buildStudentCareList(req.user._id, filters);
         await renderLayoutPage(req, res, 'student-care', {
@@ -242,6 +277,7 @@ app.get('/student-care', optionalAuth, async (req, res, next) => {
 
 app.get('/profiles', optionalAuth, async (req, res, next) => {
     try {
+        if (!ensureLecturerAccess(req, res)) return;
         await renderLayoutPage(req, res, 'profiles', {
             title: 'Quản lý Profile - FPT Polytechnic',
             currentRoute: '/profiles'
@@ -254,6 +290,7 @@ app.get('/profiles', optionalAuth, async (req, res, next) => {
 
 app.get('/classes', optionalAuth, async (req, res, next) => {
     try {
+        if (!ensureLecturerAccess(req, res)) return;
         const userId = req.user?._id || null;
 
         // Preload profiles/classes so the client can render immediately without an extra round-trip
@@ -326,9 +363,7 @@ app.get('/classes', optionalAuth, async (req, res, next) => {
 });
 
 app.get('/classes/:classId', optionalAuth, async (req, res, next) => {
-    if (!req.user) {
-        return res.redirect('/?login=required');
-    }
+    if (!ensureLecturerAccess(req, res)) return;
 
     const userId = req.user._id;
 
@@ -397,9 +432,7 @@ app.get('/classes/:classId', optionalAuth, async (req, res, next) => {
 });
 
 app.get('/classes/:classId/note', optionalAuth, async (req, res, next) => {
-    if (!req.user) {
-        return res.redirect('/?login=required');
-    }
+    if (!ensureLecturerAccess(req, res)) return;
 
     const userId = req.user._id;
 
@@ -450,6 +483,17 @@ app.get('/branding', optionalAuth, async (req, res, next) => {
     if (!req.user) {
         return res.redirect('/?login=required');
     }
+    if (req.user.role !== 'admin') {
+        return renderLayoutPage(req, res, 'forbidden', {
+            title: 'Không có quyền truy cập - FPT Polytechnic',
+            currentRoute: '/branding',
+            pageData: {
+                title: 'Không có quyền truy cập',
+                message: 'Trang này chỉ dành cho super admin.',
+                backUrl: '/dashboard'
+            }
+        });
+    }
 
     try {
         await renderLayoutPage(req, res, 'branding', {
@@ -467,6 +511,7 @@ app.get('/branding', optionalAuth, async (req, res, next) => {
 
 app.get('/template', optionalAuth, async (req, res, next) => {
     try {
+        if (!ensureLecturerAccess(req, res)) return;
         const userId = req.user?._id || 'default';
         const [profilesResult, classesResult] = await Promise.allSettled([
             profileService.getAllProfiles(userId),
@@ -526,6 +571,33 @@ app.get('/template', optionalAuth, async (req, res, next) => {
         });
     } catch (error) {
         console.error('Error rendering template:', error);
+        next(error);
+    }
+});
+
+// Admin: Lecturer management (super admin only)
+app.get('/admin/lecturers', optionalAuth, async (req, res, next) => {
+    if (!req.user) {
+        return res.redirect('/?login=required');
+    }
+    if (req.user.role !== 'admin') {
+        return renderLayoutPage(req, res, 'forbidden', {
+            title: 'Không có quyền truy cập - FPT Polytechnic',
+            currentRoute: '/admin/lecturers',
+            pageData: {
+                title: 'Không có quyền truy cập',
+                message: 'Trang này chỉ dành cho super admin.',
+                backUrl: '/dashboard'
+            }
+        });
+    }
+    try {
+        await renderLayoutPage(req, res, 'admin-lecturers', {
+            title: 'Quản lý giảng viên - FPT Polytechnic',
+            currentRoute: '/admin/lecturers'
+        });
+    } catch (error) {
+        console.error('Error rendering admin-lecturers:', error);
         next(error);
     }
 });

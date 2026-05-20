@@ -35,6 +35,18 @@ const profileSchema = new mongoose.Schema({
         default: {}
     },
 
+    // Kiểu dữ liệu của mỗi cột: 'number' | 'text' | 'link'
+    // Mặc định 'number' nếu không khai báo.
+    // Cột 'text' và 'link' không tham gia tính điểm.
+    columnTypes: {
+        type: Map,
+        of: {
+            type: String,
+            enum: ['number', 'text', 'link']
+        },
+        default: {}
+    },
+
     // User ID (để phân biệt profiles của từng user - có thể mở rộng sau)
     userId: {
         type: String,

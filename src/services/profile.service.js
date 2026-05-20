@@ -61,7 +61,7 @@ class ProfileService {
      */
     async createProfile(profileData, userId = 'default') {
         try {
-            const { profileId, name, passThreshold, weights } = profileData;
+            const { profileId, name, passThreshold, weights, columnTypes } = profileData;
 
             // Validate
             if (!profileId || !name) {
@@ -76,12 +76,14 @@ class ProfileService {
 
             // Convert weights object to Map
             const weightsMap = new Map(Object.entries(weights || {}));
+            const columnTypesMap = new Map(Object.entries(columnTypes || {}));
 
             const profile = new Profile({
                 profileId,
                 name,
                 passThreshold: passThreshold || 3,
                 weights: weightsMap,
+                columnTypes: columnTypesMap,
                 userId,
                 isDefault: Boolean(profileData.isDefault)
             });
@@ -108,6 +110,9 @@ class ProfileService {
             if (updates.passThreshold !== undefined) profile.passThreshold = updates.passThreshold;
             if (updates.weights) {
                 profile.weights = new Map(Object.entries(updates.weights));
+            }
+            if (updates.columnTypes !== undefined) {
+                profile.columnTypes = new Map(Object.entries(updates.columnTypes || {}));
             }
             if (updates.isDefault !== undefined) {
                 // Nếu set isDefault = true, unset các profile khác
@@ -164,6 +169,7 @@ class ProfileService {
                 name: newProfileData.name || `${sourceProfile.name} (Copy)`,
                 passThreshold: sourceProfile.passThreshold,
                 weights: new Map(sourceProfile.weights),
+                columnTypes: new Map(sourceProfile.columnTypes || {}),
                 userId,
                 isDefault: false
             });
@@ -191,12 +197,14 @@ class ProfileService {
                     let profile = await Profile.findByProfileId(profileId, userId);
 
                     const weightsMap = new Map(Object.entries(profileData.weights || {}));
+                    const columnTypesMap = new Map(Object.entries(profileData.columnTypes || {}));
 
                     if (profile) {
                         // Update existing
                         profile.name = profileData.name;
                         profile.passThreshold = profileData.passThreshold || 3;
                         profile.weights = weightsMap;
+                        profile.columnTypes = columnTypesMap;
                         await profile.save();
                     } else {
                         // Create new
@@ -205,6 +213,7 @@ class ProfileService {
                             name: profileData.name,
                             passThreshold: profileData.passThreshold || 3,
                             weights: weightsMap,
+                            columnTypes: columnTypesMap,
                             userId,
                             isDefault: profileData.isDefault || false
                         });
@@ -235,7 +244,8 @@ class ProfileService {
                 exportData[profile.profileId] = {
                     name: profile.name,
                     passThreshold: profile.passThreshold,
-                    weights: Object.fromEntries(profile.weights)
+                    weights: Object.fromEntries(profile.weights),
+                    columnTypes: Object.fromEntries(profile.columnTypes || new Map())
                 };
             });
 

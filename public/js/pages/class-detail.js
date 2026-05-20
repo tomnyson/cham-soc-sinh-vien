@@ -113,9 +113,11 @@ const state = {
     wheel: {
         isSpinning: false,
         currentAngle: 0,
-        students: [],
-        history: [],
-        allShuffled: [],
+        students: [],          // visible slices on the canvas (subset of remaining)
+        remaining: [],          // students still eligible to be drawn this session
+        history: [],            // winners (latest first)
+        drawnMssvs: new Set(),  // MSSVs already drawn in this session
+        allShuffled: [],        // ordered list for the side panel
         // Wheelofnames.com style colors
         colors: ['#E53935', '#1E88E5', '#43A047', '#FDD835', '#FB8C00', '#E53935', '#1E88E5', '#43A047', '#FDD835', '#FB8C00', '#E53935', '#1E88E5']
     },
@@ -197,6 +199,12 @@ const elements = {
     winnerName: document.getElementById('winnerName'),
     winnerMssv: document.getElementById('winnerMssv'),
     shuffleWheelBtn: document.getElementById('shuffleWheelBtn'),
+    resetWheelBtn: document.getElementById('resetWheelBtn'),
+    resetWheelBtnEmpty: document.getElementById('resetWheelBtnEmpty'),
+    wheelEmptyState: document.getElementById('wheelEmptyState'),
+    wheelRemaining: document.getElementById('wheelRemaining'),
+    wheelTotalStudents: document.getElementById('wheelTotalStudents'),
+    historyCount: document.getElementById('historyCount'),
     wheelHistory: document.getElementById('wheelHistory'),
     clearHistoryBtn: document.getElementById('clearHistoryBtn'),
     shuffledStudentsList: document.getElementById('shuffledStudentsList'),
@@ -223,6 +231,9 @@ const elements = {
     // Search and Filter elements
     gradeSearchInput: document.getElementById('gradeSearchInput'),
     gradeStatusFilter: document.getElementById('gradeStatusFilter'),
+    gradeTextColFilter: document.getElementById('gradeTextColFilter'),
+    gradeTextColValue: document.getElementById('gradeTextColValue'),
+    gradeFilterCount: document.getElementById('gradeFilterCount'),
     // Import only-empty checkboxes
     importOnlyEmpty: document.getElementById('importOnlyEmpty'),
     quickImportOnlyEmpty: document.getElementById('quickImportOnlyEmpty'),
@@ -316,6 +327,7 @@ function bindEvents() {
 
     if (elements.tableBody) {
         elements.tableBody.addEventListener('input', handleGradeInput);
+        elements.tableBody.addEventListener('input', handleTextInput);
         // Handle extra fields (bonus, dates, note)
         elements.tableBody.addEventListener('input', handleExtraInput);
         elements.tableBody.addEventListener('change', handleExtraInput);
@@ -474,9 +486,26 @@ function bindEvents() {
     if (elements.shuffleWheelBtn) {
         elements.shuffleWheelBtn.addEventListener('click', shuffleWheelStudents);
     }
+    if (elements.resetWheelBtn) {
+        elements.resetWheelBtn.addEventListener('click', resetWheelSession);
+    }
+    if (elements.resetWheelBtnEmpty) {
+        elements.resetWheelBtnEmpty.addEventListener('click', resetWheelSession);
+    }
     if (elements.clearHistoryBtn) {
         elements.clearHistoryBtn.addEventListener('click', clearWheelHistory);
     }
+
+    // Tabs in lucky wheel side panel
+    document.querySelectorAll('.lucky-wheel-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const target = tab.dataset.tabTarget;
+            document.querySelectorAll('.lucky-wheel-tab').forEach(t => t.classList.toggle('active', t === tab));
+            document.querySelectorAll('.lucky-wheel-tab-pane').forEach(pane => {
+                pane.classList.toggle('active', pane.dataset.tabPane === target);
+            });
+        });
+    });
 
     // Initialize wheel when modal opens
     const wheelModal = document.getElementById('luckyWheelModal');
@@ -546,6 +575,27 @@ function bindEvents() {
     if (elements.gradeStatusFilter) {
         elements.gradeStatusFilter.addEventListener('change', filterGradesTable);
     }
+    if (elements.gradeTextColFilter) {
+        elements.gradeTextColFilter.addEventListener('change', filterGradesTable);
+    }
+    if (elements.gradeTextColValue) {
+        elements.gradeTextColValue.addEventListener('input', filterGradesTable);
+    }
+
+    // Multi-select MSSV for grade table
+    const classDetailPage = document.getElementById('classDetailPage');
+    const gradeTableCopyBtn = document.getElementById('gradeTableCopySelectedBtn');
+    const gradeTableCopyCount = document.getElementById('gradeTableCopySelectedCount');
+    if (classDetailPage && gradeTableCopyBtn && typeof initMssvMultiSelect === 'function') {
+        const mssvMulti = initMssvMultiSelect({
+            scope: classDetailPage,
+            copyBtn: gradeTableCopyBtn,
+            countEl: gradeTableCopyCount,
+            separator: '\n'
+        });
+        // Re-sync after table re-renders (called from filterGradesTable)
+        window._gradeTableMssvMulti = mssvMulti;
+    }
 }
 
 function ensureProfileSelection() {
@@ -604,6 +654,44 @@ function handleGradeInput(event) {
     state.grades[mssv][column] = value === '' ? undefined : value;
     markDirty();
     updateRowSummary(mssv);
+}
+
+/**
+ * Handle input on text/link columns.
+ * Also re-renders the link open button after the value changes.
+ */
+function handleTextInput(event) {
+    const target = event.target;
+    if (!target.classList.contains('text-input')) return;
+
+    const mssv = target.dataset.mssv;
+    const column = target.dataset.column;
+    if (!mssv || !column) return;
+
+    const value = target.value;
+    ensureStudentGrade(mssv);
+    state.grades[mssv][column] = value === '' ? undefined : value;
+    markDirty();
+
+    // Update link open button if present
+    const cell = target.closest('td');
+    if (cell) {
+        const existingBtn = cell.querySelector('a.btn-link');
+        const isUrl = /^https?:\/\//i.test(value);
+        if (existingBtn) {
+            existingBtn.href = escapeHtml(value);
+            existingBtn.style.display = isUrl ? '' : 'none';
+        } else if (isUrl) {
+            const btn = document.createElement('a');
+            btn.href = value;
+            btn.target = '_blank';
+            btn.rel = 'noopener noreferrer';
+            btn.className = 'btn btn-link btn-sm p-0';
+            btn.title = 'Mở link';
+            btn.innerHTML = '<i class="bi bi-box-arrow-up-right"></i>';
+            cell.querySelector('.d-flex')?.appendChild(btn);
+        }
+    }
 }
 
 function ensureStudentGrade(mssv) {
@@ -1104,7 +1192,8 @@ function exportAllGradesToExcel() {
 function renderGradesTable() {
     const profile = getCurrentProfile();
 
-    if (!profile || !profile.weights || Object.keys(profile.weights).length === 0) {
+    if (!profile || (!profile.weights || Object.keys(profile.weights).length === 0) &&
+        (!profile.columnTypes || Object.keys(profile.columnTypes).length === 0)) {
         showEmptyState(true, 'Vui lòng chọn một profile có cấu hình trọng số để xem bảng điểm.');
         return;
     }
@@ -1116,19 +1205,47 @@ function renderGradesTable() {
 
     showEmptyState(false);
 
-    const allColumns = sortColumns(profile);
-    // Filter out hidden columns for display
+    const columnTypes = profile.columnTypes || {};
+
+    // Build the full ordered column list (number cols from sortColumns, then text/link cols appended)
+    const numericCols = sortColumns(profile).filter(c => (columnTypes[c] || 'number') === 'number');
+    const textCols = Object.keys(columnTypes).filter(c => columnTypes[c] === 'text' || columnTypes[c] === 'link');
+    // Also include text/link keys that exist only in columnTypes (not in weights)
+    const allColumns = [
+        ...numericCols,
+        ...textCols.filter(c => !numericCols.includes(c))
+    ];
+    // Respect hidden columns
     const visibleColumns = allColumns.filter(col => !state.hiddenColumns.has(col));
+
+    function colTypeIcon(col) {
+        const t = columnTypes[col] || 'number';
+        if (t === 'text') return '📝 ';
+        if (t === 'link') return '🔗 ';
+        return '';
+    }
+
+    function colSubtext(col) {
+        const t = columnTypes[col] || 'number';
+        if (t === 'text') return '<div style="font-size:0.72rem;color:#9ca3af;font-weight:400;margin-top:2px;">văn bản</div>';
+        if (t === 'link') return '<div style="font-size:0.72rem;color:#9ca3af;font-weight:400;margin-top:2px;">link</div>';
+        const w = profile.weights[col];
+        return `<div style="font-size:0.75rem;color:#9ca3af;font-weight:400;margin-top:2px;">${w !== undefined ? w + '%' : ''}</div>`;
+    }
 
     elements.tableHeader.innerHTML = `
         <tr>
+            <th class="text-center" style="width:36px;">
+                <input type="checkbox" class="form-check-input mssv-select-all" id="gradeTableSelectAll" title="Chọn tất cả">
+            </th>
             <th class="text-center sticky-col-1">STT</th>
             <th class="sticky-col-2">MSSV</th>
             <th class="sticky-col-3">HỌ VÀ TÊN</th>
             ${visibleColumns.map(col => `
                 <th class="text-center align-middle" data-column="${col}">
                     <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
-                        <span>${col}</span>
+                        <span>${colTypeIcon(col)}${col}</span>
+                        ${(columnTypes[col] || 'number') === 'number' ? `
                         <button class="btn btn-link btn-sm p-0 copy-column-btn" 
                                 data-column="${col}" 
                                 title="Copy điểm"
@@ -1141,8 +1258,9 @@ function renderGradesTable() {
                                 style="font-size: 0.7rem; line-height: 1; color: #9ca3af;">
                             <i class="bi bi-bar-chart"></i>
                         </button>
+                        ` : ''}
                     </div>
-                    <div style="font-size: 0.75rem; color: #9ca3af; font-weight: 400; margin-top: 2px;">${profile.weights[col]}%</div>
+                    ${colSubtext(col)}
                 </th>
             `).join('')}
             <th class="text-center">Tổng</th>
@@ -1174,6 +1292,9 @@ function renderGradesTable() {
         </tr>
     `;
 
+    // Populate the text/link column filter dropdown
+    populateTextColFilter(allColumns, columnTypes);
+
     elements.tableBody.innerHTML = classData.students.map((student, index) => {
         ensureStudentGrade(student.mssv);
         const studentGrades = state.grades[student.mssv];
@@ -1188,10 +1309,58 @@ function renderGradesTable() {
         const canOpenZalo = Boolean(normalizedPhoneForZalo);
         const zaloChatLink = buildZaloChatLink(normalizedPhoneForZalo);
 
+        function renderGradeCell(column) {
+            const colType = columnTypes[column] || 'number';
+            const rawVal = studentGrades[column] ?? '';
+            if (colType === 'number') {
+                return `<input
+                    type="number"
+                    class="form-control form-control-sm grade-input"
+                    data-mssv="${student.mssv}"
+                    data-column="${column}"
+                    min="0" max="10" step="0.1"
+                    value="${rawVal}"
+                    placeholder="0"
+                />`;
+            }
+            if (colType === 'link') {
+                const escaped = escapeHtml(String(rawVal));
+                const isUrl = /^https?:\/\//i.test(String(rawVal));
+                return `<div class="d-flex align-items-center gap-1" style="min-width:160px;">
+                    <input
+                        type="text"
+                        class="form-control form-control-sm text-input"
+                        data-mssv="${student.mssv}"
+                        data-column="${column}"
+                        value="${escaped}"
+                        placeholder="https://..."
+                        style="min-width:120px;"
+                    />
+                    ${isUrl ? `<a href="${escaped}" target="_blank" rel="noopener noreferrer"
+                        class="btn btn-link btn-sm p-0" title="Mở link">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                    </a>` : ''}
+                </div>`;
+            }
+            // text
+            return `<input
+                type="text"
+                class="form-control form-control-sm text-input"
+                data-mssv="${student.mssv}"
+                data-column="${column}"
+                value="${escapeHtml(String(rawVal))}"
+                placeholder="Nhập..."
+                style="min-width:120px;"
+            />`;
+        }
+
         return `
             <tr class="${passed ? 'pass' : 'fail'}">
+                <td class="text-center" style="width:36px;">
+                    <input type="checkbox" class="form-check-input mssv-row-check" data-mssv="${student.mssv}" title="Chọn">
+                </td>
                 <td class="text-center sticky-col-1">${index + 1}</td>
-                <td class="sticky-col-2"><span class="badge bg-primary">${student.mssv}</span></td>
+                <td class="sticky-col-2"><span class="badge bg-primary copyable-mssv" data-mssv="${student.mssv}" title="Click để copy MSSV" style="cursor:pointer;">${student.mssv}</span></td>
                 <td class="sticky-col-3">
                     <div class="class-detail-email-row">
                         <div>
@@ -1227,23 +1396,12 @@ function renderGradesTable() {
                 </td>
                 ${visibleColumns.map(column => `
                     <td class="text-center" data-column="${column}">
-                        <input
-                            type="number"
-                            class="form-control form-control-sm grade-input"
-                            data-mssv="${student.mssv}"
-                            data-column="${column}"
-                            min="0"
-                            max="10"
-                            step="0.1"
-                            value="${studentGrades[column] ?? ''}"
-                            placeholder="0"
-                        />
+                        ${renderGradeCell(column)}
                     </td>
                 `).join('')}
                 <td class="text-center fw-bold" data-total-mssv="${student.mssv}">
                     ${total.toFixed(2)}
-                </td>
-                <td class="text-center" data-status-mssv="${student.mssv}">
+                </td>                <td class="text-center" data-status-mssv="${student.mssv}">
                     <span class="badge ${passed ? 'bg-success' : 'bg-danger'}">
                         ${passed ? '✓ Đạt' : '✗ Chưa đạt'}
                     </span>
@@ -2354,19 +2512,29 @@ function exportChartToImage() {
 // ========================================
 
 /**
- * Initialize the lucky wheel with students
+ * Initialize the lucky wheel with students.
+ *
+ * Resets the per-session state and shuffles the full roster. Students that
+ * have already been drawn during the session are excluded from the wheel,
+ * so callers should clear `state.wheel.drawnMssvs` separately when starting
+ * a brand new session (see `resetWheelSession`).
  */
 function initializeWheel() {
     if (!classData.students || classData.students.length === 0) {
         return;
     }
 
-    // Shuffle ALL students
-    const shuffled = [...classData.students].sort(() => Math.random() - 0.5);
-    state.wheel.allShuffled = shuffled;
+    // Build the eligible pool excluding already-drawn students.
+    const eligible = classData.students.filter(s => !state.wheel.drawnMssvs.has(s.mssv));
 
-    // Use up to 10 students for the wheel display (for readability)
-    state.wheel.students = shuffled.slice(0, Math.min(10, shuffled.length));
+    // Shuffle the eligible pool — this is the order shown in the side panel.
+    const shuffled = [...eligible].sort(() => Math.random() - 0.5);
+    state.wheel.allShuffled = shuffled;
+    state.wheel.remaining = shuffled.slice();
+
+    // Use up to 12 students for the wheel display (for readability).
+    const sliceCount = Math.min(12, shuffled.length);
+    state.wheel.students = shuffled.slice(0, sliceCount);
 
     // Reset winner display
     if (elements.wheelWinner) {
@@ -2375,6 +2543,48 @@ function initializeWheel() {
 
     drawWheel();
     updateShuffledList();
+    updateWheelCounters();
+    updateWheelEmptyState();
+}
+
+/**
+ * Reset the entire session: clears drawn set + history and reshuffles.
+ */
+function resetWheelSession() {
+    state.wheel.drawnMssvs = new Set();
+    state.wheel.history = [];
+    state.wheel.currentAngle = 0;
+    initializeWheel();
+    updateWheelHistory();
+}
+
+/**
+ * Update the "remaining / total" counter in the modal header.
+ */
+function updateWheelCounters() {
+    const total = (classData.students || []).length;
+    const remaining = total - state.wheel.drawnMssvs.size;
+    if (elements.wheelTotalStudents) elements.wheelTotalStudents.textContent = total;
+    if (elements.wheelRemaining) elements.wheelRemaining.textContent = remaining;
+    if (elements.shuffledCount) elements.shuffledCount.textContent = state.wheel.remaining.length;
+    if (elements.historyCount) elements.historyCount.textContent = state.wheel.history.length;
+}
+
+/**
+ * Show the empty-state card and disable the spin button when no eligible
+ * students remain.
+ */
+function updateWheelEmptyState() {
+    const hasRemaining = state.wheel.remaining.length > 0;
+    if (elements.wheelEmptyState) {
+        elements.wheelEmptyState.classList.toggle('d-none', hasRemaining);
+    }
+    if (elements.spinWheelBtn) {
+        elements.spinWheelBtn.disabled = !hasRemaining;
+    }
+    if (elements.shuffleWheelBtn) {
+        elements.shuffleWheelBtn.disabled = !hasRemaining;
+    }
 }
 
 /**
@@ -2475,7 +2685,10 @@ function spinWheel() {
 
     state.wheel.isSpinning = true;
     elements.spinWheelBtn.disabled = true;
-    elements.spinWheelBtn.innerHTML = '...';
+    elements.spinWheelBtn.classList.add('is-spinning');
+    if (elements.spinWheelBtn.querySelector('.wheel-spin-btn-label')) {
+        elements.spinWheelBtn.querySelector('.wheel-spin-btn-label').textContent = '...';
+    }
 
     // Hide previous winner
     if (elements.wheelWinner) {
@@ -2503,8 +2716,10 @@ function spinWheel() {
         } else {
             // Spin complete - determine winner
             state.wheel.isSpinning = false;
-            elements.spinWheelBtn.disabled = false;
-            elements.spinWheelBtn.innerHTML = 'Click<br>to spin';
+            elements.spinWheelBtn.classList.remove('is-spinning');
+            if (elements.spinWheelBtn.querySelector('.wheel-spin-btn-label')) {
+                elements.spinWheelBtn.querySelector('.wheel-spin-btn-label').textContent = 'SPIN';
+            }
 
             // Calculate winner based on angle at top (pointer at 270 degrees / -PI/2)
             const normalizedAngle = ((state.wheel.currentAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
@@ -2528,7 +2743,22 @@ function spinWheel() {
                 time: new Date().toLocaleTimeString('vi-VN')
             });
 
+            // Remove the winner from the eligible pool so they cannot be drawn
+            // again in the same session.
+            state.wheel.drawnMssvs.add(winner.mssv);
+            state.wheel.remaining = state.wheel.remaining.filter(s => s.mssv !== winner.mssv);
+            state.wheel.allShuffled = state.wheel.allShuffled.filter(s => s.mssv !== winner.mssv);
+
+            // Refresh the visible slices for the next spin (keeps the wheel
+            // showing only eligible students).
+            const sliceCount = Math.min(12, state.wheel.remaining.length);
+            state.wheel.students = state.wheel.remaining.slice(0, sliceCount);
+            drawWheel();
+
             updateWheelHistory();
+            updateShuffledList();
+            updateWheelCounters();
+            updateWheelEmptyState();
         }
     }
 
@@ -2536,18 +2766,21 @@ function spinWheel() {
 }
 
 /**
- * Shuffle wheel students
+ * Shuffle wheel students (keeps drawn students excluded for the session).
  */
 function shuffleWheelStudents() {
+    if (state.wheel.isSpinning) return;
     initializeWheel();
 }
 
 /**
- * Clear wheel history
+ * Clear the visual history log only. Drawn students remain excluded; use
+ * `resetWheelSession` to fully start over.
  */
 function clearWheelHistory() {
     state.wheel.history = [];
     updateWheelHistory();
+    updateWheelCounters();
 }
 
 /**
@@ -2555,21 +2788,34 @@ function clearWheelHistory() {
  */
 function updateWheelHistory() {
     if (!elements.wheelHistory) return;
+    if (elements.historyCount) elements.historyCount.textContent = state.wheel.history.length;
 
     if (state.wheel.history.length === 0) {
-        elements.wheelHistory.innerHTML = '<div class="text-muted small text-center py-2">Chưa có lịch sử</div>';
+        elements.wheelHistory.innerHTML = '<div class="lucky-wheel-list-empty">Chưa có lịch sử</div>';
         return;
     }
 
-    elements.wheelHistory.innerHTML = state.wheel.history.slice(0, 10).map((item, index) => `
-        <div class="list-group-item py-1 px-2 d-flex justify-content-between align-items-center">
-            <div>
-                <small class="fw-bold">${index + 1}. ${item.name}</small>
-                <span class="badge bg-secondary ms-1" style="font-size: 0.65rem;">${item.mssv}</span>
-            </div>
-            <small class="text-muted">${item.time}</small>
+    elements.wheelHistory.innerHTML = state.wheel.history.slice(0, 50).map((item, index) => `
+        <div class="lucky-wheel-row is-winner">
+            <div class="lucky-wheel-row-index">${index + 1}</div>
+            <div class="lucky-wheel-row-name">${escapeHtmlMaybe(item.name)}</div>
+            <span class="lucky-wheel-row-mssv">${escapeHtmlMaybe(item.mssv)}</span>
+            <span class="lucky-wheel-row-meta">${escapeHtmlMaybe(item.time)}</span>
         </div>
     `).join('');
+}
+
+/**
+ * Tiny helper to avoid breaking when the global escape helper is unavailable.
+ */
+function escapeHtmlMaybe(value) {
+    if (typeof window.escapeHtml === 'function') return window.escapeHtml(value);
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 /**
@@ -2578,36 +2824,40 @@ function updateWheelHistory() {
 function updateShuffledList() {
     if (!elements.shuffledStudentsList) return;
 
-    const shuffled = state.wheel.allShuffled || [];
+    const upcoming = state.wheel.remaining || [];
+    const drawn = state.wheel.history || [];
 
-    if (shuffled.length === 0) {
-        elements.shuffledStudentsList.innerHTML = '<div class="text-muted small text-center py-3">Nhấn "Xáo trộn" để random thứ tự</div>';
+    if (upcoming.length === 0 && drawn.length === 0) {
+        elements.shuffledStudentsList.innerHTML = '<div class="lucky-wheel-list-empty">Nhấn "Xáo trộn" để bắt đầu.</div>';
         if (elements.shuffledCount) elements.shuffledCount.textContent = '0';
         return;
     }
 
-    // Update count badge
     if (elements.shuffledCount) {
-        elements.shuffledCount.textContent = shuffled.length;
+        elements.shuffledCount.textContent = upcoming.length;
     }
 
-    // Render shuffled list with numbered positions
-    elements.shuffledStudentsList.innerHTML = shuffled.map((student, index) => {
-        const bgColor = index === 0 ? 'bg-success text-white' :
-            index === 1 ? 'bg-warning' :
-                index === 2 ? 'bg-info text-white' : '';
-        const medal = index === 0 ? '[1st]' : index === 1 ? '[2nd]' : index === 2 ? '[3rd]' : '';
+    const upcomingHtml = upcoming.map((student, index) => `
+        <div class="lucky-wheel-row" data-mssv="${escapeHtmlMaybe(student.mssv)}">
+            <div class="lucky-wheel-row-index">${index + 1}</div>
+            <div class="lucky-wheel-row-name">${escapeHtmlMaybe(student.name)}</div>
+            <span class="lucky-wheel-row-mssv">${escapeHtmlMaybe(student.mssv)}</span>
+        </div>
+    `).join('');
 
-        return `
-            <div class="list-group-item py-2 px-3 d-flex align-items-center ${bgColor}">
-                <span class="badge ${index < 3 ? 'bg-dark' : 'bg-secondary'} me-2" style="min-width: 28px;">${index + 1}</span>
-                <div class="flex-grow-1">
-                    <span class="fw-semibold">${medal} ${student.name}</span>
-                </div>
-                <span class="badge bg-primary-subtle text-primary">${student.mssv}</span>
-            </div>
-        `;
-    }).join('');
+    const drawnHtml = drawn.length === 0 ? '' : `
+        <div class="text-muted small px-2 mt-2 mb-1">
+            <i class="bi bi-check2-circle me-1"></i> Đã quay (${drawn.length})
+        </div>
+    ` + drawn.map((item, index) => `
+        <div class="lucky-wheel-row is-drawn">
+            <div class="lucky-wheel-row-index"><i class="bi bi-check"></i></div>
+            <div class="lucky-wheel-row-name">${escapeHtmlMaybe(item.name)}</div>
+            <span class="lucky-wheel-row-mssv">${escapeHtmlMaybe(item.mssv)}</span>
+        </div>
+    `).join('');
+
+    elements.shuffledStudentsList.innerHTML = upcomingHtml + drawnHtml;
 }
 
 // ========================================
@@ -3264,13 +3514,44 @@ function pickRandomStudent() {
 // ========================================
 
 /**
- * Filter the grades table based on search input and status dropdown
+ * Populate the text/link column filter dropdown with all text/link columns
+ * from the current profile. Preserves the previously selected value if still valid.
+ */
+function populateTextColFilter(allColumns, columnTypes) {
+    const sel = elements.gradeTextColFilter;
+    if (!sel) return;
+
+    const prev = sel.value;
+    const textLinkCols = allColumns.filter(c => {
+        const t = (columnTypes || {})[c] || 'number';
+        return t === 'text' || t === 'link';
+    });
+
+    sel.innerHTML = '<option value="">-- Lọc theo nhóm --</option>';
+    textLinkCols.forEach(col => {
+        const opt = document.createElement('option');
+        opt.value = col;
+        opt.textContent = col;
+        if (col === prev) opt.selected = true;
+        sel.appendChild(opt);
+    });
+
+    // Hide the filter row elements when there are no text columns
+    const valInput = elements.gradeTextColValue;
+    if (valInput) valInput.style.display = textLinkCols.length ? '' : 'none';
+    sel.style.display = textLinkCols.length ? '' : 'none';
+}
+
+/**
+ * Filter the grades table based on search input, status dropdown and text column filter
  */
 function filterGradesTable() {
     if (!elements.tableBody) return;
 
     const searchText = (elements.gradeSearchInput?.value || '').trim().toLowerCase();
     const statusFilter = elements.gradeStatusFilter?.value || 'all';
+    const textCol = (elements.gradeTextColFilter?.value || '').trim();
+    const textVal = removeVietnameseTones((elements.gradeTextColValue?.value || '').trim().toLowerCase());
 
     const rows = elements.tableBody.querySelectorAll('tr');
     let visibleCount = 0;
@@ -3300,14 +3581,32 @@ function filterGradesTable() {
             }
         }
 
+        // Text column filter
+        let matchesTextCol = true;
+        if (textCol && textVal) {
+            const mssvBadge = row.querySelector('.sticky-col-2 .badge');
+            const mssv = mssvBadge ? mssvBadge.textContent.trim() : '';
+            const studentGrades = mssv && state.grades[mssv] ? state.grades[mssv] : {};
+            const cellVal = removeVietnameseTones(String(studentGrades[textCol] || '').trim().toLowerCase());
+            matchesTextCol = cellVal.includes(textVal);
+        }
+
         // Apply display
-        if (matchesSearch && matchesStatus) {
+        if (matchesSearch && matchesStatus && matchesTextCol) {
             row.style.display = '';
             visibleCount++;
         } else {
             row.style.display = 'none';
+            // Uncheck hidden rows so they don't appear in the copy count
+            const cb = row.querySelector('.mssv-row-check');
+            if (cb) cb.checked = false;
         }
     });
+
+    // Keep copy button count in sync
+    if (window._gradeTableMssvMulti) {
+        window._gradeTableMssvMulti.updateCopyBtn();
+    }
 
     // Handle empty state if filtering results in no rows
     const tableWrapper = document.getElementById('classDetailTableWrapper');
