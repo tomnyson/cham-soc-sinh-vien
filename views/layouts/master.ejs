@@ -83,6 +83,12 @@
                 </script>
             <% } %>
 
+            <% if (typeof user !== 'undefined' && user) { %>
+                <script>
+                    window.__CURRENT_USER__ = <%- JSON.stringify(user).replace(/</g, '\\u003c') %>;
+                </script>
+            <% } %>
+
                     <%- include('../partials/scripts') %>
                         <%- include('../partials/scripts-extra') %>
 </body>

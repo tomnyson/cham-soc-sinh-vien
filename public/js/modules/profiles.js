@@ -68,6 +68,74 @@ export const profileManager = {
             return;
         }
 
+        // If user is not logged in, try fetching public profiles from MongoDB, and fallback to localStorage/hardcoded if that fails
+        if (!window.__CURRENT_USER__) {
+            try {
+                const response = await fetch('/api/public/profiles');
+                const result = await response.json();
+                if (result.success && result.data && result.data.length > 0) {
+                    this.profiles = {};
+                    result.data.forEach(profile => {
+                        this.profiles[profile.profileId] = {
+                            profileId: profile.profileId,
+                            name: profile.name,
+                            passThreshold: profile.passThreshold,
+                            weights: profile.weights
+                        };
+                    });
+                    
+                    // Save to localStorage for offline fallback
+                    storage.saveProfiles(this.profiles);
+                    logger.logSuccess('initProfiles', { count: result.data.length, source: 'Public API' });
+                } else {
+                    throw new Error('No public profiles returned');
+                }
+            } catch (error) {
+                logger.logError(error, 'profileManager.init (public)');
+                const cached = storage.loadProfiles();
+                if (cached) {
+                    this.profiles = cached;
+                } else {
+                    // Hardcoded fallback profile if no profiles are in localStorage
+                    this.profiles = {
+                        default: {
+                            profileId: 'default',
+                            name: 'Mặc định (60%)',
+                            passThreshold: 3,
+                            weights: {
+                                'Lab 1': 3.5,
+                                'Lab 2': 3.5,
+                                'Lab 3': 3.5,
+                                'Lab 4': 3.5,
+                                'Lab 5': 3.5,
+                                'Lab 6': 3.5,
+                                'Lab 7': 3.5,
+                                'Lab 8': 3.5,
+                                'Quiz 1': 1.5,
+                                'Quiz 2': 1.5,
+                                'Quiz 3': 1.5,
+                                'Quiz 4': 1.5,
+                                'Quiz 5': 1.5,
+                                'Quiz 6': 1.5,
+                                'Quiz 7': 1.5,
+                                'Quiz 8': 1.5,
+                                'GD 1': 10,
+                                'GD 2': 10
+                            }
+                        }
+                    };
+                }
+            }
+
+            if (!this.currentProfile || !this.profiles[this.currentProfile]) {
+                this.currentProfile = Object.keys(this.profiles)[0] || 'default';
+            }
+
+            this.loadProfile();
+            this.updateProfileSelect();
+            return;
+        }
+
         uiState.showLoading('profiles');
         
         try {

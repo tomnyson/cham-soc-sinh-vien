@@ -98,7 +98,7 @@ async function renderLayoutPage(req, res, viewName, {
 
     const viewPath = path.join(__dirname, '../views/pages', `${viewName}.ejs`);
     const template = await fsPromises.readFile(viewPath, 'utf8');
-    const body = ejs.render(template, pageData, { filename: viewPath });
+    const body = ejs.render(template, { ...pageData, assetPath: app.locals.assetPath, assetVersion: app.locals.assetVersion }, { filename: viewPath });
     const branding = await brandingService.getGlobalBranding();
 
     res.render('layouts/master', {

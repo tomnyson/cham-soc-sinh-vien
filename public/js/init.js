@@ -70,6 +70,11 @@ async function initializeApp() {
     logger.logSuccess('Application', { message: 'Starting initialization' });
 
     try {
+        // Initialize AuthModule first if available
+        if (window.AuthModule) {
+            await window.AuthModule.init();
+        }
+
         // Initialize profiles and classes in parallel for better performance
         await Promise.all([
             profileManager.init(),

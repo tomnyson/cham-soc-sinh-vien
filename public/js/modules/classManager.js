@@ -66,6 +66,18 @@ export const classManager = {
             return;
         }
 
+        // If user is not logged in, load from localStorage directly and skip API
+        if (!window.__CURRENT_USER__) {
+            const cached = storage.loadClasses();
+            if (cached) {
+                this.classes = cached;
+            } else {
+                this.classes = {};
+            }
+            this.updateClassSelect();
+            return;
+        }
+
         uiState.showLoading('classes');
         
         try {

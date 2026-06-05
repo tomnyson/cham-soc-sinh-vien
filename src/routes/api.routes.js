@@ -39,6 +39,7 @@ router.get('/health', (req, res) => {
 // ===== Public Student Grade Lookup (No Login Required) =====
 router.get('/public/student-grade', asyncHandler(classController.getPublicStudentGrade));
 router.get('/public/branding', asyncHandler(brandingController.getPublicBranding));
+router.get('/public/profiles', asyncHandler(profileController.getPublicProfiles));
 
 // ===== Public Student Report =====
 router.get('/public/recaptcha-config', asyncHandler(reportController.getPublicRecaptchaConfig));

@@ -10,6 +10,13 @@ const User = require('../models/user.model');
  */
 exports.authenticate = async (req, res, next) => {
     try {
+        // If user is already authenticated via passport session, accept it.
+        // This prevents 401 errors when the JWT token expires but the
+        // passport session (set by passport.session() middleware) is still valid.
+        if (req.user && req.user._id) {
+            return next();
+        }
+
         let token;
 
         // Check for token in cookie

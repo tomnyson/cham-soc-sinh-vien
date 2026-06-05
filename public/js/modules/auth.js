@@ -15,14 +15,43 @@ const AuthModule = {
      * Initialize authentication
      */
     async init() {
-        await this.checkAuthStatus();
+        const urlParams = new URLSearchParams(window.location.search);
+        const loginRequired = urlParams.get('login') === 'required';
+
+        if (window.__CURRENT_USER__) {
+            this.isAuthenticated = true;
+            this.currentUser = window.__CURRENT_USER__;
+            this.updateUI();
+        } else {
+            this.isAuthenticated = false;
+            this.currentUser = null;
+            if (loginRequired) {
+                this.showLoginPage();
+            }
+        }
+
         this.setupEventListeners();
+
+        // Clean login result parameters if present
+        if (urlParams.get('login') === 'success' || urlParams.get('login') === 'error' || urlParams.get('login') === 'failed') {
+            if (urlParams.get('login') === 'failed' || urlParams.get('login') === 'error') {
+                alert('Đăng nhập thất bại. Vui lòng thử lại.');
+            }
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
     },
 
     /**
      * Check if user is authenticated
      */
     async checkAuthStatus() {
+        if (window.__CURRENT_USER__) {
+            this.isAuthenticated = true;
+            this.currentUser = window.__CURRENT_USER__;
+            this.updateUI();
+            return true;
+        }
+
         try {
             const response = await fetch('/api/auth/check', {
                 credentials: 'include'
@@ -37,12 +66,15 @@ const AuthModule = {
             } else {
                 this.isAuthenticated = false;
                 this.currentUser = null;
-                this.showLoginPage();
+                // Only show login page if specifically on a route or query that demands it
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('login') === 'required') {
+                    this.showLoginPage();
+                }
                 return false;
             }
         } catch (error) {
             console.error('Error checking auth status:', error);
-            this.showLoginPage();
             return false;
         }
     },
@@ -242,17 +274,6 @@ const AuthModule = {
             this.showLoginPage();
         });
 
-        // Check for login success/error in URL
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('login') === 'success') {
-            this.checkAuthStatus();
-            // Clean URL
-            window.history.replaceState({}, document.title, window.location.pathname);
-        } else if (urlParams.get('login') === 'error' || urlParams.get('login') === 'failed') {
-            alert('Đăng nhập thất bại. Vui lòng thử lại.');
-            // Clean URL
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }
     },
 
     /**
