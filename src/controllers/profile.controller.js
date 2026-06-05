@@ -183,6 +183,18 @@ const exportProfiles = async (req, res, next) => {
     }
 };
 
+/**
+ * Lấy tất cả profiles công khai (dùng cho guest ở trang kiểm tra điểm)
+ */
+const getPublicProfiles = async (req, res, next) => {
+    try {
+        const profiles = await profileService.getAllProfiles('default');
+        res.json({ success: true, data: profiles.map(serializeProfile) });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     getAllProfiles,
     getProfileById,
@@ -193,5 +205,6 @@ module.exports = {
     duplicateProfile,
     importProfiles,
     exportProfiles,
-    createDefaultProfile
+    createDefaultProfile,
+    getPublicProfiles
 };

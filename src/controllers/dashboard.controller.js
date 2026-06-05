@@ -141,7 +141,9 @@ const renderDashboard = async (req, res, next) => {
         const body = ejs.render(template, {
             classes: classList,
             selectedClassId,
-            dashboard
+            dashboard,
+            assetPath: req.app.locals.assetPath,
+            assetVersion: req.app.locals.assetVersion
         }, { filename: pageViewPath });
 
         return res.render('layouts/master', {
