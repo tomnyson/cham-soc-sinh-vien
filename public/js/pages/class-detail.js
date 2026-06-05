@@ -113,6 +113,7 @@ const state = {
     wheel: {
         isSpinning: false,
         currentAngle: 0,
+        pickCount: 1,
         students: [],          // visible slices on the canvas (subset of remaining)
         remaining: [],          // students still eligible to be drawn this session
         history: [],            // winners (latest first)
@@ -198,6 +199,8 @@ const elements = {
     wheelWinner: document.getElementById('wheelWinner'),
     winnerName: document.getElementById('winnerName'),
     winnerMssv: document.getElementById('winnerMssv'),
+    wheelSingleModeBtn: document.getElementById('wheelSingleModeBtn'),
+    wheelPairModeBtn: document.getElementById('wheelPairModeBtn'),
     shuffleWheelBtn: document.getElementById('shuffleWheelBtn'),
     resetWheelBtn: document.getElementById('resetWheelBtn'),
     resetWheelBtnEmpty: document.getElementById('resetWheelBtnEmpty'),
@@ -495,6 +498,10 @@ function bindEvents() {
     if (elements.clearHistoryBtn) {
         elements.clearHistoryBtn.addEventListener('click', clearWheelHistory);
     }
+    [elements.wheelSingleModeBtn, elements.wheelPairModeBtn].forEach(button => {
+        if (!button) return;
+        button.addEventListener('click', () => setWheelPickCount(Number(button.dataset.pickCount) || 1));
+    });
 
     // Tabs in lucky wheel side panel
     document.querySelectorAll('.lucky-wheel-tab').forEach(tab => {
@@ -2567,7 +2574,7 @@ function updateWheelCounters() {
     if (elements.wheelTotalStudents) elements.wheelTotalStudents.textContent = total;
     if (elements.wheelRemaining) elements.wheelRemaining.textContent = remaining;
     if (elements.shuffledCount) elements.shuffledCount.textContent = state.wheel.remaining.length;
-    if (elements.historyCount) elements.historyCount.textContent = state.wheel.history.length;
+    if (elements.historyCount) elements.historyCount.textContent = countWheelHistoryStudents();
 }
 
 /**
@@ -2585,6 +2592,62 @@ function updateWheelEmptyState() {
     if (elements.shuffleWheelBtn) {
         elements.shuffleWheelBtn.disabled = !hasRemaining;
     }
+}
+
+function setWheelPickCount(nextPickCount) {
+    if (state.wheel.isSpinning) return;
+    state.wheel.pickCount = nextPickCount === 2 ? 2 : 1;
+    [elements.wheelSingleModeBtn, elements.wheelPairModeBtn].forEach(button => {
+        if (!button) return;
+        const isActive = Number(button.dataset.pickCount) === state.wheel.pickCount;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-pressed', String(isActive));
+    });
+}
+
+function getWheelPickCount() {
+    return Math.min(state.wheel.pickCount === 2 ? 2 : 1, state.wheel.remaining.length || 1);
+}
+
+function pickAdditionalWheelWinners(primaryWinner, pickCount) {
+    if (pickCount <= 1) return [];
+    return state.wheel.remaining
+        .filter(student => student.mssv !== primaryWinner.mssv)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, pickCount - 1);
+}
+
+function getHistoryEntryWinners(item) {
+    if (Array.isArray(item?.winners) && item.winners.length > 0) return item.winners;
+    if (item && item.name && item.mssv) return [{ name: item.name, mssv: item.mssv }];
+    return [];
+}
+
+function countWheelHistoryStudents() {
+    return (state.wheel.history || []).reduce((total, item) => total + getHistoryEntryWinners(item).length, 0);
+}
+
+function renderWinnerDisplay(winners) {
+    if (!elements.wheelWinner || !elements.winnerName || !elements.winnerMssv) return;
+
+    if (winners.length <= 1) {
+        const winner = winners[0];
+        elements.winnerName.classList.remove('is-pair');
+        elements.winnerName.textContent = winner?.name || '';
+        elements.winnerMssv.textContent = winner?.mssv || '';
+    } else {
+        elements.winnerName.classList.add('is-pair');
+        elements.winnerName.innerHTML = winners.map((winner, index) => `
+            <div class="lucky-wheel-winner-pair-row">
+                <span class="lucky-wheel-winner-pair-index">${index + 1}</span>
+                <span class="lucky-wheel-winner-pair-person">${escapeHtmlMaybe(winner.name)}</span>
+                <span class="lucky-wheel-winner-pair-mssv">${escapeHtmlMaybe(winner.mssv)}</span>
+            </div>
+        `).join('');
+        elements.winnerMssv.textContent = 'Pair code';
+    }
+
+    elements.wheelWinner.classList.remove('d-none');
 }
 
 /**
@@ -2728,26 +2791,28 @@ function spinWheel() {
             const winnerIndex = Math.floor(pointerAngle / sliceAngle) % state.wheel.students.length;
 
             const winner = state.wheel.students[winnerIndex];
+            const winners = [winner, ...pickAdditionalWheelWinners(winner, getWheelPickCount())];
 
             // Show winner
-            if (elements.wheelWinner && elements.winnerName && elements.winnerMssv) {
-                elements.winnerName.textContent = winner.name;
-                elements.winnerMssv.textContent = winner.mssv;
-                elements.wheelWinner.classList.remove('d-none');
-            }
+            renderWinnerDisplay(winners);
 
             // Add to history
             state.wheel.history.unshift({
-                name: winner.name,
-                mssv: winner.mssv,
+                name: winners.map(student => student.name).join(' + '),
+                mssv: winners.map(student => student.mssv).join(' + '),
+                winners: winners.map(student => ({
+                    name: student.name,
+                    mssv: student.mssv
+                })),
+                mode: winners.length === 2 ? 'pair' : 'single',
                 time: new Date().toLocaleTimeString('vi-VN')
             });
 
             // Remove the winner from the eligible pool so they cannot be drawn
             // again in the same session.
-            state.wheel.drawnMssvs.add(winner.mssv);
-            state.wheel.remaining = state.wheel.remaining.filter(s => s.mssv !== winner.mssv);
-            state.wheel.allShuffled = state.wheel.allShuffled.filter(s => s.mssv !== winner.mssv);
+            winners.forEach(student => state.wheel.drawnMssvs.add(student.mssv));
+            state.wheel.remaining = state.wheel.remaining.filter(s => !state.wheel.drawnMssvs.has(s.mssv));
+            state.wheel.allShuffled = state.wheel.allShuffled.filter(s => !state.wheel.drawnMssvs.has(s.mssv));
 
             // Refresh the visible slices for the next spin (keeps the wheel
             // showing only eligible students).
@@ -2788,21 +2853,27 @@ function clearWheelHistory() {
  */
 function updateWheelHistory() {
     if (!elements.wheelHistory) return;
-    if (elements.historyCount) elements.historyCount.textContent = state.wheel.history.length;
+    if (elements.historyCount) elements.historyCount.textContent = countWheelHistoryStudents();
 
     if (state.wheel.history.length === 0) {
         elements.wheelHistory.innerHTML = '<div class="lucky-wheel-list-empty">Chưa có lịch sử</div>';
         return;
     }
 
-    elements.wheelHistory.innerHTML = state.wheel.history.slice(0, 50).map((item, index) => `
-        <div class="lucky-wheel-row is-winner">
-            <div class="lucky-wheel-row-index">${index + 1}</div>
-            <div class="lucky-wheel-row-name">${escapeHtmlMaybe(item.name)}</div>
-            <span class="lucky-wheel-row-mssv">${escapeHtmlMaybe(item.mssv)}</span>
-            <span class="lucky-wheel-row-meta">${escapeHtmlMaybe(item.time)}</span>
-        </div>
-    `).join('');
+    elements.wheelHistory.innerHTML = state.wheel.history.slice(0, 50).map((item, index) => {
+        const winners = getHistoryEntryWinners(item);
+        const names = winners.map(winner => escapeHtmlMaybe(winner.name)).join(' + ');
+        const mssvs = winners.map(winner => escapeHtmlMaybe(winner.mssv)).join(' + ');
+        const indexContent = winners.length > 1 ? '<i class="bi bi-people-fill"></i>' : index + 1;
+        return `
+            <div class="lucky-wheel-row is-winner">
+                <div class="lucky-wheel-row-index">${indexContent}</div>
+                <div class="lucky-wheel-row-name">${names}</div>
+                <span class="lucky-wheel-row-mssv">${mssvs}</span>
+                <span class="lucky-wheel-row-meta">${escapeHtmlMaybe(item.time)}</span>
+            </div>
+        `;
+    }).join('');
 }
 
 /**
@@ -2845,11 +2916,12 @@ function updateShuffledList() {
         </div>
     `).join('');
 
-    const drawnHtml = drawn.length === 0 ? '' : `
+    const drawnStudents = drawn.flatMap(getHistoryEntryWinners);
+    const drawnHtml = drawnStudents.length === 0 ? '' : `
         <div class="text-muted small px-2 mt-2 mb-1">
-            <i class="bi bi-check2-circle me-1"></i> Đã quay (${drawn.length})
+            <i class="bi bi-check2-circle me-1"></i> Đã quay (${drawnStudents.length})
         </div>
-    ` + drawn.map((item, index) => `
+    ` + drawnStudents.map((item) => `
         <div class="lucky-wheel-row is-drawn">
             <div class="lucky-wheel-row-index"><i class="bi bi-check"></i></div>
             <div class="lucky-wheel-row-name">${escapeHtmlMaybe(item.name)}</div>

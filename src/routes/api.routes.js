@@ -12,6 +12,7 @@ const dashboardRoutes = require('./dashboard.routes');
 const adminRoutes = require('./admin.routes');
 
 const studentCareController = require('../controllers/student-care.controller');
+const reportController = require('../controllers/report.controller');
 
 const { uploadSingle, cleanupFile } = require('../middleware/upload.middleware');
 const { validateGenerateTemplate, validateExportResults } = require('../middleware/validation.middleware');
@@ -38,6 +39,11 @@ router.get('/health', (req, res) => {
 // ===== Public Student Grade Lookup (No Login Required) =====
 router.get('/public/student-grade', asyncHandler(classController.getPublicStudentGrade));
 router.get('/public/branding', asyncHandler(brandingController.getPublicBranding));
+
+// ===== Public Student Report =====
+router.get('/public/recaptcha-config', asyncHandler(reportController.getPublicRecaptchaConfig));
+router.get('/public/report-template', asyncHandler(reportController.getPublicTemplate));
+router.post('/public/submit-report', asyncHandler(reportController.submitReport));
 
 // ===== Admin Lecturer Management =====
 router.use('/admin', adminRoutes);
@@ -113,6 +119,11 @@ router.put('/classes/:classId/unarchive', authenticate, requireActiveLecturer, a
 router.get('/branding', authenticate, requireAdmin, asyncHandler(brandingController.getBranding));
 router.put('/branding', authenticate, requireAdmin, asyncHandler(brandingController.updateBranding));
 router.post('/branding/reset', authenticate, requireAdmin, asyncHandler(brandingController.resetBranding));
+
+// ===== Report Management (Protected) =====
+router.get('/report-template', authenticate, requireActiveLecturer, asyncHandler(reportController.getTemplate));
+router.post('/report-template', authenticate, requireActiveLecturer, asyncHandler(reportController.saveTemplate));
+router.get('/reports', authenticate, requireActiveLecturer, asyncHandler(reportController.getReports));
 
 // ===== Grade Entry Dashboard JSON endpoints =====
 router.use('/', dashboardRoutes);

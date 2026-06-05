@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const ejs = require('ejs');
 const session = require('express-session');
 const passport = require('passport');
@@ -24,6 +25,53 @@ const apiRoutes = require('./routes/api.routes');
 // Initialize app
 const app = express();
 const fsPromises = fs.promises;
+
+function hashAssetTree() {
+    const explicitVersion = process.env.ASSET_VERSION
+        || process.env.BUILD_VERSION
+        || process.env.GIT_COMMIT
+        || process.env.RENDER_GIT_COMMIT
+        || process.env.SOURCE_VERSION;
+
+    if (explicitVersion) {
+        return String(explicitVersion).replace(/[^a-zA-Z0-9_.-]/g, '').slice(0, 32) || 'dev';
+    }
+
+    const hash = crypto.createHash('sha1');
+    const roots = [
+        path.join(__dirname, '../public/css'),
+        path.join(__dirname, '../public/js'),
+        path.join(__dirname, '../views')
+    ];
+    const allowedExts = new Set(['.css', '.js', '.ejs']);
+
+    function walk(dir) {
+        if (!fs.existsSync(dir)) return;
+        fs.readdirSync(dir, { withFileTypes: true })
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .forEach(entry => {
+                const fullPath = path.join(dir, entry.name);
+                if (entry.isDirectory()) {
+                    walk(fullPath);
+                    return;
+                }
+                if (!allowedExts.has(path.extname(entry.name))) return;
+                hash.update(path.relative(__dirname, fullPath));
+                hash.update(fs.readFileSync(fullPath));
+            });
+    }
+
+    roots.forEach(walk);
+    return hash.digest('hex').slice(0, 12);
+}
+
+const assetVersion = hashAssetTree();
+
+app.locals.assetVersion = assetVersion;
+app.locals.assetPath = function assetPath(assetUrl) {
+    const separator = assetUrl.includes('?') ? '&' : '?';
+    return `${assetUrl}${separator}v=${assetVersion}`;
+};
 
 /**
  * Render a page inside the master layout
@@ -196,8 +244,16 @@ app.use(passport.session());
 // Passport configuration
 require('../config/passport.config')(passport);
 
-// Static files
-app.use(express.static(path.join(__dirname, '../public')));
+// Static assets only. Keep "/" on the server-rendered route instead of the
+// legacy public/index.html shell, whose menu can drift from the EJS layout.
+app.use(express.static(path.join(__dirname, '../public'), {
+    index: false,
+    setHeaders(res, filePath) {
+        if (path.extname(filePath) === '.html') {
+            res.setHeader('Cache-Control', 'no-store, must-revalidate');
+        }
+    }
+}));
 
 // API routes (must be before page routes)
 app.use('/api', apiRoutes);

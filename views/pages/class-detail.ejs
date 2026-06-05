@@ -115,6 +115,17 @@
                 </div>
             </a>
         </div>
+        <!-- Report Tool Button -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card h-100 border-0 shadow-sm" style="cursor: pointer;" data-bs-toggle="modal"
+                data-bs-target="#reportToolModal">
+                <div class="card-body d-flex align-items-center class-detail-tool-body">
+                    <div>
+                        <h5 class="mb-1"><i class="bi bi-journal-text me-1"></i> Báo Cáo</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="card shadow-sm border-0 mb-4">
@@ -489,6 +500,15 @@
                             </button>
                             <button id="resetWheelBtn" type="button" class="btn btn-outline-warning btn-sm flex-grow-1">
                                 <i class="bi bi-arrow-counterclockwise me-1"></i> Đặt lại
+                            </button>
+                        </div>
+
+                        <div class="lucky-wheel-mode" role="group" aria-label="Chế độ chọn sinh viên">
+                            <button id="wheelSingleModeBtn" type="button" class="btn lucky-wheel-mode-btn active" data-pick-count="1" aria-pressed="true">
+                                <i class="bi bi-person me-1"></i> 1 sinh viên
+                            </button>
+                            <button id="wheelPairModeBtn" type="button" class="btn lucky-wheel-mode-btn" data-pick-count="2" aria-pressed="false">
+                                <i class="bi bi-people me-1"></i> Pair code
                             </button>
                         </div>
 
@@ -1079,6 +1099,44 @@
         font-weight: 600;
     }
 
+    .lucky-wheel-winner-name.is-pair {
+        display: grid;
+        gap: 6px;
+        font-size: 1rem;
+    }
+
+    .lucky-wheel-winner-pair-row {
+        align-items: center;
+        display: grid;
+        gap: 8px;
+        grid-template-columns: 28px minmax(0, 1fr) auto;
+    }
+
+    .lucky-wheel-winner-pair-index {
+        align-items: center;
+        background: #fff3cd;
+        border-radius: 8px;
+        color: #b26b00;
+        display: inline-flex;
+        font-size: 0.78rem;
+        font-weight: 800;
+        height: 28px;
+        justify-content: center;
+        width: 28px;
+    }
+
+    .lucky-wheel-winner-pair-person {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .lucky-wheel-winner-pair-mssv {
+        color: #6d4c00;
+        font-size: 0.78rem;
+        font-weight: 800;
+    }
+
     .lucky-wheel-empty {
         display: flex;
         flex-direction: column;
@@ -1152,6 +1210,27 @@
     .lucky-wheel-side-actions {
         display: flex;
         gap: 8px;
+    }
+
+    .lucky-wheel-mode {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .lucky-wheel-mode-btn {
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        color: #6c757d;
+        font-size: 0.82rem;
+        font-weight: 700;
+        min-height: 36px;
+    }
+
+    .lucky-wheel-mode-btn.active {
+        background: #fff0e7;
+        border-color: #ffb98c;
+        color: #e65100;
     }
 
     .lucky-wheel-tab-pane {
@@ -1449,7 +1528,7 @@
         }
 
         .class-detail-stats-row .stat-card {
-            min-height: 100%;
+            min-height: 76px;
         }
 
         .class-detail-tools-row .card {
@@ -1457,9 +1536,9 @@
         }
 
         .class-detail-tool-body {
-            min-height: 72px;
-            padding-top: 0.9rem;
-            padding-bottom: 0.9rem;
+            min-height: 56px;
+            padding-top: 0.7rem;
+            padding-bottom: 0.7rem;
         }
 
         .class-detail-action-col {
@@ -1561,11 +1640,11 @@
         }
 
         .class-detail-tool-body {
-            min-height: 64px;
+            min-height: 50px;
         }
 
         .class-detail-tool-body h5 {
-            font-size: 1rem;
+            font-size: 0.95rem;
         }
 
         .class-detail-stats-controls label,
@@ -1678,4 +1757,108 @@
     </div>
 </div>
 
-<script type="module" src="/js/pages/class-detail.js"></script>
+<div class="modal fade report-tool-modal" id="reportToolModal" tabindex="-1" aria-labelledby="reportToolModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable report-tool-dialog">
+        <div class="modal-content border-0 shadow-lg overflow-hidden report-tool-shell">
+            <div class="modal-header text-white border-0 report-tool-header">
+                <h5 class="modal-title fw-bold report-tool-title" id="reportToolModalLabel">
+                    <i class="bi bi-journal-text me-2"></i> Quản lý Báo Cáo Bài Học
+                </h5>
+                <button type="button" class="btn-close btn-close-white opacity-75" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0 report-tool-body">
+                <div class="row g-0 report-tool-layout">
+                    <!-- Sidebar -->
+                    <div class="col-md-3 report-tool-nav-pane">
+                        <div class="nav flex-column nav-pills report-tool-tabs" id="report-tablist" role="tablist" aria-orientation="vertical">
+                            <button class="nav-link active text-start fw-medium" id="tab-report-view" data-bs-toggle="tab" data-bs-target="#report-view" type="button" role="tab" aria-controls="report-view" aria-selected="true">
+                                <i class="bi bi-list-check me-2 fs-5 align-middle"></i> Xem Báo Cáo
+                            </button>
+                            <button class="nav-link text-start fw-medium" id="tab-report-config" data-bs-toggle="tab" data-bs-target="#report-config" type="button" role="tab" aria-controls="report-config" aria-selected="false" title="Cấu hình biểu mẫu">
+                                <i class="bi bi-gear me-2 fs-5 align-middle"></i> Cấu hình
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="col-md-9 report-tool-main">
+                        <div class="tab-content active" id="report-tab-content">
+                            <!-- View Reports Tab -->
+                            <div class="tab-pane fade show active" id="report-view" role="tabpanel" aria-labelledby="tab-report-view">
+                                <div class="report-tool-toolbar">
+                                    <div>
+                                        <p class="report-tool-kicker mb-1">Nhật ký theo ngày</p>
+                                        <h5 class="mb-0 fw-bold text-dark">Danh sách báo cáo sinh viên</h5>
+                                    </div>
+                                    <div class="report-tool-filter">
+                                        <div class="input-group report-date-input">
+                                            <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                                            <input type="date" class="form-control" id="reportFilterDate" placeholder="Lọc theo ngày">
+                                        </div>
+                                        <button class="btn btn-primary report-filter-btn" id="btnLoadReports">
+                                            <i class="bi bi-search me-1"></i> Lọc
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="report-table-card">
+                                    <div class="table-responsive report-table-scroll">
+                                        <table class="table table-hover table-borderless mb-0 align-middle report-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Ngày</th>
+                                                    <th>MSSV</th>
+                                                    <th>Tên sinh viên</th>
+                                                    <th>Nội dung báo cáo</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="reportListBody">
+                                                <tr>
+                                                    <td colspan="4" class="text-center py-5 text-muted">
+                                                        <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+                                                        <div>Đang tải dữ liệu...</div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Config Template Tab -->
+                            <div class="tab-pane fade" id="report-config" role="tabpanel" aria-labelledby="tab-report-config">
+                                <div class="report-config-head">
+                                    <div>
+                                        <p class="report-tool-kicker mb-1">Biểu mẫu lớp học</p>
+                                        <h5 class="mb-1 fw-bold text-dark">Cấu hình câu hỏi báo cáo</h5>
+                                        <p class="text-muted small mb-0">Tùy chỉnh biểu mẫu báo cáo bài học dành riêng cho lớp này.</p>
+                                    </div>
+                                    <button class="btn btn-success report-add-field-btn" id="btnAddReportField">
+                                        <i class="bi bi-plus-circle me-2"></i>Thêm câu hỏi
+                                    </button>
+                                </div>
+
+                                <div class="report-config-container">
+                                    <div id="reportFieldsContainer" class="mb-2">
+                                        <div class="text-center py-5 text-muted">
+                                            <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+                                            <div>Đang tải cấu hình biểu mẫu...</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="report-save-bar">
+                                    <button class="btn btn-primary report-save-template-btn" id="btnSaveReportTemplate">
+                                        <i class="bi bi-cloud-arrow-up me-2"></i>Lưu Cấu Hình
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="<%- assetPath('/js/pages/class-detail.js') %>"></script>
+<script src="<%- assetPath('/js/pages/report-tool.js') %>"></script>

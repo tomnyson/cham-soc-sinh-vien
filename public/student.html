@@ -187,6 +187,24 @@
                     </div>
                 </div>
 
+                <!-- Tabs -->
+                <ul class="nav nav-tabs mb-4" id="studentTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold" id="grades-tab" data-bs-toggle="tab" data-bs-target="#grades-content" type="button" role="tab">
+                            <i class="bi bi-card-list"></i> Tra cứu điểm
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold" id="report-tab" data-bs-toggle="tab" data-bs-target="#report-content" type="button" role="tab" onclick="loadReportTemplate()">
+                            <i class="bi bi-journal-check"></i> Báo cáo bài học
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="studentTabsContent">
+                    <!-- Grade Content -->
+                    <div class="tab-pane fade show active" id="grades-content" role="tabpanel">
+
                 <!-- Statistics -->
                 <div id="studentNoteSection" class="alert alert-warning border-0 shadow-sm" style="display: none;">
                     <div class="fw-bold mb-1"><i class="bi bi-journal-text me-1"></i> Ghi chú từ giáo viên</div>
@@ -300,6 +318,38 @@
                         </div>
                     </div>
                 </div>
+                    </div> <!-- End Grade Content -->
+
+                    <!-- Report Content -->
+                    <div class="tab-pane fade" id="report-content" role="tabpanel">
+                        <div class="card shadow">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-journal-text"></i> Viết báo cáo bài học
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Ngày học:</label>
+                                    <input type="date" class="form-control" id="reportDate" required>
+                                </div>
+                                <div id="reportFormContainer">
+                                    <p class="text-muted">Đang tải biểu mẫu báo cáo...</p>
+                                </div>
+                                <div class="mt-3 d-none" id="reportCaptchaWrapper">
+                                    <label class="form-label fw-bold">Xác minh:</label>
+                                    <div id="reportCaptchaWidget"></div>
+                                    <div class="form-text">Vui lòng xác minh Google CAPTCHA trước khi gửi báo cáo.</div>
+                                </div>
+                                <div class="text-end mt-4">
+                                    <button class="btn btn-primary" onclick="submitReport()" id="btnSubmitReport">
+                                        <i class="bi bi-send"></i> Gửi báo cáo
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- End tab-content -->
             </div>
         </div>
     </div>
@@ -308,6 +358,9 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
+        const LAST_MSSV_STORAGE_KEY = 'studentCare:lastMssv';
+        const LAST_CLASS_ID_STORAGE_KEY = 'studentCare:lastClassId';
+
         // Check if URL has params
         window.addEventListener('DOMContentLoaded', function () {
             loadBrandingConfig();
@@ -315,17 +368,78 @@
             const urlParams = new URLSearchParams(window.location.search);
             const classId = urlParams.get('class');
             const mssv = urlParams.get('mssv');
+            const classIdInput = document.getElementById('classIdInput');
+            const mssvInput = document.getElementById('mssvInput');
+
+            if (classIdInput) {
+                classIdInput.value = getSavedClassId();
+                classIdInput.addEventListener('input', function () {
+                    saveClassId(classIdInput.value);
+                    resetReportTemplateState();
+                });
+            }
+
+            if (mssvInput) {
+                mssvInput.value = getSavedMssv();
+                mssvInput.addEventListener('input', function () {
+                    saveMssv(mssvInput.value);
+                });
+            }
 
             if (classId) {
-                document.getElementById('classIdInput').value = classId;
+                classIdInput.value = classId;
+                saveClassId(classId);
                 if (mssv) {
-                    document.getElementById('mssvInput').value = mssv;
+                    mssvInput.value = mssv.toUpperCase();
+                    saveMssv(mssvInput.value);
                     checkGrades();
                 } else {
-                    document.getElementById('mssvInput').focus();
+                    mssvInput.focus();
                 }
             }
         });
+
+        function getSavedClassId() {
+            try {
+                return (localStorage.getItem(LAST_CLASS_ID_STORAGE_KEY) || '').trim();
+            } catch (error) {
+                return '';
+            }
+        }
+
+        function saveClassId(value) {
+            const normalized = String(value || '').trim();
+            try {
+                if (normalized) {
+                    localStorage.setItem(LAST_CLASS_ID_STORAGE_KEY, normalized);
+                } else {
+                    localStorage.removeItem(LAST_CLASS_ID_STORAGE_KEY);
+                }
+            } catch (error) {
+                console.warn('Cannot save class ID:', error.message);
+            }
+        }
+
+        function getSavedMssv() {
+            try {
+                return (localStorage.getItem(LAST_MSSV_STORAGE_KEY) || '').trim().toUpperCase();
+            } catch (error) {
+                return '';
+            }
+        }
+
+        function saveMssv(value) {
+            const normalized = String(value || '').trim().toUpperCase();
+            try {
+                if (normalized) {
+                    localStorage.setItem(LAST_MSSV_STORAGE_KEY, normalized);
+                } else {
+                    localStorage.removeItem(LAST_MSSV_STORAGE_KEY);
+                }
+            } catch (error) {
+                console.warn('Cannot save MSSV:', error.message);
+            }
+        }
 
         async function loadBrandingConfig() {
             try {
@@ -427,6 +541,8 @@
 
                 // Display results
                 displayGrades(student, classData, profile, studentGrades || {});
+                saveClassId(classId);
+                saveMssv(mssv);
 
                 // Update share link
                 const shareUrl = `${window.location.origin}/student.html?class=${classId}&mssv=${mssv}`;
@@ -587,8 +703,8 @@
         function logout() {
             document.getElementById('loginSection').style.display = 'block';
             document.getElementById('resultsSection').style.display = 'none';
-            document.getElementById('classIdInput').value = '';
-            document.getElementById('mssvInput').value = '';
+            document.getElementById('classIdInput').value = getSavedClassId();
+            document.getElementById('mssvInput').value = getSavedMssv();
             const noteSection = document.getElementById('studentNoteSection');
             const noteText = document.getElementById('studentNoteText');
             if (noteSection) noteSection.style.display = 'none';
@@ -612,6 +728,215 @@
             document.execCommand('copy');
 
             alert('Đã copy link!');
+        }
+
+        // Report Feature Logic
+        let reportTemplateLoadedClassId = '';
+        let currentReportFields = [];
+        let reportCaptchaConfig = { enabled: false, siteKey: '' };
+        let reportCaptchaWidgetId = null;
+        let reportCaptchaScriptPromise = null;
+
+        async function loadReportTemplate() {
+            const classId = document.getElementById('classIdInput').value.trim();
+            if (!classId) return;
+            if (reportTemplateLoadedClassId === classId) return;
+
+            const container = document.getElementById('reportFormContainer');
+            container.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div></div>';
+
+            // Set default date to today
+            document.getElementById('reportDate').valueAsDate = new Date();
+
+            try {
+                const response = await fetch(`/api/public/report-template?classId=${encodeURIComponent(classId)}`);
+                const result = await response.json();
+
+                if (result.success && result.data && result.data.fields) {
+                    currentReportFields = result.data.fields;
+                    renderReportForm(currentReportFields);
+                    await loadReportCaptcha();
+                    reportTemplateLoadedClassId = classId;
+                } else {
+                    container.innerHTML = '<div class="alert alert-warning">Lớp học này chưa cấu hình biểu mẫu báo cáo.</div>';
+                    reportTemplateLoadedClassId = '';
+                }
+            } catch (error) {
+                console.error('Error loading template:', error);
+                container.innerHTML = '<div class="alert alert-danger">Lỗi kết nối khi tải biểu mẫu.</div>';
+                reportTemplateLoadedClassId = '';
+            }
+        }
+
+        function resetReportTemplateState() {
+            reportTemplateLoadedClassId = '';
+            currentReportFields = [];
+            const container = document.getElementById('reportFormContainer');
+            if (container) {
+                container.innerHTML = '<p class="text-muted">Đang tải biểu mẫu báo cáo...</p>';
+            }
+        }
+
+        function renderReportForm(fields) {
+            const container = document.getElementById('reportFormContainer');
+            if (fields.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">Không có câu hỏi nào.</div>';
+                return;
+            }
+
+            let html = '';
+            fields.sort((a, b) => a.order - b.order).forEach(field => {
+                const requiredAttr = field.isRequired ? 'required' : '';
+                const requiredMark = field.isRequired ? '<span class="text-danger">*</span>' : '';
+                html += `
+                    <div class="mb-3 report-field-group">
+                        <label class="form-label fw-bold">${field.questionText} ${requiredMark}</label>
+                        <textarea class="form-control report-answer" data-field-id="${field._id}" rows="3" ${requiredAttr}></textarea>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        async function loadReportCaptcha() {
+            try {
+                const response = await fetch('/api/public/recaptcha-config');
+                const result = await response.json();
+
+                if (!result.success || !result.data || !result.data.enabled) {
+                    return;
+                }
+
+                reportCaptchaConfig = result.data;
+                await ensureReportCaptchaScript();
+                renderReportCaptcha();
+            } catch (error) {
+                console.error('Error loading reCAPTCHA:', error);
+            }
+        }
+
+        function ensureReportCaptchaScript() {
+            if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
+                return Promise.resolve();
+            }
+
+            if (reportCaptchaScriptPromise) {
+                return reportCaptchaScriptPromise;
+            }
+
+            reportCaptchaScriptPromise = new Promise((resolve, reject) => {
+                window.onStudentReportCaptchaLoaded = function () {
+                    resolve();
+                };
+
+                const script = document.createElement('script');
+                script.src = 'https://www.google.com/recaptcha/api.js?onload=onStudentReportCaptchaLoaded&render=explicit';
+                script.async = true;
+                script.defer = true;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+
+            return reportCaptchaScriptPromise;
+        }
+
+        function renderReportCaptcha() {
+            const wrapper = document.getElementById('reportCaptchaWrapper');
+            const widget = document.getElementById('reportCaptchaWidget');
+            if (!wrapper || !widget || reportCaptchaWidgetId !== null) return;
+
+            wrapper.classList.remove('d-none');
+            reportCaptchaWidgetId = window.grecaptcha.render(widget, {
+                sitekey: reportCaptchaConfig.siteKey
+            });
+        }
+
+        function getReportCaptchaToken() {
+            if (!reportCaptchaConfig.enabled) return '';
+            if (!window.grecaptcha || reportCaptchaWidgetId === null) return '';
+            return window.grecaptcha.getResponse(reportCaptchaWidgetId);
+        }
+
+        function resetReportCaptcha() {
+            if (window.grecaptcha && reportCaptchaWidgetId !== null) {
+                window.grecaptcha.reset(reportCaptchaWidgetId);
+            }
+        }
+
+        async function submitReport() {
+            const classId = document.getElementById('classIdInput').value.trim();
+            const mssv = document.getElementById('mssvInput').value.trim().toUpperCase();
+            const date = document.getElementById('reportDate').value;
+            const captchaToken = getReportCaptchaToken();
+
+            if (!date) {
+                alert('Vui lòng chọn ngày học.');
+                return;
+            }
+
+            if (reportCaptchaConfig.enabled && !captchaToken) {
+                alert('Vui lòng xác minh CAPTCHA trước khi gửi báo cáo.');
+                return;
+            }
+
+            const answers = {};
+            let hasError = false;
+
+            document.querySelectorAll('.report-answer').forEach(el => {
+                const fieldId = el.getAttribute('data-field-id');
+                const val = el.value.trim();
+                const isRequired = el.hasAttribute('required');
+
+                if (isRequired && !val) {
+                    el.classList.add('is-invalid');
+                    hasError = true;
+                } else {
+                    el.classList.remove('is-invalid');
+                    answers[fieldId] = val;
+                }
+            });
+
+            if (hasError) {
+                alert('Vui lòng điền đầy đủ các thông tin bắt buộc.');
+                return;
+            }
+
+            const btn = document.getElementById('btnSubmitReport');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Đang gửi...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/public/submit-report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        classId,
+                        mssv,
+                        date,
+                        answers,
+                        captchaToken
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Gửi báo cáo thành công!');
+                    // Switch back to grades tab
+                    document.getElementById('grades-tab').click();
+                } else {
+                    alert('Lỗi: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error submitting report:', error);
+                alert('Lỗi kết nối khi gửi báo cáo.');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                resetReportCaptcha();
+            }
         }
     </script>
 </body>

@@ -2,11 +2,15 @@
 <!-- Sidebar -->
 <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
-        <img id="appSidebarLogo" src="<%= appBranding.logoDataUrl %>" alt="<%= appBranding.subtext %>" class="logo">
+        <img id="appSidebarLogo" src="<%= appBranding.logoDataUrl %>" alt="<%= appBranding.subtext %>" class="logo" width="160" height="80" decoding="async">
     </div>
 
     <nav class="sidebar-nav">
         <p class="sidebar-nav-title">Chức năng</p>
+        <a href="/grade-check" data-route="/grade-check" class="nav-item <%= activeClass(currentRoute, '/grade-check') %>">
+            <i class="bi bi-clipboard-data-fill"></i>
+            <span>Kiểm tra điểm</span>
+        </a>
         <a href="/profiles" data-route="/profiles" class="nav-item <%= activeClass(currentRoute, '/profiles') %>">
             <i class="bi bi-gear"></i>
             <span>Quản lý Profile</span>
