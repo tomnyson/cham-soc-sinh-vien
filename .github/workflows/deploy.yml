@@ -18,21 +18,21 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: 'npm'
+          cache: 'yarn'
 
       - name: Install dependencies
-        run: npm ci
+        run: yarn install --frozen-lockfile
 
       - name: Check code formatting
-        run: npm run format:check
+        run: yarn format:check
         continue-on-error: true
 
       - name: Run linter
-        run: npm run lint
+        run: yarn lint
         continue-on-error: true
 
       - name: Run unit tests
-        run: npm test -- --passWithNoTests
+        run: yarn test --passWithNoTests
 
   deploy:
     name: Deploy to SSH Server
@@ -61,7 +61,7 @@ jobs:
             git reset --hard origin/$(git rev-parse --abbrev-ref HEAD)
 
             # Install production dependencies only to keep environment clean
-            npm install --production --no-audit --no-fund
+            yarn install --production --frozen-lockfile
 
             # Restart the process using PM2
             # Tries to restart by name first, falls back to starting the server
