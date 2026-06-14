@@ -61,7 +61,7 @@ jobs:
             git reset --hard origin/$(git rev-parse --abbrev-ref HEAD)
 
             # Install production dependencies only to keep environment clean
-            yarn install --production --frozen-lockfile
+            npm install --production --no-audit --no-fund
 
             # Restart the process using PM2
             # Tries to restart by name first, falls back to starting the server
