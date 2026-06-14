@@ -256,11 +256,13 @@ h6,
 
 .nav-item:hover {
      color: var(--fpt-orange-dark);
+     background-color: var(--gray-100);
 }
 
 .nav-item.active {
     color: var(--fpt-orange-dark);
     font-weight: 600;
+    background-color: var(--fpt-orange-light);
 }
 
 .nav-item i {
@@ -274,7 +276,7 @@ h6,
 }
 
 .nav-item:hover i {
-    color: var(--gray-900);
+    color: var(--fpt-orange-dark);
 }
 
 .nav-item.active i {
@@ -968,6 +970,10 @@ input[type="file"] {
     letter-spacing: 0.01em;
 }
 
+.btn:active {
+    transform: scale(0.98);
+}
+
 .btn-primary {
     background-color: var(--fpt-orange);
     color: white;
@@ -976,10 +982,6 @@ input[type="file"] {
 
 .btn-primary:hover {
     background-color: var(--fpt-orange-dark);
-}
-
-.btn-primary:active {
-    transform: translateY(1px);
 }
 
 .btn-outline-primary {
@@ -1045,7 +1047,7 @@ input[type="file"] {
 }
 
 .form-control::placeholder {
-    color: var(--gray-400);
+    color: var(--gray-500);
 }
 
 .form-label {
@@ -3316,6 +3318,10 @@ input.grade-input.is-invalid,
     color: #ffffff;
 }
 
+:root[data-theme="dark"] .nav-item:hover i {
+    color: var(--fpt-orange);
+}
+
 :root[data-theme="dark"] .nav-item.active {
     background: rgba(255, 122, 47, 0.16);
     border-color: rgba(255, 122, 47, 0.36);
@@ -4492,3 +4498,39 @@ input.grade-input.is-invalid,
         width: 100%;
     }
 }
+
+/* ========================================
+   RESPONSIVE TABLE STICKY COLUMNS
+   ======================================== */
+@media (max-width: 768px) {
+    .table-responsive {
+        position: relative;
+        overflow-x: auto;
+    }
+    
+    #dashboardStudentTable th:nth-child(2),
+    #dashboardStudentTable td:nth-child(2) {
+        position: sticky;
+        left: 0;
+        background-color: white;
+        z-index: 2;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+    }
+    
+    #dashboardStudentTable th:nth-child(3),
+    #dashboardStudentTable td:nth-child(3) {
+        position: sticky;
+        left: 80px; /* Adjust according to MSSV column width */
+        background-color: white;
+        z-index: 2;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+    }
+    
+    :root[data-theme="dark"] #dashboardStudentTable th:nth-child(2),
+    :root[data-theme="dark"] #dashboardStudentTable td:nth-child(2),
+    :root[data-theme="dark"] #dashboardStudentTable th:nth-child(3),
+    :root[data-theme="dark"] #dashboardStudentTable td:nth-child(3) {
+        background-color: #162033;
+    }
+}
+

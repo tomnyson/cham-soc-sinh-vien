@@ -1,113 +1,128 @@
-# Implementation Plan: [FEATURE]
+# Implementation Plan: Student Lesson Report & Website Redesign
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-
-**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
-
-**Note**: This template is filled in by the `/speckit-plan` command. See `.specify/templates/plan-template.md` for the execution workflow.
+**Branch**: `002-student-lesson-report` | **Date**: 2026-06-14 | **Spec**: [spec.md](file:///Applications/work/tool_cham_soc_sv/specs/002-student-lesson-report/spec.md)
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+Implement the Student Lesson Report feature (Student login via Class ID and MSSV, lesson report submission form with teacher-customized questions) and perform a comprehensive styling redesign of all pages of the website using the `/design-taste-frontend` rules to deliver a high-end, cohesive user experience.
+
+---
+
+### Design Read (taste-skill inference)
+**Reading this as**: Academic student care and grading portal for lecturers and students, with a clean B2B/SaaS dashboard language, leaning toward a cohesive CSS-variables theme + polished borders, soft shadows, and clean grid alignments.
+
+**Core Configuration Dials**:
+* `DESIGN_VARIANCE`: 5 (symmetric, clean, structured)
+* `MOTION_INTENSITY`: 3 (subtle entry/state transitions, restrained)
+* `VISUAL_DENSITY`: 5 (high-density layout suitable for grading tables and dashboards)
+
+---
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
+**Language/Version**: Node.js 18+ (Express app)
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]
+**Primary Dependencies**:
+* `express` for server-side routing
+* `ejs` for view templates
+* `mongoose` for MongoDB schema models
+* `bootstrap@5.3.2` and `bootstrap-icons@1.11.1` via CDN for CSS/icons framework
+* `xlsx` for Excel import/export logic
+* `chart.js` for dashboard metrics visualization
 
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
+**Storage**: MongoDB (local and atlas) for `StudentReport`, `ReportTemplate`, `Class`, `Student`, `User` data.
 
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
+**Testing**: Jest + Supertest (defined in `package.json`).
 
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]
+**Target Platform**: Node.js runtime, modern browsers (Chrome, Safari, Firefox).
 
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Project Type**: Server-side rendered web service with client-side SPA routing for specific views.
 
-**Project Type**: [e.g., library/cli/web-service/mobile-app/compiler/desktop-app or NEEDS CLARIFICATION]
+**Performance Goals**:
+* Page loads under 1 second.
+* Database queries indexed properly by `classId` and `mssv`.
 
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]
+**Constraints**:
+* No Tailwind CSS unless explicitly chosen; style overrides must leverage Vanilla CSS and Bootstrap utility mappings in `public/css/style.css`.
+* Responsive layout (from mobile to wide screen) for all redesigned elements.
 
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]
+**Scale/Scope**:
+* 10+ pages including Student Login, Student Dashboard, Lecturer Dashboard, Student Care panel, Template customizer, Profiles list, and Admin settings.
 
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+---
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- **MVC Architecture**: Route handles controller actions; templates are separated into EJS views and static client-side partials. (Passed)
+- **Error Handling**: Use `asyncHandler` middleware for endpoints. (Passed)
+- **Security & Validation**: CAPTCHA verification on public report submissions; validation of inputs using middleware. (Passed)
+- **Code Quality**: Keep scripts modular in `public/js/pages/`. (Passed)
+- **Server-Side Rendering**: Leverages `master.ejs` layout pattern. (Passed)
+
+---
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```text
-specs/[###-feature]/
-├── plan.md              # This file (/speckit-plan command output)
-├── research.md          # Phase 0 output (/speckit-plan command)
-├── data-model.md        # Phase 1 output (/speckit-plan command)
-├── quickstart.md        # Phase 1 output (/speckit-plan command)
-├── contracts/           # Phase 1 output (/speckit-plan command)
-└── tasks.md             # Phase 2 output (/speckit-tasks command - NOT created by /speckit-plan)
+specs/002-student-lesson-report/
+├── plan.md              # This file
+├── research.md          # Research details (design alignment & captcha service)
+├── data-model.md        # DB Schemas: StudentReport, ReportTemplate
+├── quickstart.md        # Local environment run details
+└── contracts/
+    └── api.md           # API request/response formats for reports
 ```
 
 ### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
 
 ```text
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
-
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+public/
+├── css/
+│   ├── style.css        # Refined custom styling system (redesigned)
+│   └── reliability.css  # Error and offline styling
+├── js/
+│   ├── app.js           # Core layout logic
+│   ├── router.js        # Client-side router
+│   ├── routes.js        # Updated routes (adding lesson report triggers)
+│   └── pages/
+│       ├── report-tool.js # Lesson report UI controller
+│       └── ...          # Existing pages scripts
+└── partials/
+    ├── template.html    # Report template design (redesigned)
+    └── ...              # Other partials
+views/
+├── layouts/
+│   └── master.ejs       # Global master frame (redesigned header/sidebar/mobile-nav)
+└── pages/
+    ├── dashboard.ejs    # Lecturer grade/status table (redesigned)
+    ├── student-care.ejs # Student Care tracker (redesigned)
+    └── template.ejs     # Template builder (redesigned)
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+**Structure Decision**: Continue using the single hybrid project structure. Server-rendered views and static API-driven HTML pages are updated in parallel.
 
-## Complexity Tracking
+---
 
-> **Fill ONLY if Constitution Check has violations that must be justified**
+## Verification Plan
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+### Automated Tests
+Run back-end unit tests using Jest:
+```bash
+npm test
+```
+
+### Manual Verification
+1. Access the Student Portal (`student.html` or `/grade-check` route) and verify visual consistency (colors, shadows, typography, buttons contrast).
+2. Test report submission:
+   * Verify validation for mandatory fields.
+   * Verify reCAPTCHA verification.
+   * Verify date picker and subject selection.
+3. Test Lecturer Dashboard:
+   * Navigate to `/dashboard` and check the updated stats cards.
+   * Check sticky columns during horizontal scrolling on mobile.
+4. Test Template builder:
+   * Configure questions for a class and save. Verify that the updated questions appear in the student form.
