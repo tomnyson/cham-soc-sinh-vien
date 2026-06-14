@@ -1,0 +1,68 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  lint-and-test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check code formatting
+        run: npm run format:check
+        continue-on-error: true
+
+      - name: Run linter
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Run unit tests
+        run: npm test -- --passWithNoTests
+
+  deploy:
+    name: Deploy to SSH Server
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: SSH Deploy and Restart
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT || '22' }}
+          script: |
+            # Exit immediately if a command exits with a non-zero status
+            set -e
+
+            # Navigate to application folder
+            cd ${{ secrets.SSH_APP_DIR }}
+
+            # Reset local changes and pull latest changes from repository
+            git fetch origin
+            git reset --hard origin/$(git rev-parse --abbrev-ref HEAD)
+
+            # Install production dependencies only to keep environment clean
+            npm install --production --no-audit --no-fund
+
+            # Restart the process using PM2
+            # Tries to restart by name first, falls back to starting the server
+            pm2 restart grade-checker || pm2 start server.js --name grade-checker

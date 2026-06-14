@@ -32,3 +32,8 @@ build/
 
 # Test coverage
 coverage/
+
+# Agents & Skills
+.agents/
+agents/
+skills-lock.json

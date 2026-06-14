@@ -1,5 +1,6 @@
 /**
  * Authentication Page Styles
+ * Uses design system CSS variables for dark mode support
  */
 
 .login-page {
@@ -10,9 +11,9 @@
     width: 100%;
     height: 100vh;
     background:
-        radial-gradient(1200px 600px at 15% -10%, rgba(255, 108, 0, 0.35), transparent 60%),
-        radial-gradient(900px 400px at 90% 0%, rgba(11, 47, 159, 0.3), transparent 55%),
-        linear-gradient(135deg, #f9f5f0 0%, #eaf1ff 55%, #f8fafc 100%);
+        radial-gradient(1200px 600px at 15% -10%, rgba(255, 108, 0, 0.25), transparent 60%),
+        radial-gradient(900px 400px at 90% 0%, rgba(35, 70, 160, 0.2), transparent 55%),
+        var(--edu-surface);
     justify-content: center;
     align-items: center;
     z-index: 9999;
@@ -25,9 +26,10 @@
 }
 
 .login-card {
-    background: white;
-    border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    background: var(--edu-paper);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-xl);
     padding: 40px;
     animation: fadeInUp 0.5s ease-out;
 }
@@ -57,13 +59,13 @@
 .login-header h1 {
     font-size: 24px;
     font-weight: 700;
-    color: #2d3748;
+    color: var(--gray-800);
     margin-bottom: 8px;
 }
 
 .login-header p {
     font-size: 14px;
-    color: #718096;
+    color: var(--gray-500);
     margin: 0;
 }
 
@@ -73,7 +75,7 @@
 
 .login-message {
     font-size: 16px;
-    color: #4a5568;
+    color: var(--gray-600);
     margin-bottom: 30px;
 }
 
@@ -84,27 +86,27 @@
     gap: 12px;
     width: 100%;
     padding: 14px 24px;
-    background: white;
-    border: 2px solid #e2e8f0;
-    border-radius: 10px;
+    background: var(--edu-paper);
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-md);
     font-size: 16px;
     font-weight: 600;
-    color: #2d3748;
+    color: var(--gray-800);
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-xs);
 }
 
 .btn-google-login:hover {
-    background: #f7fafc;
-    border-color: #cbd5e0;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    transform: translateY(-2px);
+    background: var(--gray-50);
+    border-color: var(--gray-300);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
 }
 
 .btn-google-login:active {
     transform: translateY(0);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-xs);
 }
 
 .btn-google-login svg {
@@ -114,12 +116,12 @@
 .login-footer {
     margin-top: 24px;
     padding-top: 24px;
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid var(--gray-200);
 }
 
 .login-footer small {
     font-size: 13px;
-    color: #718096;
+    color: var(--gray-500);
 }
 
 /* User Picture Styles */
@@ -128,7 +130,7 @@
     height: 32px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid #e2e8f0;
+    border: 2px solid var(--gray-200);
     display: none;
 }
 
