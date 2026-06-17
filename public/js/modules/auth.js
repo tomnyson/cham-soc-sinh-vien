@@ -7,7 +7,7 @@ const AuthModule = {
     currentUser: null,
     isAuthenticated: false,
     defaultBranding: {
-        logoDataUrl: 'https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png',
+        logoDataUrl: '/images/logo.svg',
         subtext: 'FPT Polytechnic'
     },
 

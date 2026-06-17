@@ -152,8 +152,8 @@ const TimerModule = {
 
         // Show browser notification
         if (Notification.permission === 'granted') {
-            const brandingLogo = String(window.__APP_BRANDING__?.logoDataUrl || 'https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png').trim()
-                || 'https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png';
+            const brandingLogo = String(window.__APP_BRANDING__?.logoDataUrl || '/images/logo.svg').trim()
+                || '/images/logo.svg';
             new Notification('⏰ Hẹn giờ hoàn thành!', {
                 body: `${timer.name} đã kết thúc!`,
                 icon: brandingLogo

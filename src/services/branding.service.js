@@ -4,7 +4,7 @@ const GLOBAL_SCOPE = 'global_share_page';
 const MAX_LOGO_BYTES = 500 * 1024;
 
 const DEFAULT_BRANDING = Object.freeze({
-    logoDataUrl: 'https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png',
+    logoDataUrl: '/images/logo.svg',
     subtext: 'FPT Polytechnic',
     primaryColor: '#FF6C00'
 });

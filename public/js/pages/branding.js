@@ -3,7 +3,7 @@ const pageEl = document.getElementById('brandingPage');
 if (pageEl) {
     const serverData = window.__INITIAL_SERVER_DATA__ || {};
     const defaults = {
-        logoDataUrl: serverData.brandingDefault?.logoDataUrl || 'https://caodang.fpt.edu.vn/wp-content/uploads/logo-3.png',
+        logoDataUrl: serverData.brandingDefault?.logoDataUrl || '/images/logo.svg',
         subtext: serverData.brandingDefault?.subtext || 'FPT Polytechnic',
         primaryColor: serverData.brandingDefault?.primaryColor || '#FF6C00'
     };
