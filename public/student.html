@@ -121,6 +121,12 @@
                         <input type="text" class="form-control" id="mssvInput" placeholder="VD: PK03230">
                     </div>
 
+                    <div class="mb-3 d-none" id="lookupCaptchaWrapper">
+                        <label class="form-label fw-bold">Xác minh:</label>
+                        <div id="lookupCaptchaWidget"></div>
+                        <div class="form-text">Vui lòng xác minh Google CAPTCHA trước khi tra cứu.</div>
+                    </div>
+
                     <button class="btn btn-primary w-100 btn-lg" onclick="checkGrades()">
                         <i class="bi bi-search"></i> Tra cứu điểm
                     </button>
@@ -327,8 +333,9 @@
         const LAST_CLASS_ID_STORAGE_KEY = 'studentCare:lastClassId';
 
         // Check if URL has params
-        window.addEventListener('DOMContentLoaded', function () {
+        window.addEventListener('DOMContentLoaded', async function () {
             loadBrandingConfig();
+            await loadLookupCaptcha();
 
             const urlParams = new URLSearchParams(window.location.search);
             const classId = urlParams.get('class');
@@ -357,7 +364,9 @@
                 if (mssv) {
                     mssvInput.value = mssv.toUpperCase();
                     saveMssv(mssvInput.value);
-                    checkGrades();
+                    if (!lookupCaptchaConfig.enabled) {
+                        checkGrades();
+                    }
                 } else {
                     mssvInput.focus();
                 }
@@ -480,15 +489,22 @@
                 return;
             }
 
+            const captchaToken = getLookupCaptchaToken();
+            if (lookupCaptchaConfig.enabled && !captchaToken) {
+                alert('Vui lòng xác minh CAPTCHA trước khi tra cứu điểm.');
+                return;
+            }
+
             try {
                 // Public grade lookup (no login required)
                 const response = await fetch(
-                    `/api/public/student-grade?classId=${encodeURIComponent(classId)}&mssv=${encodeURIComponent(mssv)}`
+                    `/api/public/student-grade?classId=${encodeURIComponent(classId)}&mssv=${encodeURIComponent(mssv)}&captchaToken=${encodeURIComponent(captchaToken)}`
                 );
                 const result = await response.json();
 
                 if (!result.success) {
                     alert(result.message || 'Không tìm thấy dữ liệu tra cứu!');
+                    resetLookupCaptcha();
                     return;
                 }
 
@@ -501,6 +517,7 @@
 
                 if (!classData || !student || !profile) {
                     alert('Dữ liệu tra cứu không hợp lệ!');
+                    resetLookupCaptcha();
                     return;
                 }
 
@@ -516,6 +533,7 @@
             } catch (error) {
                 console.error('Error:', error);
                 alert('Lỗi kết nối server: ' + error.message);
+                resetLookupCaptcha();
             }
         }
 
@@ -685,6 +703,8 @@
 
             // Clear URL params
             window.history.replaceState({}, document.title, window.location.pathname);
+
+            resetLookupCaptcha();
         }
 
         function copyShareLink() {
@@ -701,6 +721,50 @@
         let reportCaptchaConfig = { enabled: false, siteKey: '' };
         let reportCaptchaWidgetId = null;
         let reportCaptchaScriptPromise = null;
+
+        // Lookup Feature Captcha Logic
+        let lookupCaptchaConfig = { enabled: false, siteKey: '' };
+        let lookupCaptchaWidgetId = null;
+
+        async function loadLookupCaptcha() {
+            try {
+                const response = await fetch('/api/public/recaptcha-config');
+                const result = await response.json();
+
+                if (!result.success || !result.data || !result.data.enabled) {
+                    return;
+                }
+
+                lookupCaptchaConfig = result.data;
+                await ensureReportCaptchaScript();
+                renderLookupCaptcha();
+            } catch (error) {
+                console.error('Error loading lookup reCAPTCHA:', error);
+            }
+        }
+
+        function renderLookupCaptcha() {
+            const wrapper = document.getElementById('lookupCaptchaWrapper');
+            const widget = document.getElementById('lookupCaptchaWidget');
+            if (!wrapper || !widget || lookupCaptchaWidgetId !== null) return;
+
+            wrapper.classList.remove('d-none');
+            lookupCaptchaWidgetId = window.grecaptcha.render(widget, {
+                sitekey: lookupCaptchaConfig.siteKey
+            });
+        }
+
+        function getLookupCaptchaToken() {
+            if (!lookupCaptchaConfig.enabled) return '';
+            if (!window.grecaptcha || lookupCaptchaWidgetId === null) return '';
+            return window.grecaptcha.getResponse(lookupCaptchaWidgetId);
+        }
+
+        function resetLookupCaptcha() {
+            if (window.grecaptcha && lookupCaptchaWidgetId !== null) {
+                window.grecaptcha.reset(lookupCaptchaWidgetId);
+            }
+        }
 
         async function loadReportTemplate() {
             const classId = document.getElementById('classIdInput').value.trim();

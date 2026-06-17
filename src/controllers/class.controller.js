@@ -2,6 +2,7 @@ const classService = require('../services/class.service');
 const profileService = require('../services/profile.service');
 const googleSheetService = require('../services/google-sheet.service');
 const emailService = require('../services/email.service');
+const recaptchaService = require('../services/recaptcha.service');
 
 /**
  * Class Controller - Xử lý requests liên quan đến classes
@@ -637,11 +638,20 @@ const getPublicStudentGrade = async (req, res, next) => {
     try {
         const classId = String(req.query.classId || '').trim();
         const mssv = String(req.query.mssv || '').trim().toUpperCase();
+        const captchaToken = String(req.query.captchaToken || '').trim();
 
         if (!classId || !mssv) {
             return res.status(400).json({
                 success: false,
                 message: 'classId và mssv là bắt buộc'
+            });
+        }
+
+        const captchaResult = await recaptchaService.verify(captchaToken, req.ip);
+        if (!captchaResult.success) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng xác minh CAPTCHA trước khi tra cứu điểm.'
             });
         }
 
