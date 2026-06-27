@@ -7,6 +7,7 @@ const templateController = require('../controllers/template.controller');
 const profileController = require('../controllers/profile.controller');
 const classController = require('../controllers/class.controller');
 const brandingController = require('../controllers/branding.controller');
+const attendanceController = require('../controllers/attendance.controller');
 
 const dashboardRoutes = require('./dashboard.routes');
 const adminRoutes = require('./admin.routes');
@@ -115,6 +116,10 @@ router.put('/classes/:classId/students/:mssv', authenticate, requireActiveLectur
 // Class archive management (Protected)
 router.put('/classes/:classId/archive', authenticate, requireActiveLecturer, asyncHandler(classController.archiveClass));
 router.put('/classes/:classId/unarchive', authenticate, requireActiveLecturer, asyncHandler(classController.unarchiveClass));
+
+// Attendance Routes
+router.get('/classes/:classId/attendance', authenticate, requireActiveLecturer, asyncHandler(attendanceController.getSessionsByClass));
+router.post('/classes/:classId/attendance', authenticate, requireActiveLecturer, asyncHandler(attendanceController.createSession));
 
 // ===== Global Branding (Admin Only) =====
 router.get('/branding', authenticate, requireAdmin, asyncHandler(brandingController.getBranding));

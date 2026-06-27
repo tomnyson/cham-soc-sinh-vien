@@ -124,6 +124,15 @@ function normalizeClassMetadata(input = {}) {
         result.instructorCode = normalizeText(input.instructorCode);
     }
 
+    if (input.hourlyRate !== undefined) {
+        const rate = Number(input.hourlyRate);
+        if (!Number.isNaN(rate) && rate >= 0) {
+            result.hourlyRate = rate;
+        } else {
+            result.hourlyRate = 0;
+        }
+    }
+
     return result;
 }
 

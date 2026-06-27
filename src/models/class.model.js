@@ -53,6 +53,12 @@ const classSchema = new mongoose.Schema({
         trim: true
     },
 
+    // Mức giá / giờ học
+    hourlyRate: {
+        type: Number,
+        default: 0
+    },
+
     // Danh sách sinh viên
     students: {
         type: [studentSchema],
@@ -88,7 +94,7 @@ const classSchema = new mongoose.Schema({
     // Block trong kỳ (1 hoặc 2). Để trống nếu không áp dụng.
     block: {
         type: Number,
-        enum: [null, 1, 2],
+        enum: [1, 2],
         default: null
     },
 

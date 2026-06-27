@@ -2885,7 +2885,7 @@ async function saveClass() {
                 closeClassModal();
                 alert(`Đã tạo lớp "${name}" thành công!`);
             } else {
-                alert('Lỗi tạo lớp: ' + (result.message || 'Unknown error'));
+                alert('Lỗi tạo lớp: ' + (result.error || result.message || 'Unknown error'));
             }
         } else {
             // Update existing class

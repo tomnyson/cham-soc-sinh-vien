@@ -266,7 +266,7 @@ export const classManager = {
                     }
                 } else {
                     uiState.showNotification(
-                        'Lỗi tạo lớp: ' + (result.message || 'Unknown error'),
+                        'Lỗi tạo lớp: ' + (result.error || result.message || 'Unknown error'),
                         'error'
                     );
                 }
