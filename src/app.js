@@ -219,6 +219,7 @@ function serializeClass(classDoc = {}) {
     description: classDoc.description || '',
     students: normalizedStudents,
     grades: normalizedGrades,
+    hourlyRate: typeof classDoc.hourlyRate === 'number' ? classDoc.hourlyRate : 0,
     year: typeof classDoc.year === 'number' ? classDoc.year : null,
     block: classDoc.block === 1 || classDoc.block === 2 ? classDoc.block : null,
     semester: classDoc.semester || '',
