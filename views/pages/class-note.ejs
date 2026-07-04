@@ -8,7 +8,7 @@
                     </a>
                 </p>
                 <h1 class="h5 mb-1 d-flex align-items-center gap-2">
-                    <i class="bi bi-pencil-square text-primary"></i>
+                    <i class="bi bi-pencil-square class-note-title-icon"></i>
                     <span>Note bảng - <%= classData.name %></span>
                 </h1>
                 <p class="small text-muted mb-0">
@@ -30,6 +30,10 @@
                 <button class="btn btn-outline-danger btn-sm" id="noteClearBtn" type="button">
                     <i class="bi bi-trash3 me-1"></i> Xóa bảng
                 </button>
+                <button class="btn btn-outline-primary btn-sm" id="noteCopyBtn" type="button"
+                    title="Copy ảnh bảng vào clipboard để dán trực tiếp (Ctrl+V)">
+                    <i class="bi bi-clipboard me-1"></i> Copy ảnh
+                </button>
                 <button class="btn btn-outline-success btn-sm" id="noteExportBtn" type="button">
                     <i class="bi bi-download me-1"></i> Export PNG
                 </button>
@@ -43,37 +47,129 @@
     <div class="class-note-workspace">
         <aside class="class-note-toolbar card shadow-sm border-0">
             <div class="card-body">
-                <div class="class-note-tool-group">
-                    <button type="button" class="class-note-tool-btn active" id="noteToolPen" data-tool="pen">
-                        <i class="bi bi-pen"></i>
-                        <span>Pen</span>
-                    </button>
-                    <button type="button" class="class-note-tool-btn" id="noteToolEraser" data-tool="eraser">
-                        <i class="bi bi-eraser"></i>
-                        <span>Eraser</span>
-                    </button>
-                    <button type="button" class="class-note-tool-btn" id="noteToolText" data-tool="text">
-                        <i class="bi bi-type"></i>
-                        <span>Text</span>
-                    </button>
-                    <button type="button" class="class-note-tool-btn" id="noteToolPan" data-tool="pan">
-                        <i class="bi bi-arrows-move"></i>
-                        <span>Move</span>
-                    </button>
-                    <button type="button" class="class-note-tool-btn" id="noteToolRect" data-tool="rect">
-                        <i class="bi bi-square"></i>
-                        <span>Rect</span>
-                    </button>
-                    <button type="button" class="class-note-tool-btn" id="noteToolCircle" data-tool="circle">
-                        <i class="bi bi-circle"></i>
-                        <span>Circle</span>
-                    </button>
+                <div class="class-note-tool-section">
+                    <span class="class-note-tool-label">Công cụ</span>
+                    <div class="class-note-tool-group">
+                        <button type="button" class="class-note-tool-btn active" id="noteToolPen" data-tool="pen"
+                            title="Bút vẽ (P)">
+                            <i class="bi bi-pen"></i>
+                            <span>Pen</span>
+                        </button>
+                        <button type="button" class="class-note-tool-btn" id="noteToolEraser" data-tool="eraser"
+                            title="Tẩy (E)">
+                            <i class="bi bi-eraser"></i>
+                            <span>Eraser</span>
+                        </button>
+                        <button type="button" class="class-note-tool-btn" id="noteToolText" data-tool="text"
+                            title="Text (T)">
+                            <i class="bi bi-type"></i>
+                            <span>Text</span>
+                        </button>
+                        <button type="button" class="class-note-tool-btn" id="noteToolPan" data-tool="pan"
+                            title="Di chuyển / chọn (V)">
+                            <i class="bi bi-arrows-move"></i>
+                            <span>Move</span>
+                        </button>
+                        <button type="button" class="class-note-tool-btn" id="noteToolFill" data-tool="fill"
+                            title="Đổ màu (F) – click vào hình để tô màu, click vùng trống để đổi màu nền bảng">
+                            <i class="bi bi-paint-bucket"></i>
+                            <span>Fill</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="class-note-tool-section">
+                    <span class="class-note-tool-label">Hình vẽ</span>
+                    <div class="class-note-tool-group">
+                        <button type="button" class="class-note-tool-btn" id="noteToolLine" data-tool="line"
+                            title="Đường thẳng (L)">
+                            <i class="bi bi-slash-lg"></i>
+                            <span>Line</span>
+                        </button>
+                        <button type="button" class="class-note-tool-btn" id="noteToolArrow" data-tool="arrow"
+                            title="Mũi tên (A)">
+                            <i class="bi bi-arrow-up-right"></i>
+                            <span>Arrow</span>
+                        </button>
+                        <button type="button" class="class-note-tool-btn" id="noteToolRect" data-tool="rect"
+                            title="Hình chữ nhật (R) – khung hệ thống trong use case">
+                            <i class="bi bi-square"></i>
+                            <span>Rect</span>
+                        </button>
+                        <button type="button" class="class-note-tool-btn" id="noteToolCircle" data-tool="circle"
+                            title="Hình tròn / elip (C) – use case trong sơ đồ">
+                            <i class="bi bi-circle"></i>
+                            <span>Circle</span>
+                        </button>
+                        <button type="button" class="class-note-tool-btn" id="noteToolTriangle" data-tool="triangle"
+                            title="Tam giác">
+                            <i class="bi bi-triangle"></i>
+                            <span>Triangle</span>
+                        </button>
+                        <button type="button" class="class-note-tool-btn" id="noteToolDiamond" data-tool="diamond"
+                            title="Hình thoi">
+                            <i class="bi bi-diamond"></i>
+                            <span>Diamond</span>
+                        </button>
+                        <button type="button" class="class-note-tool-btn" id="noteToolStar" data-tool="star"
+                            title="Ngôi sao">
+                            <i class="bi bi-star"></i>
+                            <span>Star</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="class-note-tool-section">
+                    <span class="class-note-tool-label">Use case</span>
+                    <div class="class-note-tool-group">
+                        <button type="button" class="class-note-tool-btn" id="noteToolActor" data-tool="actor"
+                            title="Actor – người dùng (U). Kết hợp Circle làm use case, Rect làm khung hệ thống, Line/Arrow làm liên kết">
+                            <i class="bi bi-person"></i>
+                            <span>Actor</span>
+                        </button>
+                        <button type="button" class="class-note-tool-btn" id="noteToolDashArrow" data-tool="dasharrow"
+                            title="Mũi tên nét đứt (D) – dùng cho «include» / «extend»">
+                            <i class="bi bi-arrow-up-right-circle"></i>
+                            <span>Dashed</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="class-note-control-group">
                     <label for="noteColorInput" class="form-label small text-muted mb-1">Màu</label>
+                    <div class="class-note-swatches">
+                        <button type="button" class="class-note-swatch" data-color="#111827"
+                            style="--swatch-color:#111827" title="Đen"></button>
+                        <button type="button" class="class-note-swatch" data-color="#6b7280"
+                            style="--swatch-color:#6b7280" title="Xám"></button>
+                        <button type="button" class="class-note-swatch" data-color="#ffffff"
+                            style="--swatch-color:#ffffff" title="Trắng"></button>
+                        <button type="button" class="class-note-swatch" data-color="#ef4444"
+                            style="--swatch-color:#ef4444" title="Đỏ"></button>
+                        <button type="button" class="class-note-swatch" data-color="#f97316"
+                            style="--swatch-color:#f97316" title="Cam"></button>
+                        <button type="button" class="class-note-swatch" data-color="#facc15"
+                            style="--swatch-color:#facc15" title="Vàng"></button>
+                        <button type="button" class="class-note-swatch" data-color="#16a34a"
+                            style="--swatch-color:#16a34a" title="Xanh lá"></button>
+                        <button type="button" class="class-note-swatch" data-color="#14b8a6"
+                            style="--swatch-color:#14b8a6" title="Xanh ngọc"></button>
+                        <button type="button" class="class-note-swatch" data-color="#2f6fed"
+                            style="--swatch-color:#2f6fed" title="Xanh dương"></button>
+                        <button type="button" class="class-note-swatch" data-color="#0ea5e9"
+                            style="--swatch-color:#0ea5e9" title="Xanh da trời"></button>
+                        <button type="button" class="class-note-swatch" data-color="#9333ea"
+                            style="--swatch-color:#9333ea" title="Tím"></button>
+                        <button type="button" class="class-note-swatch" data-color="#ec4899"
+                            style="--swatch-color:#ec4899" title="Hồng"></button>
+                    </div>
                     <input type="color" id="noteColorInput" class="form-control form-control-color" value="#2f6fed"
-                        title="Chọn màu vẽ">
+                        title="Chọn màu tùy ý (màu đã chọn sẽ lưu vào Màu gần đây)">
+                </div>
+
+                <div class="class-note-control-group d-none" id="noteRecentGroup">
+                    <label class="form-label small text-muted mb-1">Màu gần đây</label>
+                    <div class="class-note-swatches" id="noteRecentSwatches"></div>
                 </div>
 
                 <div class="class-note-control-group">
@@ -83,6 +179,16 @@
                     </label>
                     <input type="range" id="noteSizeInput" class="form-range" min="1" max="24" step="1" value="4">
                 </div>
+
+                <div class="class-note-control-group">
+                    <label for="noteFontSizeInput"
+                        class="form-label small text-muted mb-1 d-flex justify-content-between">
+                        <span>Cỡ chữ</span>
+                        <span id="noteFontSizeValue">22</span>
+                    </label>
+                    <input type="range" id="noteFontSizeInput" class="form-range" min="10" max="120" step="1"
+                        value="22" title="Cỡ chữ cho công cụ Text (áp dụng cả với text đang chọn)">
+                </div>
             </div>
         </aside>
 
@@ -91,7 +197,7 @@
                 <canvas id="noteCanvas"></canvas>
             </div>
             <div class="class-note-status" id="noteStatus">
-                Sẵn sàng vẽ. Dữ liệu note lưu cục bộ theo lớp trong trình duyệt này.
+                Sẵn sàng vẽ. Dữ liệu note lưu cục bộ theo lớp trong trình duyệt này. Phím tắt: P (bút), E (tẩy), T (text), V (di chuyển), F (đổ màu), L, A, D, R, C (hình), U (actor).
             </div>
         </section>
     </div>

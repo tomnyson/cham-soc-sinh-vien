@@ -3113,8 +3113,3 @@ function updateGenerateButtonState() {
 
     btn.disabled = !(hasProfile && hasStudents);
 }
-
-// ========================================
-// CLASS DETAIL VIEW - Now handled by ClassesModule
-// ========================================
-// All class detail functions have been moved to modules/classes.js

@@ -19,7 +19,7 @@
             || (pageEl && pageEl.getAttribute('data-class-id'))
             || '';
 
-        console.log('[report-tool] init, classId =', classId);
+        console.debug('[report-tool] init, classId =', classId);
 
         if (!classId) {
             console.warn('[report-tool] No classId found, aborting init.');
@@ -30,7 +30,7 @@
         const reportToolModalEl = document.getElementById('reportToolModal');
         if (reportToolModalEl) {
             reportToolModalEl.addEventListener('shown.bs.modal', onReportModalOpen);
-            console.log('[report-tool] Modal listener attached (shown.bs.modal).');
+            console.debug('[report-tool] Modal listener attached (shown.bs.modal).');
         } else {
             console.warn('[report-tool] #reportToolModal not found in DOM.');
         }
@@ -52,7 +52,7 @@
     }
 
     async function onReportModalOpen() {
-        console.log('[report-tool] Modal opened, loading data...');
+        console.debug('[report-tool] Modal opened, loading data...');
         try {
             await loadReportTemplate();
             await loadReports();
@@ -80,12 +80,12 @@
 
         try {
             const url = `/api/reports?classId=${encodeURIComponent(classId)}&date=${encodeURIComponent(date)}`;
-            console.log('[report-tool] GET', url);
+            console.debug('[report-tool] GET', url);
 
             const response = await fetch(url, { credentials: 'include' });
             const result = await response.json();
 
-            console.log('[report-tool] reports response:', result);
+            console.debug('[report-tool] reports response:', result);
 
             if (result.success) {
                 renderReports(result.data);
@@ -155,12 +155,12 @@
 
         try {
             const url = `/api/report-template?classId=${encodeURIComponent(classId)}`;
-            console.log('[report-tool] GET', url);
+            console.debug('[report-tool] GET', url);
 
             const response = await fetch(url, { credentials: 'include' });
             const result = await response.json();
 
-            console.log('[report-tool] template response:', result);
+            console.debug('[report-tool] template response:', result);
 
             if (result.success && result.data && result.data.fields) {
                 reportFields = result.data.fields;
@@ -283,7 +283,7 @@
             });
 
             const result = await response.json();
-            console.log('[report-tool] save template response:', result);
+            console.debug('[report-tool] save template response:', result);
 
             if (result.success) {
                 showToast('Lưu cấu hình thành công!', 'success');

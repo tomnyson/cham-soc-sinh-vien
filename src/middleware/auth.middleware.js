@@ -196,8 +196,8 @@ exports.optionalAuth = async (req, res, next) => {
             }
         }
     } catch (error) {
-        // Silently fail for optional auth
-        console.log('Optional auth failed:', error.message);
+        // Optional auth: request proceeds unauthenticated, but keep a trace for ops.
+        console.warn('Optional auth failed:', error.message);
     }
 
     next();

@@ -7,6 +7,11 @@
     <title>
         <%= title || 'FPT Polytechnic - Hệ thống quản lý điểm' %>
     </title>
+    <meta name="description" content="Hệ thống quản lý điểm và chăm sóc sinh viên FPT Polytechnic: tra cứu điểm, quản lý lớp, note bảng và trình chiếu cho giảng viên.">
+    <meta name="theme-color" content="#f26a21">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="<%= title || 'FPT Polytechnic - Hệ thống quản lý điểm' %>">
+    <meta property="og:description" content="Hệ thống quản lý điểm và chăm sóc sinh viên FPT Polytechnic.">
 
     <script>
         (function () {
@@ -31,6 +36,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
     <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap"
         rel="stylesheet">
 
@@ -42,7 +49,8 @@
     <link rel="stylesheet" href="<%- assetPath('/css/style.css') %>">
     <link rel="stylesheet" href="<%- assetPath('/css/reliability.css') %>">
     <link rel="stylesheet" href="<%- assetPath('/css/auth.css') %>">
-    <link rel="icon" href="data:,">
+    <link rel="icon"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23f26a21'/%3E%3Cpath d='M20 40.5 38.6 21.9a4.4 4.4 0 0 1 6.2 0l1.3 1.3a4.4 4.4 0 0 1 0 6.2L27.5 48H20z' fill='%23fff'/%3E%3Crect x='18' y='51' width='28' height='4' rx='2' fill='%23ffd9c2'/%3E%3C/svg%3E">
 
     <%- include('../partials/head-extra') %>
 </head>

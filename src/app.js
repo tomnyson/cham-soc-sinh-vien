@@ -92,7 +92,6 @@ async function renderLayoutPage(
     initialData = null,
   } = {}
 ) {
-  console.log(`Rendering page: ${viewName} | Route: ${currentRoute}`);
   const safeInitialData = initialData ? { ...initialData } : null;
   const userData = req?.user
     ? {

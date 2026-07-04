@@ -32,6 +32,25 @@
     box-shadow: var(--shadow-xl);
     padding: 40px;
     animation: fadeInUp 0.5s ease-out;
+    position: relative;
+    overflow: hidden;
+}
+
+/* FPT tri-color identity strip, same as the app header. */
+.login-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg,
+            var(--fpt-orange) 0%,
+            var(--fpt-orange) 46%,
+            var(--fpt-blue) 46%,
+            var(--fpt-blue) 73%,
+            var(--fpt-green) 73%,
+            var(--fpt-green) 100%);
 }
 
 @keyframes fadeInUp {
