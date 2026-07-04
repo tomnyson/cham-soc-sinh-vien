@@ -193,6 +193,8 @@ const elements = {
     googleSheetTabInput: document.getElementById('googleSheetTabInput'),
     confirmSyncGoogleSheetBtn: document.getElementById('confirmSyncGoogleSheetBtn'),
     googleSheetSyncStatus: document.getElementById('googleSheetSyncStatus'),
+    googleServiceAccountEmail: document.getElementById('googleServiceAccountEmail'),
+    copyServiceAccountEmailBtn: document.getElementById('copyServiceAccountEmailBtn'),
     // Lucky wheel elements
     wheelCanvas: document.getElementById('wheelCanvas'),
     spinWheelBtn: document.getElementById('spinWheelBtn'),
@@ -480,6 +482,9 @@ function bindEvents() {
     }
     if (elements.confirmSyncGoogleSheetBtn) {
         elements.confirmSyncGoogleSheetBtn.addEventListener('click', syncGradesToGoogleSheet);
+    }
+    if (elements.copyServiceAccountEmailBtn) {
+        elements.copyServiceAccountEmailBtn.addEventListener('click', copyServiceAccountEmail);
     }
 
     // Lucky wheel bindings
@@ -2084,6 +2089,29 @@ function prefillGoogleSheetSyncForm() {
     setGoogleSheetSyncStatus('');
 }
 
+async function copyServiceAccountEmail() {
+    const email = String(elements.googleServiceAccountEmail?.textContent || '').trim();
+    if (!email) return;
+
+    const button = elements.copyServiceAccountEmailBtn;
+    try {
+        await navigator.clipboard.writeText(email);
+        if (button) {
+            button.innerHTML = '<i class="bi bi-check-lg text-success"></i>';
+            setTimeout(() => {
+                button.innerHTML = '<i class="bi bi-clipboard"></i>';
+            }, 1500);
+        }
+    } catch (error) {
+        // Clipboard blocked (e.g. non-HTTPS): fall back to selecting the text for manual copy.
+        const range = document.createRange();
+        range.selectNodeContents(elements.googleServiceAccountEmail);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
+}
+
 async function syncGradesToGoogleSheet() {
     try {
         if (!classData.classId) {
@@ -3297,6 +3325,8 @@ async function handleMultiQuizImport(event) {
         let totalSkipped = 0;
         const processedColumns = [];
         const notFoundMssvs = new Set();
+        const sheetWarnings = [];
+        const studentLookup = buildStudentMssvLookup();
 
         for (const [sheetName, columnName] of Object.entries(sheetToColumnMap)) {
             const sheet = workbook.Sheets[sheetName];
@@ -3304,75 +3334,73 @@ async function handleMultiQuizImport(event) {
 
             if (rows.length < 2) continue;
 
-            // Find MSSV column index (look for "Đăng nhập" or "MSSV")
             const headers = rows[0].map(h => (h || '').toString().toLowerCase().trim());
-            let mssvIndex = headers.findIndex(h =>
-                h.includes('đăng nhập') || h.includes('login') || h.includes('mssv') || h.includes('masv')
-            );
+            let mssvIndex = detectMssvColumnIndex(headers);
+            let scoreIndex = detectScoreColumnIndex(headers);
 
-            // If not found, try column index 1 (common position)
+            // Positional fallback for headerless exports — flagged so the user can double-check.
             if (mssvIndex === -1 && rows[0].length > 1) {
                 mssvIndex = 1;
+                sheetWarnings.push(`${sheetName}: không thấy cột MSSV/Đăng nhập, dùng tạm cột thứ 2`);
             }
-
-            // Find score column index (look for "Đạt điểm" or score-related)
-            let scoreIndex = headers.findIndex(h =>
-                h.includes('đạt điểm') || h.includes('điểm') || h.includes('score') || h.includes('grade')
-            );
-
-            // If not found, try column index 2 (common position)
             if (scoreIndex === -1 && rows[0].length > 2) {
                 scoreIndex = 2;
+                sheetWarnings.push(`${sheetName}: không thấy cột Đạt điểm, dùng tạm cột thứ 3`);
             }
 
-            if (mssvIndex === -1 || scoreIndex === -1) continue;
+            if (mssvIndex === -1 || scoreIndex === -1) {
+                sheetWarnings.push(`${sheetName}: thiếu cột MSSV hoặc cột điểm, đã bỏ qua sheet`);
+                continue;
+            }
 
-            let sheetUpdated = 0;
             let sheetSkipped = 0;
 
-            // Process data rows
+            // Each quiz attempt is one row, so a student can appear many times.
+            // Keep the BEST score per student instead of letting the last row win.
+            const bestScoreByMssv = new Map();
+
             rows.slice(1).forEach(row => {
                 if (!row || row.length === 0) return;
 
                 const rawMssv = row[mssvIndex];
-                const rawScore = row[scoreIndex];
-
-                if (!rawMssv) {
+                if (rawMssv === undefined || rawMssv === null || String(rawMssv).trim() === '') {
                     sheetSkipped++;
                     return;
                 }
 
-                const mssv = rawMssv.toString().trim().toUpperCase();
-                const score = parseFloat(rawScore);
-
-                if (Number.isNaN(score)) {
+                const score = parseScoreValue(row[scoreIndex]);
+                if (score === null) {
                     sheetSkipped++;
                     return;
                 }
 
-                // Find student
-                const student = classData.students.find(s =>
-                    (s.mssv || '').toString().trim().toUpperCase() === mssv
-                );
-
+                const student = findStudentByMssv(studentLookup, rawMssv);
                 if (!student) {
-                    notFoundMssvs.add(mssv);
+                    notFoundMssvs.add(String(rawMssv).trim().toUpperCase());
                     sheetSkipped++;
                     return;
                 }
 
-                // Apply score (clamp to 0-10)
                 const clampedScore = Math.min(Math.max(score, 0), 10);
-                ensureStudentGrade(student.mssv);
+                const existingBest = bestScoreByMssv.get(student.mssv);
+                if (existingBest === undefined || clampedScore > existingBest) {
+                    bestScoreByMssv.set(student.mssv, clampedScore);
+                }
+            });
 
-                const onlyEmpty = elements.importOnlyEmpty?.checked;
-                const existing = state.grades[student.mssv][columnName];
+            let sheetUpdated = 0;
+            const onlyEmpty = elements.importOnlyEmpty?.checked;
+
+            bestScoreByMssv.forEach((score, mssv) => {
+                ensureStudentGrade(mssv);
+
+                const existing = state.grades[mssv][columnName];
                 if (onlyEmpty && existing !== undefined && existing !== null && existing !== '') {
                     sheetSkipped++;
                     return;
                 }
 
-                state.grades[student.mssv][columnName] = clampedScore;
+                state.grades[mssv][columnName] = score;
                 sheetUpdated++;
             });
 
@@ -3400,7 +3428,10 @@ async function handleMultiQuizImport(event) {
         }
         if (notFoundMssvs.size > 0) {
             const notFoundList = Array.from(notFoundMssvs).slice(0, 5);
-            statusMsg += ` | MSSV không tìm thấy: ${notFoundList.join(', ')}${notFoundMssvs.size > 5 ? '...' : ''}`;
+            statusMsg += ` | ${notFoundMssvs.size} MSSV không tìm thấy: ${notFoundList.join(', ')}${notFoundMssvs.size > 5 ? '...' : ''}`;
+        }
+        if (sheetWarnings.length > 0) {
+            statusMsg += ` | Lưu ý: ${sheetWarnings.join('; ')}`;
         }
         setImportStatus(statusMsg, 'success');
 
@@ -3413,6 +3444,108 @@ async function handleMultiQuizImport(event) {
         console.error('Multi-quiz import error:', error);
         setImportStatus(`❌ Lỗi nhập file: ${error.message}`, 'error');
     }
+}
+
+/**
+ * Parse a score cell into a number, or null when the cell is not a clean number.
+ * Handles Vietnamese decimal commas ("8,5") — parseFloat would silently
+ * truncate them to 8 — and rejects partially-numeric text outright.
+ */
+function parseScoreValue(rawScore) {
+    if (typeof rawScore === 'number') {
+        return Number.isFinite(rawScore) ? rawScore : null;
+    }
+
+    const text = String(rawScore ?? '').trim();
+    if (!text) return null;
+
+    const normalized = text.replace(/\s+/g, '').replace(/,/g, '.');
+    if (!/^-?\d+(\.\d+)?$/.test(normalized)) return null;
+
+    const value = Number.parseFloat(normalized);
+    return Number.isFinite(value) ? value : null;
+}
+
+/**
+ * Normalize an MSSV for matching: trim, uppercase, and reduce email logins
+ * to their local part ("ps12345@fpt.edu.vn" -> "PS12345").
+ */
+function normalizeMssvKey(value) {
+    let text = String(value ?? '').trim();
+    if (!text) return '';
+
+    const atIndex = text.indexOf('@');
+    if (atIndex > 0) {
+        text = text.slice(0, atIndex);
+    }
+
+    return text.toUpperCase();
+}
+
+function buildStudentMssvLookup() {
+    const lookup = new Map();
+
+    (classData.students || []).forEach(student => {
+        const key = normalizeMssvKey(student.mssv);
+        if (!key) return;
+
+        lookup.set(key, student);
+        // Numeric MSSV loses leading zeros when Excel stores it as a number.
+        if (/^\d+$/.test(key)) {
+            lookup.set(key.replace(/^0+/, ''), student);
+        }
+    });
+
+    return lookup;
+}
+
+function findStudentByMssv(lookup, rawMssv) {
+    const key = normalizeMssvKey(rawMssv);
+    if (!key) return null;
+
+    const direct = lookup.get(key);
+    if (direct) return direct;
+
+    if (/^\d+$/.test(key)) {
+        return lookup.get(key.replace(/^0+/, '')) || null;
+    }
+
+    return null;
+}
+
+/**
+ * Column detection via ordered predicates, most specific first, so a generic
+ * header ("Thang điểm", "Điểm tối đa") can never shadow the real score
+ * column ("Đạt điểm").
+ */
+function detectMssvColumnIndex(headers) {
+    const predicates = [
+        h => h.includes('đăng nhập'),
+        h => h.includes('login') || h.includes('username'),
+        h => h.includes('mssv') || h.includes('masv') || h.includes('mã sv') || h.includes('ma sv')
+    ];
+
+    for (const predicate of predicates) {
+        const index = headers.findIndex(predicate);
+        if (index !== -1) return index;
+    }
+    return -1;
+}
+
+function detectScoreColumnIndex(headers) {
+    const predicates = [
+        h => h === 'đạt điểm',
+        h => h.includes('đạt điểm'),
+        h => h.includes('score'),
+        h => h.includes('grade'),
+        h => h.includes('điểm') && !h.includes('thang') && !h.includes('tối đa') && !h.includes('hệ số')
+    ];
+
+    for (const predicate of predicates) {
+        const index = headers.findIndex(predicate);
+        if (index !== -1) return index;
+    }
+    return -1;
 }
 
 /**

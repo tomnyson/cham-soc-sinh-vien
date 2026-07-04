@@ -229,6 +229,19 @@ async function syncGradesToGoogleSheet({ spreadsheetId, sheetName = 'BangDiem', 
     };
 }
 
+/**
+ * Service account email for UI hints (users must share their sheet with it).
+ * Returns '' when the service account is not configured instead of throwing.
+ */
+function getServiceAccountEmail() {
+    try {
+        return getServiceAccountCredentials().clientEmail || '';
+    } catch (error) {
+        return '';
+    }
+}
+
 module.exports = {
-    syncGradesToGoogleSheet
+    syncGradesToGoogleSheet,
+    getServiceAccountEmail
 };

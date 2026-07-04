@@ -744,6 +744,29 @@
                     <input type="text" class="form-control" id="googleSheetTabInput" value="BangDiem"
                         placeholder="BangDiem">
                 </div>
+                <% if (typeof googleServiceAccountEmail !== 'undefined' && googleServiceAccountEmail) { %>
+                <div class="alert alert-warning py-2 small mb-2">
+                    <div class="fw-semibold mb-1">
+                        <i class="bi bi-share me-1"></i> Bước bắt buộc trước khi sync
+                    </div>
+                    Mở Google Sheet → bấm <strong>Chia sẻ (Share)</strong> → thêm email dưới đây với quyền
+                    <strong>Người chỉnh sửa (Editor)</strong>. Nếu chưa chia sẻ, sync sẽ báo lỗi không có quyền truy cập.
+                    <div class="d-flex align-items-center gap-2 mt-2">
+                        <code id="googleServiceAccountEmail"
+                            class="text-break user-select-all flex-grow-1"><%= googleServiceAccountEmail %></code>
+                        <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2"
+                            id="copyServiceAccountEmailBtn" title="Copy email">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                </div>
+                <% } else { %>
+                <div class="alert alert-warning py-2 small mb-2">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    Server chưa cấu hình Google Service Account (GOOGLE_SERVICE_ACCOUNT_EMAIL). Liên hệ quản trị viên để
+                    bật tính năng sync.
+                </div>
+                <% } %>
                 <div class="alert alert-info py-2 small mb-2">
                     Đồng bộ toàn bộ bảng điểm hiện tại của lớp (gồm điểm thành phần, tổng, trạng thái, bonus, ghi chú).
                 </div>

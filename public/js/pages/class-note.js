@@ -42,6 +42,11 @@ const FONT_SIZE_MAX = 120;
 const FONT_SIZE_DEFAULT = 22;
 const RECENT_COLOR_LIMIT = 6;
 
+// Pasted images are downscaled/re-encoded to keep localStorage under quota.
+const IMAGE_MAX_DIMENSION = 1280;
+const IMAGE_JPEG_QUALITY = 0.85;
+const IMAGE_DATAURL_SOFT_LIMIT = 1500000;
+
 const pageEl = document.getElementById('classNotePage');
 
 if (pageEl) {
@@ -63,6 +68,7 @@ if (pageEl) {
         redoBtn: document.getElementById('noteRedoBtn'),
         clearBtn: document.getElementById('noteClearBtn'),
         copyBtn: document.getElementById('noteCopyBtn'),
+        pasteBtn: document.getElementById('notePasteBtn'),
         exportBtn: document.getElementById('noteExportBtn'),
         presentBtn: document.getElementById('notePresentBtn'),
         toolButtons: Array.from(document.querySelectorAll('.class-note-tool-btn')),
@@ -146,6 +152,9 @@ if (pageEl) {
 
     // Groups repeated font-size slider drags into a single undo entry per interaction.
     let fontSizeHistoryCommitted = false;
+
+    // Decoded <img> elements per image object id, so render() never re-decodes data URLs.
+    const imageCache = new Map();
 
     // Canvas ctx.font cannot resolve CSS variables, so resolve the body font once.
     const canvasFontFamily = (() => {
@@ -238,6 +247,9 @@ if (pageEl) {
         if (elements.copyBtn) {
             elements.copyBtn.addEventListener('click', copyPng);
         }
+        if (elements.pasteBtn) {
+            elements.pasteBtn.addEventListener('click', pasteImageFromClipboard);
+        }
         if (elements.exportBtn) {
             elements.exportBtn.addEventListener('click', exportPng);
         }
@@ -256,6 +268,12 @@ if (pageEl) {
         window.addEventListener('resize', handleViewportResize);
         window.addEventListener('beforeunload', flushAutoSave);
         document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+        document.addEventListener('paste', handlePaste);
+        if (elements.canvasWrap) {
+            elements.canvasWrap.addEventListener('dragover', handleImageDragOver);
+            elements.canvasWrap.addEventListener('drop', handleImageDrop);
+        }
     }
 
     function handleViewportResize() {
@@ -551,6 +569,8 @@ if (pageEl) {
             scheduleSave();
             if (objectItem && objectItem.type === 'shape') {
                 setStatus('Da di chuyen shape.', 'success');
+            } else if (objectItem && objectItem.type === 'image') {
+                setStatus('Da di chuyen anh.', 'success');
             } else {
                 setStatus('Da di chuyen noi dung text.', 'success');
             }
@@ -759,6 +779,11 @@ if (pageEl) {
             return;
         }
 
+        if (hitObject.type === 'image') {
+            setStatus('Khong the do mau vao anh.', 'info');
+            return;
+        }
+
         // Text, lines and actor have no fillable area: recolor their stroke instead.
         const usesStrokeColor = hitObject.type === 'text' ||
             LINE_SHAPES.includes(hitObject.shape) ||
@@ -786,6 +811,145 @@ if (pageEl) {
         updateUndoRedoButtons();
         render();
         scheduleSave();
+    }
+
+    async function pasteImageFromClipboard() {
+        if (!navigator.clipboard || !navigator.clipboard.read) {
+            setStatus('Trinh duyet khong ho tro doc clipboard. Hay bam Ctrl+V hoac keo tha file anh.', 'warning');
+            return;
+        }
+
+        try {
+            const clipboardItems = await navigator.clipboard.read();
+            for (const clipboardItem of clipboardItems) {
+                const imageType = (clipboardItem.types || []).find((type) => type.startsWith('image/'));
+                if (imageType) {
+                    const blob = await clipboardItem.getType(imageType);
+                    insertImageFromBlob(blob, null);
+                    return;
+                }
+            }
+            setStatus('Clipboard khong co anh. Copy anh truoc roi bam lai "Dan anh".', 'info');
+        } catch (error) {
+            setStatus('Khong doc duoc clipboard (quyen bi chan?). Hay bam Ctrl+V hoac keo tha file anh.', 'warning');
+        }
+    }
+
+    function handlePaste(event) {
+        if (state.textInputSession.active || isEditableElement(event.target)) return;
+
+        const items = event.clipboardData ? event.clipboardData.items : null;
+        if (!items) return;
+
+        for (const item of items) {
+            if (item.kind === 'file' && String(item.type || '').startsWith('image/')) {
+                event.preventDefault();
+                const file = item.getAsFile();
+                if (file) {
+                    insertImageFromBlob(file, null);
+                }
+                return;
+            }
+        }
+    }
+
+    function handleImageDragOver(event) {
+        const types = Array.from((event.dataTransfer && event.dataTransfer.types) || []);
+        if (types.includes('Files')) {
+            event.preventDefault();
+        }
+    }
+
+    function handleImageDrop(event) {
+        const files = Array.from((event.dataTransfer && event.dataTransfer.files) || []);
+        const imageFile = files.find((file) => String(file.type || '').startsWith('image/'));
+        if (!imageFile) return;
+
+        event.preventDefault();
+        const dropPoint = getCanvasPoint(event, { allowOutside: true });
+        insertImageFromBlob(imageFile, dropPoint);
+    }
+
+    function insertImageFromBlob(blob, canvasPoint) {
+        setStatus('Dang xu ly anh...', 'info');
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const sourceImage = new Image();
+            sourceImage.onload = () => {
+                try {
+                    const src = buildBoardImageSrc(sourceImage, blob.type);
+                    placeImageObject(src, sourceImage.naturalWidth || 1, sourceImage.naturalHeight || 1, canvasPoint);
+                } catch (error) {
+                    setStatus('Khong the xu ly anh nay.', 'error');
+                }
+            };
+            sourceImage.onerror = () => setStatus('File anh khong hop le.', 'error');
+            sourceImage.src = String(reader.result || '');
+        };
+        reader.onerror = () => setStatus('Khong doc duoc file anh.', 'error');
+        reader.readAsDataURL(blob);
+    }
+
+    function buildBoardImageSrc(sourceImage, mimeType) {
+        const naturalWidth = sourceImage.naturalWidth || 1;
+        const naturalHeight = sourceImage.naturalHeight || 1;
+        const scale = Math.min(1, IMAGE_MAX_DIMENSION / Math.max(naturalWidth, naturalHeight));
+
+        if (scale >= 1 && sourceImage.src.length <= IMAGE_DATAURL_SOFT_LIMIT) {
+            return sourceImage.src;
+        }
+
+        const offscreen = document.createElement('canvas');
+        offscreen.width = Math.max(1, Math.round(naturalWidth * scale));
+        offscreen.height = Math.max(1, Math.round(naturalHeight * scale));
+        const offscreenCtx = offscreen.getContext('2d');
+        if (!offscreenCtx) {
+            return sourceImage.src;
+        }
+        offscreenCtx.drawImage(sourceImage, 0, 0, offscreen.width, offscreen.height);
+
+        let output = offscreen.toDataURL('image/png');
+        if (mimeType === 'image/jpeg' || output.length > IMAGE_DATAURL_SOFT_LIMIT) {
+            output = offscreen.toDataURL('image/jpeg', IMAGE_JPEG_QUALITY);
+        }
+        return output;
+    }
+
+    function placeImageObject(src, naturalWidth, naturalHeight, canvasPoint) {
+        const canvasWidth = state.canvasSize.width || 800;
+        const canvasHeight = state.canvasSize.height || 600;
+        const displayScale = Math.min(
+            1,
+            (canvasWidth * 0.6) / naturalWidth,
+            (canvasHeight * 0.6) / naturalHeight
+        );
+        const width = Math.max(24, Math.round(naturalWidth * displayScale));
+        const height = Math.max(24, Math.round(naturalHeight * displayScale));
+
+        const anchorPoint = canvasPoint || { x: canvasWidth / 2, y: canvasHeight / 2 };
+        const worldCenter = screenToWorld(anchorPoint);
+
+        commitHistorySnapshot();
+
+        const newImage = {
+            id: createObjectId(),
+            type: 'image',
+            x: roundTo(worldCenter.x - (width / 2), 2),
+            y: roundTo(worldCenter.y - (height / 2), 2),
+            width,
+            height,
+            src
+        };
+
+        state.objects.push(newImage);
+        state.selectedObjectId = newImage.id;
+        setTool('pan');
+
+        updateUndoRedoButtons();
+        render();
+        scheduleSave();
+        setStatus('Da chen anh vao bang. Keo de di chuyen, Delete de xoa.', 'success');
     }
 
     function placeText(canvasPoint) {
@@ -1212,9 +1376,44 @@ if (pageEl) {
             drawText(ctx, objectItem);
             return;
         }
+        if (objectItem.type === 'image') {
+            drawImageObject(ctx, objectItem);
+            return;
+        }
         if (objectItem.type === 'shape') {
             drawShape(ctx, objectItem, false);
         }
+    }
+
+    function drawImageObject(ctx, imageObject) {
+        const entry = getImageCacheEntry(imageObject);
+        if (!entry || !entry.loaded) return;
+
+        const topLeft = worldToScreen({
+            x: Number(imageObject.x) || 0,
+            y: Number(imageObject.y) || 0
+        });
+        const width = Math.max(1, Number(imageObject.width) || 1);
+        const height = Math.max(1, Number(imageObject.height) || 1);
+
+        ctx.drawImage(entry.img, topLeft.x, topLeft.y, width, height);
+    }
+
+    function getImageCacheEntry(imageObject) {
+        if (!imageObject || !imageObject.id || typeof imageObject.src !== 'string') return null;
+
+        let entry = imageCache.get(imageObject.id);
+        if (!entry) {
+            const img = new Image();
+            entry = { img, loaded: false };
+            img.onload = () => {
+                entry.loaded = true;
+                render();
+            };
+            imageCache.set(imageObject.id, entry);
+            img.src = imageObject.src;
+        }
+        return entry;
     }
 
     function drawPath(ctx, pathObject, isPreview) {
@@ -1457,6 +1656,8 @@ if (pageEl) {
             bounds = getTextBounds(objectItem, { padding: 8 });
         } else if (objectItem.type === 'shape') {
             bounds = getShapeBounds(objectItem, { padding: 6 });
+        } else if (objectItem.type === 'image') {
+            bounds = getImageBounds(objectItem, { padding: 4 });
         }
 
         if (!bounds) return;
@@ -1903,6 +2104,14 @@ if (pageEl) {
                 continue;
             }
 
+            if (objectItem.type === 'image') {
+                const imageBounds = getImageBounds(objectItem, { padding: 4 });
+                if (imageBounds && isPointInsideBounds(worldPoint, imageBounds)) {
+                    return objectItem;
+                }
+                continue;
+            }
+
             if (objectItem.type === 'shape') {
                 if (isPointInsideShape(worldPoint, objectItem, 8)) {
                     return objectItem;
@@ -1911,6 +2120,23 @@ if (pageEl) {
         }
 
         return null;
+    }
+
+    function getImageBounds(imageObject, options = {}) {
+        if (!imageObject || imageObject.type !== 'image') return null;
+
+        const x = Number(imageObject.x) || 0;
+        const y = Number(imageObject.y) || 0;
+        const width = Math.max(0, Number(imageObject.width) || 0);
+        const height = Math.max(0, Number(imageObject.height) || 0);
+        const padding = clampNumber(Number(options.padding), 0, 100, 0);
+
+        return {
+            left: x - padding,
+            top: y - padding,
+            width: width + (padding * 2),
+            height: height + (padding * 2)
+        };
     }
 
     function isPointInsideShape(worldPoint, shapeObject, padding = 0) {
@@ -2086,7 +2312,10 @@ if (pageEl) {
     }
 
     function isMovableObject(objectItem) {
-        return Boolean(objectItem && (objectItem.type === 'text' || objectItem.type === 'shape'));
+        return Boolean(
+            objectItem &&
+            (objectItem.type === 'text' || objectItem.type === 'shape' || objectItem.type === 'image')
+        );
     }
 
     function isValidObject(objectItem) {
@@ -2100,6 +2329,15 @@ if (pageEl) {
             return typeof objectItem.text === 'string' &&
                 Number.isFinite(Number(objectItem.x)) &&
                 Number.isFinite(Number(objectItem.y));
+        }
+
+        if (objectItem.type === 'image') {
+            return typeof objectItem.src === 'string' &&
+                objectItem.src.startsWith('data:image/') &&
+                [objectItem.x, objectItem.y, objectItem.width, objectItem.height]
+                    .every((value) => Number.isFinite(Number(value))) &&
+                Number(objectItem.width) > 0 &&
+                Number(objectItem.height) > 0;
         }
 
         if (objectItem.type === 'shape') {

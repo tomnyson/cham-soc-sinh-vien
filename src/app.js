@@ -11,6 +11,7 @@ const config = require('../config/app.config');
 const profileService = require('./services/profile.service');
 const classService = require('./services/class.service');
 const brandingService = require('./services/branding.service');
+const googleSheetService = require('./services/google-sheet.service');
 
 // Middleware
 const { notFoundHandler, errorHandler } = require('./middleware/error.middleware');
@@ -523,6 +524,7 @@ app.get('/classes/:classId', optionalAuth, async (req, res, next) => {
         classData,
         profiles,
         selectedProfileId,
+        googleServiceAccountEmail: googleSheetService.getServiceAccountEmail(),
       },
       initialData: {
         classDetail: classData,
