@@ -85,6 +85,40 @@ describe('createInvoiceWorkbook', () => {
     expect(flat).toContain('img.vietqr.io');
   });
 
+  it('không có voucher thì chỉ có một dòng TỔNG CỘNG', () => {
+    const { rows } = readSheetText(createInvoiceWorkbook(invoiceData));
+    const labels = rows.flat().filter(Boolean).map(String);
+    expect(labels).toContain('TỔNG CỘNG');
+    expect(labels).not.toContain('TẠM TÍNH');
+    expect(labels).not.toContain('TỔNG THANH TOÁN');
+  });
+
+  it('có voucher thì hiện tạm tính, dòng giảm giá âm và tổng thanh toán', () => {
+    const withVoucher = buildInvoiceData({
+      classData: { classId: 'c1', name: 'SOF308' },
+      sessions: [
+        { date: new Date(2026, 7, 1), durationHours: 2, hourlyRate: 200000, totalCost: 400000 },
+        { date: new Date(2026, 7, 10), durationHours: 2, hourlyRate: 200000, totalCost: 400000 },
+      ],
+      from: null,
+      to: null,
+      branding: null,
+      voucher: { code: 'GIAM10', type: 'percent', value: 10 },
+    });
+
+    const { rows } = readSheetText(createInvoiceWorkbook(withVoucher));
+    const flat = rows.flat();
+    const labels = flat.filter(Boolean).map(String);
+
+    expect(labels).toContain('TẠM TÍNH');
+    expect(labels).toContain('GIAM10 (giảm 10%)');
+    expect(labels).toContain('TỔNG THANH TOÁN');
+    expect(flat).toContain(800000); // tạm tính
+    expect(flat).toContain(-80000); // giảm giá ghi âm
+    expect(flat).toContain(720000); // phải trả
+    expect(labels.join(' ')).toContain('Bảy trăm hai mươi nghìn đồng chẵn');
+  });
+
   it('xử lý hóa đơn rỗng không crash', () => {
     const empty = buildInvoiceData({
       classData: { classId: 'c1', name: 'X' },

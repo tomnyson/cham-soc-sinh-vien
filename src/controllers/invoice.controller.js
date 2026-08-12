@@ -1,7 +1,7 @@
 const AttendanceSession = require('../models/attendance.model');
 const Class = require('../models/class.model');
 const brandingService = require('../services/branding.service');
-const { parseDateRange, buildInvoiceData } = require('../utils/invoice.util');
+const { parseDateRange, parseVoucher, buildInvoiceData } = require('../utils/invoice.util');
 const { createInvoiceWorkbook } = require('../utils/excel.util');
 
 /**
@@ -26,8 +26,9 @@ async function loadInvoice(classId, query) {
 
     const sessions = await AttendanceSession.find(filter).sort({ date: 1 }).lean();
     const branding = await brandingService.getGlobalBranding();
+    const voucher = parseVoucher(query);
 
-    return buildInvoiceData({ classData, sessions, from, to, branding });
+    return buildInvoiceData({ classData, sessions, from, to, branding, voucher });
 }
 
 /**

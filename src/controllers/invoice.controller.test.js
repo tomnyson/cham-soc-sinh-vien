@@ -135,6 +135,95 @@ describe('getInvoiceData', () => {
   });
 });
 
+describe('voucher giảm học phí', () => {
+  it('áp voucher % trừ thẳng vào tổng phải trả', async () => {
+    const res = makeRes();
+    await invoiceController.getInvoiceData(
+      makeReq({ voucherCode: 'giam10', discountType: 'percent', discountValue: '10' }),
+      res,
+      jest.fn()
+    );
+
+    const { totals, voucher, amountInWords, qrUrl } = res.body.data;
+    expect(totals.subtotal).toBe(800000);
+    expect(totals.discountAmount).toBe(80000);
+    expect(totals.totalAmount).toBe(720000);
+    expect(voucher.code).toBe('GIAM10');
+    expect(voucher.label).toBe('GIAM10 (giảm 10%)');
+    expect(amountInWords).toBe('Bảy trăm hai mươi nghìn đồng chẵn');
+    expect(qrUrl).toContain('amount=720000');
+  });
+
+  it('áp voucher số tiền cố định', async () => {
+    const res = makeRes();
+    await invoiceController.getInvoiceData(
+      makeReq({ voucherCode: 'HE2026', discountType: 'amount', discountValue: '300000' }),
+      res,
+      jest.fn()
+    );
+
+    expect(res.body.data.totals.discountAmount).toBe(300000);
+    expect(res.body.data.totals.totalAmount).toBe(500000);
+  });
+
+  it('kết hợp được với lọc khoảng ngày', async () => {
+    const res = makeRes();
+    await invoiceController.getInvoiceData(
+      makeReq({
+        from: '2026-08-01',
+        to: '2026-08-31',
+        discountType: 'percent',
+        discountValue: '50',
+      }),
+      res,
+      jest.fn()
+    );
+
+    expect(res.body.data.totals.subtotal).toBe(400000);
+    expect(res.body.data.totals.totalAmount).toBe(200000);
+  });
+
+  it('bỏ qua voucher không hợp lệ, giữ nguyên tổng tiền', async () => {
+    const res = makeRes();
+    await invoiceController.getInvoiceData(
+      makeReq({ voucherCode: 'SAI', discountType: 'percent', discountValue: 'abc' }),
+      res,
+      jest.fn()
+    );
+
+    expect(res.body.data.voucher).toBeNull();
+    expect(res.body.data.totals.totalAmount).toBe(800000);
+  });
+
+  it('file Excel xuất kèm voucher vẫn là buffer hợp lệ', async () => {
+    const res = makeRes();
+    await invoiceController.exportInvoiceExcel(
+      makeReq({ voucherCode: 'GIAM10', discountType: 'percent', discountValue: '10' }),
+      res,
+      jest.fn()
+    );
+
+    expect(Buffer.isBuffer(res.sentBuffer)).toBe(true);
+    expect(res.headers['Content-Disposition']).toContain('.xlsx');
+  });
+
+  it('áp voucher không ghi bất kỳ thay đổi nào vào database', async () => {
+    const classBefore = await Class.findOne({ classId: 'class_test_1' }).lean();
+    const sessionsBefore = await AttendanceSession.find({ classId: 'class_test_1' })
+      .sort({ date: 1 })
+      .lean();
+
+    const query = { voucherCode: 'GIAM10', discountType: 'percent', discountValue: '10' };
+    await invoiceController.getInvoiceData(makeReq(query), makeRes(), jest.fn());
+    await invoiceController.exportInvoiceExcel(makeReq(query), makeRes(), jest.fn());
+
+    expect(await Class.findOne({ classId: 'class_test_1' }).lean()).toEqual(classBefore);
+    expect(
+      await AttendanceSession.find({ classId: 'class_test_1' }).sort({ date: 1 }).lean()
+    ).toEqual(sessionsBefore);
+  });
+});
+
 describe('exportInvoiceExcel', () => {
   it('trả buffer xlsx với header tải file', async () => {
     const res = makeRes();

@@ -6,6 +6,7 @@ const {
   parseDateRange,
   filterSessionsByRange,
   buildInvoiceData,
+  parseVoucher,
 } = require('./invoice.util');
 
 const makeSession = (dateIso, overrides = {}) => ({
@@ -290,7 +291,13 @@ describe('buildInvoiceData', () => {
   it('xử lý lớp không có buổi nào', () => {
     const result = buildInvoiceData({ classData, sessions: [], from: null, to: null, branding });
     expect(result.rows).toEqual([]);
-    expect(result.totals).toEqual({ sessionCount: 0, totalHours: 0, totalAmount: 0 });
+    expect(result.totals).toEqual({
+      sessionCount: 0,
+      totalHours: 0,
+      subtotal: 0,
+      discountAmount: 0,
+      totalAmount: 0,
+    });
     expect(result.amountInWords).toBe('Không đồng');
     expect(result.qrUrl).toBeNull();
   });
@@ -315,5 +322,139 @@ describe('buildInvoiceData', () => {
 
     const noRange = buildInvoiceData({ classData, sessions: [], from: null, to: null, branding });
     expect(noRange.period.label).toBe('Toàn bộ');
+  });
+});
+
+describe('parseVoucher', () => {
+  it('trả null khi không nhập gì', () => {
+    expect(parseVoucher({})).toBeNull();
+    expect(parseVoucher()).toBeNull();
+  });
+
+  it('trả null khi chỉ có mã mà không có giá trị giảm', () => {
+    expect(parseVoucher({ voucherCode: 'GIAM10' })).toBeNull();
+  });
+
+  it('đọc voucher giảm theo phần trăm', () => {
+    expect(parseVoucher({ voucherCode: 'giam10', discountType: 'percent', discountValue: '10' })
+    ).toEqual({ code: 'GIAM10', type: 'percent', value: 10 });
+  });
+
+  it('đọc voucher giảm số tiền cố định', () => {
+    expect(
+      parseVoucher({ voucherCode: 'HE2026', discountType: 'amount', discountValue: '500000' })
+    ).toEqual({ code: 'HE2026', type: 'amount', value: 500000 });
+  });
+
+  it('mặc định là percent khi không ghi rõ loại', () => {
+    expect(parseVoucher({ discountValue: '15' }).type).toBe('percent');
+  });
+
+  it('cho phép voucher không có mã', () => {
+    expect(parseVoucher({ discountType: 'amount', discountValue: '200000' })).toEqual({
+      code: '',
+      type: 'amount',
+      value: 200000,
+    });
+  });
+
+  it('kẹp phần trăm trong khoảng 0..100', () => {
+    expect(parseVoucher({ discountType: 'percent', discountValue: '150' }).value).toBe(100);
+  });
+
+  it('trả null với giá trị âm, bằng 0 hoặc không phải số', () => {
+    expect(parseVoucher({ discountType: 'percent', discountValue: '-5' })).toBeNull();
+    expect(parseVoucher({ discountType: 'amount', discountValue: '0' })).toBeNull();
+    expect(parseVoucher({ discountType: 'amount', discountValue: 'abc' })).toBeNull();
+  });
+
+  it('cắt mã voucher quá dài và bỏ khoảng trắng thừa', () => {
+    const long = parseVoucher({ voucherCode: `  ${'A'.repeat(60)}  `, discountValue: '10' });
+    expect(long.code).toHaveLength(40);
+  });
+});
+
+describe('buildInvoiceData - áp dụng voucher', () => {
+  const classData = {
+    classId: 'class_1782608848247',
+    name: 'SOF308',
+    students: [{ mssv: 'SV01' }, { mssv: 'SV02' }],
+    invoiceConfig: {
+      centerName: 'Trung tâm ABC',
+      bankCode: '970436',
+      bankAccount: '0011001234567',
+      bankAccountName: 'NGUYEN VAN A',
+    },
+  };
+  const branding = { logoDataUrl: '', subtext: '', primaryColor: '#FF6C00' };
+  // 2 buổi x 400.000 = 800.000
+  const sessions = [makeSession('2026-08-01T10:00:00'), makeSession('2026-08-10T10:00:00')];
+  const build = voucher =>
+    buildInvoiceData({ classData, sessions, from: null, to: null, branding, voucher });
+
+  it('không có voucher thì tổng giữ nguyên', () => {
+    const result = build(null);
+    expect(result.totals.subtotal).toBe(800000);
+    expect(result.totals.discountAmount).toBe(0);
+    expect(result.totals.totalAmount).toBe(800000);
+    expect(result.voucher).toBeNull();
+  });
+
+  it('giảm theo phần trăm và trừ thẳng vào tổng', () => {
+    const result = build({ code: 'GIAM10', type: 'percent', value: 10 });
+    expect(result.totals.subtotal).toBe(800000);
+    expect(result.totals.discountAmount).toBe(80000);
+    expect(result.totals.totalAmount).toBe(720000);
+    expect(result.voucher.code).toBe('GIAM10');
+    expect(result.voucher.label).toBe('GIAM10 (giảm 10%)');
+  });
+
+  it('giảm theo số tiền cố định', () => {
+    const result = build({ code: 'HE2026', type: 'amount', value: 300000 });
+    expect(result.totals.discountAmount).toBe(300000);
+    expect(result.totals.totalAmount).toBe(500000);
+    expect(result.voucher.label).toBe('HE2026 (giảm 300.000 đ)');
+  });
+
+  it('không cho giảm vượt quá tổng tiền', () => {
+    const result = build({ code: 'BIG', type: 'amount', value: 99999999 });
+    expect(result.totals.discountAmount).toBe(800000);
+    expect(result.totals.totalAmount).toBe(0);
+    expect(result.qrUrl).toBeNull();
+  });
+
+  it('tiền bằng chữ tính trên số tiền sau giảm', () => {
+    const result = build({ code: 'GIAM10', type: 'percent', value: 10 });
+    expect(result.amountInWords).toBe('Bảy trăm hai mươi nghìn đồng chẵn');
+  });
+
+  it('mã QR mang số tiền sau giảm', () => {
+    const result = build({ code: 'GIAM10', type: 'percent', value: 10 });
+    expect(result.qrUrl).toContain('amount=720000');
+  });
+
+  it('làm tròn số tiền giảm về đơn vị đồng', () => {
+    const result = build({ code: 'LE', type: 'percent', value: 33 });
+    expect(Number.isInteger(result.totals.discountAmount)).toBe(true);
+    expect(result.totals.discountAmount).toBe(264000);
+  });
+
+  it('nhãn voucher không có mã thì chỉ hiện mức giảm', () => {
+    const result = build({ code: '', type: 'percent', value: 5 });
+    expect(result.voucher.label).toBe('Giảm 5%');
+  });
+
+  it('hóa đơn rỗng vẫn an toàn khi có voucher', () => {
+    const result = buildInvoiceData({
+      classData,
+      sessions: [],
+      from: null,
+      to: null,
+      branding,
+      voucher: { code: 'GIAM10', type: 'percent', value: 10 },
+    });
+    expect(result.totals.discountAmount).toBe(0);
+    expect(result.totals.totalAmount).toBe(0);
+    expect(result.qrUrl).toBeNull();
   });
 });

@@ -226,15 +226,25 @@ function createInvoiceWorkbook(invoiceData) {
     ]);
   });
 
+  const discountAmount = totals.discountAmount || 0;
+  const subtotal = totals.subtotal === undefined ? totals.totalAmount : totals.subtotal;
+
   sheet.push(['']);
   sheet.push([
     '',
-    'TỔNG CỘNG',
+    discountAmount > 0 ? 'TẠM TÍNH' : 'TỔNG CỘNG',
     totals.totalHours,
     `${totals.sessionCount} buổi`,
     '',
-    totals.totalAmount,
+    discountAmount > 0 ? subtotal : totals.totalAmount,
   ]);
+
+  if (discountAmount > 0) {
+    const label = (data.voucher && data.voucher.label) || 'Giảm giá';
+    sheet.push(['', label, '', '', '', -discountAmount]);
+    sheet.push(['', 'TỔNG THANH TOÁN', '', '', '', totals.totalAmount]);
+  }
+
   sheet.push(['Bằng chữ:', data.amountInWords || '']);
 
   if (config.bankAccount) {

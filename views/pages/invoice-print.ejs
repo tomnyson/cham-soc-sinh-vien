@@ -197,6 +197,11 @@
         color: var(--accent);
       }
 
+      tfoot .discount td {
+        font-weight: 600;
+        color: #0f7b3f;
+      }
+
       .empty-row td {
         padding: 22px 8px;
         text-align: center;
@@ -409,12 +414,28 @@
           <% }); %>
         </tbody>
         <tfoot>
+          <% const hasDiscount = invoice.totals.discountAmount > 0; %>
           <tr>
-            <td colspan="2">TỔNG CỘNG (<%= invoice.totals.sessionCount %> buổi)</td>
+            <td colspan="2">
+              <%= hasDiscount ? 'TẠM TÍNH' : 'TỔNG CỘNG' %> (<%= invoice.totals.sessionCount %>
+              buổi)
+            </td>
             <td class="center"><%= invoice.totals.totalHours %></td>
             <td colspan="2"></td>
+            <td class="num<%= hasDiscount ? '' : ' grand' %>">
+              <%= fmtMoney(hasDiscount ? invoice.totals.subtotal : invoice.totals.totalAmount) %>
+            </td>
+          </tr>
+          <% if (hasDiscount) { %>
+          <tr class="discount">
+            <td colspan="5"><%= invoice.voucher.label %></td>
+            <td class="num">−<%= fmtMoney(invoice.totals.discountAmount) %></td>
+          </tr>
+          <tr>
+            <td colspan="5">TỔNG THANH TOÁN</td>
             <td class="num grand"><%= fmtMoney(invoice.totals.totalAmount) %></td>
           </tr>
+          <% } %>
         </tfoot>
       </table>
 

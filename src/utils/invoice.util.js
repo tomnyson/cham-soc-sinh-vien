@@ -220,6 +220,53 @@ function buildPeriodLabel(from, to) {
   return 'Toàn bộ';
 }
 
+const VOUCHER_CODE_MAX_LENGTH = 40;
+
+/**
+ * Chuẩn hoá voucher giảm giá từ query string.
+ * Voucher nhập tại chỗ khi xuất hóa đơn — không lưu database.
+ * @param {object} query - { voucherCode, discountType, discountValue }
+ * @returns {{ code: string, type: 'percent'|'amount', value: number }|null} null nếu không giảm
+ */
+function parseVoucher(query) {
+  const source = query || {};
+  const value = Number(source.discountValue);
+  if (!Number.isFinite(value) || value <= 0) return null;
+
+  const type = source.discountType === 'amount' ? 'amount' : 'percent';
+  const code = String(source.voucherCode || '')
+    .trim()
+    .slice(0, VOUCHER_CODE_MAX_LENGTH)
+    .toUpperCase();
+
+  return { code, type, value: type === 'percent' ? Math.min(value, 100) : value };
+}
+
+/**
+ * Tính số tiền được giảm, luôn nằm trong khoảng 0..subtotal.
+ * @param {number} subtotal - tổng tiền trước giảm
+ * @param {object|null} voucher - kết quả parseVoucher()
+ * @returns {number} số tiền giảm đã làm tròn về đồng
+ */
+function calcDiscountAmount(subtotal, voucher) {
+  if (!voucher || subtotal <= 0) return 0;
+  const raw = voucher.type === 'percent' ? (subtotal * voucher.value) / 100 : voucher.value;
+  return Math.min(Math.max(Math.round(raw), 0), subtotal);
+}
+
+/**
+ * Nhãn hiển thị của voucher trên hóa đơn.
+ * @param {object} voucher - kết quả parseVoucher()
+ * @returns {string} VD: "GIAM10 (giảm 10%)" hoặc "Giảm 5%"
+ */
+function buildVoucherLabel(voucher) {
+  const amount =
+    voucher.type === 'percent'
+      ? `${voucher.value}%`
+      : `${Number(voucher.value).toLocaleString('vi-VN')} đ`;
+  return voucher.code ? `${voucher.code} (giảm ${amount})` : `Giảm ${amount}`;
+}
+
 /**
  * Dựng toàn bộ dữ liệu hóa đơn để render ra HTML hoặc Excel.
  * Hàm thuần — không đọc / ghi database.
@@ -229,6 +276,7 @@ function buildPeriodLabel(from, to) {
  * @param {Date|null} params.from - cận dưới khoảng ngày
  * @param {Date|null} params.to - cận trên khoảng ngày
  * @param {object|null} params.branding - cấu hình thương hiệu toàn cục
+ * @param {object|null} params.voucher - voucher giảm giá đã chuẩn hoá
  * @returns {object}
  */
 function buildInvoiceData({
@@ -237,6 +285,7 @@ function buildInvoiceData({
   from = null,
   to = null,
   branding = null,
+  voucher = null,
 } = {}) {
   const filtered = filterSessionsByRange(sessions, from, to)
     .slice()
@@ -255,14 +304,22 @@ function buildInvoiceData({
     };
   });
 
-  const totals = rows.reduce(
+  const summed = rows.reduce(
     (acc, row) => ({
       sessionCount: acc.sessionCount + 1,
       totalHours: acc.totalHours + row.durationHours,
-      totalAmount: acc.totalAmount + row.totalCost,
+      subtotal: acc.subtotal + row.totalCost,
     }),
-    { sessionCount: 0, totalHours: 0, totalAmount: 0 }
+    { sessionCount: 0, totalHours: 0, subtotal: 0 }
   );
+
+  const discountAmount = calcDiscountAmount(summed.subtotal, voucher);
+  const totals = {
+    ...summed,
+    discountAmount,
+    // totalAmount luôn là số tiền phải trả sau khi trừ voucher
+    totalAmount: summed.subtotal - discountAmount,
+  };
 
   const rawConfig = classData.invoiceConfig || {};
   const config = {
@@ -301,6 +358,7 @@ function buildInvoiceData({
     },
     rows,
     totals,
+    voucher: voucher ? { ...voucher, label: buildVoucherLabel(voucher) } : null,
     amountInWords: numberToVietnameseWords(totals.totalAmount),
     // Không sinh QR khi tổng tiền bằng 0 — QR không có số tiền dễ gây hiểu nhầm
     qrUrl:
@@ -323,5 +381,6 @@ module.exports = {
   generateInvoiceNo,
   parseDateRange,
   filterSessionsByRange,
+  parseVoucher,
   buildInvoiceData,
 };
