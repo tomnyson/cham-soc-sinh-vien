@@ -159,10 +159,116 @@ function createResultsWorkbook(results) {
   return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 }
 
+const SEMESTER_LABELS = { spring: 'Spring', summer: 'Summer', fall: 'Fall' };
+
+/**
+ * Định dạng ngày dd/mm/yyyy cho ô Excel
+ * @param {Date|string} date
+ * @returns {string}
+ */
+function formatInvoiceDate(date) {
+  const parsed = date instanceof Date ? date : new Date(date);
+  const day = String(parsed.getDate()).padStart(2, '0');
+  const month = String(parsed.getMonth() + 1).padStart(2, '0');
+  return `${day}/${month}/${parsed.getFullYear()}`;
+}
+
+/**
+ * Tạo workbook Excel cho hóa đơn (bảng kê học phí)
+ * @param {object} invoiceData - kết quả của buildInvoiceData()
+ * @returns {Buffer} Buffer file .xlsx
+ */
+function createInvoiceWorkbook(invoiceData) {
+  const data = invoiceData || {};
+  const cls = data.class || {};
+  const config = data.config || {};
+  const totals = data.totals || { sessionCount: 0, totalHours: 0, totalAmount: 0 };
+  const rows = Array.isArray(data.rows) ? data.rows : [];
+
+  const semesterLabel = SEMESTER_LABELS[cls.semester] || '';
+  const periodParts = [semesterLabel, cls.year || '', cls.block ? `Block ${cls.block}` : '']
+    .filter(Boolean)
+    .join(' ');
+
+  const sheet = [
+    [config.centerName || 'BẢNG KÊ HỌC PHÍ'],
+    ['BẢNG KÊ HỌC PHÍ'],
+    [''],
+    [
+      'Số hóa đơn:',
+      data.invoiceNo || '',
+      '',
+      'Ngày xuất:',
+      formatInvoiceDate(data.issuedAt || new Date()),
+    ],
+    ['Lớp:', cls.name || '', '', 'Kỳ học:', periodParts],
+    [
+      'Giảng viên:',
+      cls.instructorCode || '',
+      '',
+      'Kỳ thanh toán:',
+      (data.period && data.period.label) || '',
+    ],
+    ['Kính gửi:', config.payerName || '', '', 'Điện thoại:', config.payerPhone || ''],
+    ['Địa chỉ:', config.payerAddress || ''],
+    [''],
+    ['STT', 'Ngày', 'Thời lượng (giờ)', 'Sĩ số', 'Đơn giá/giờ', 'Thành tiền'],
+  ];
+
+  rows.forEach(row => {
+    sheet.push([
+      row.index,
+      formatInvoiceDate(row.date),
+      row.durationHours,
+      `${row.presentCount}/${row.totalStudents}`,
+      row.hourlyRate,
+      row.totalCost,
+    ]);
+  });
+
+  sheet.push(['']);
+  sheet.push([
+    '',
+    'TỔNG CỘNG',
+    totals.totalHours,
+    `${totals.sessionCount} buổi`,
+    '',
+    totals.totalAmount,
+  ]);
+  sheet.push(['Bằng chữ:', data.amountInWords || '']);
+
+  if (config.bankAccount) {
+    sheet.push(['']);
+    sheet.push(['THÔNG TIN CHUYỂN KHOẢN']);
+    sheet.push([
+      'Ngân hàng:',
+      data.bank ? `${data.bank.shortName} - ${data.bank.name}` : config.bankCode,
+    ]);
+    sheet.push(['Số tài khoản:', config.bankAccount]);
+    sheet.push(['Chủ tài khoản:', config.bankAccountName || '']);
+    sheet.push(['Nội dung:', data.invoiceNo || '']);
+    if (data.qrUrl) sheet.push(['Mã QR:', data.qrUrl]);
+  }
+
+  if (config.note) {
+    sheet.push(['']);
+    sheet.push(['Ghi chú:', config.note]);
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(sheet);
+  ws['!cols'] = [{ wch: 16 }, { wch: 26 }, { wch: 16 }, { wch: 10 }, { wch: 16 }, { wch: 18 }];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Hóa đơn');
+
+  return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+}
+
 module.exports = {
   readExcelFile,
   findMSSVColumnIndex,
   findNameColumnIndex,
   createTemplateWorkbook,
   createResultsWorkbook,
+  createInvoiceWorkbook,
 };
