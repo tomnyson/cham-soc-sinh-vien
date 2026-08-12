@@ -36,7 +36,7 @@
 - Consumes: (không có)
 - Produces: `numberToVietnameseWords(amount: number): string` — trả chuỗi đã viết hoa chữ đầu, kết thúc bằng `" đồng chẵn"` (hoặc `"Không đồng"` khi bằng 0).
 
-- [ ] **Step 1: Viết test thất bại**
+- [x] **Step 1: Viết test thất bại**
 
 Tạo `src/utils/invoice.util.test.js`:
 
@@ -91,12 +91,12 @@ describe('numberToVietnameseWords', () => {
 });
 ```
 
-- [ ] **Step 2: Chạy test để xác nhận nó fail**
+- [x] **Step 2: Chạy test để xác nhận nó fail**
 
 Run: `npx jest src/utils/invoice.util.test.js`
 Expected: FAIL — `Cannot find module './invoice.util'`
 
-- [ ] **Step 3: Viết implementation tối thiểu**
+- [x] **Step 3: Viết implementation tối thiểu**
 
 Tạo `src/utils/invoice.util.js`:
 
@@ -175,12 +175,12 @@ module.exports = {
 };
 ```
 
-- [ ] **Step 4: Chạy test để xác nhận pass**
+- [x] **Step 4: Chạy test để xác nhận pass**
 
 Run: `npx jest src/utils/invoice.util.test.js`
 Expected: PASS — 10 test
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/utils/invoice.util.js src/utils/invoice.util.test.js
@@ -202,7 +202,7 @@ git commit -m "feat: doc so tien thanh chu tieng Viet cho hoa don"
   - `buildVietQrUrl({ bankCode, bankAccount, bankAccountName, amount, addInfo }): string | null`
   - `generateInvoiceNo(classId: string, from: Date|null, to: Date|null): string`
 
-- [ ] **Step 1: Viết test thất bại**
+- [x] **Step 1: Viết test thất bại**
 
 Thêm vào cuối `src/utils/invoice.util.test.js`:
 
@@ -287,12 +287,12 @@ describe('generateInvoiceNo', () => {
 });
 ```
 
-- [ ] **Step 2: Chạy test để xác nhận fail**
+- [x] **Step 2: Chạy test để xác nhận fail**
 
 Run: `npx jest src/utils/invoice.util.test.js`
 Expected: FAIL — `BANKS is not defined` / `buildVietQrUrl is not a function`
 
-- [ ] **Step 3: Viết implementation**
+- [x] **Step 3: Viết implementation**
 
 Thêm vào `src/utils/invoice.util.js` (trước `module.exports`):
 
@@ -389,12 +389,12 @@ module.exports = {
 
 > Lưu ý `generateInvoiceNo` dùng `getFullYear()`/`getMonth()` theo giờ máy chủ — nhất quán với cách hiển thị ngày `toLocaleString('vi-VN')` ở phần còn lại của app.
 
-- [ ] **Step 4: Chạy test để xác nhận pass**
+- [x] **Step 4: Chạy test để xác nhận pass**
 
 Run: `npx jest src/utils/invoice.util.test.js`
 Expected: PASS — toàn bộ test của Task 1 và Task 2
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/utils/invoice.util.js src/utils/invoice.util.test.js
@@ -416,7 +416,7 @@ git commit -m "feat: danh sach ngan hang VietQR, dung URL QR va so hoa don"
   - `filterSessionsByRange(sessions, from, to): Array` — thuần lọc, không mutate
   - `buildInvoiceData({ classData, sessions, from, to, branding }): object` — cấu trúc đầy đủ để render
 
-- [ ] **Step 1: Viết test thất bại**
+- [x] **Step 1: Viết test thất bại**
 
 Thêm vào `src/utils/invoice.util.test.js`:
 
@@ -603,12 +603,12 @@ describe('buildInvoiceData', () => {
 });
 ```
 
-- [ ] **Step 2: Chạy test để xác nhận fail**
+- [x] **Step 2: Chạy test để xác nhận fail**
 
 Run: `npx jest src/utils/invoice.util.test.js`
 Expected: FAIL — `parseDateRange is not a function`
 
-- [ ] **Step 3: Viết implementation**
+- [x] **Step 3: Viết implementation**
 
 Thêm vào `src/utils/invoice.util.js`:
 
@@ -753,12 +753,12 @@ module.exports = {
 };
 ```
 
-- [ ] **Step 4: Chạy test để xác nhận pass**
+- [x] **Step 4: Chạy test để xác nhận pass**
 
 Run: `npx jest src/utils/invoice.util.test.js`
 Expected: PASS — toàn bộ test Task 1–3
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/utils/invoice.util.js src/utils/invoice.util.test.js
@@ -784,7 +784,7 @@ git commit -m "feat: loc buoi hoc theo khoang ngay va dung du lieu hoa don"
 
 > **Ràng buộc:** chỉ THÊM. Không đổi bất kỳ field, hàm, export nào đang có.
 
-- [ ] **Step 1: Viết test thất bại**
+- [x] **Step 1: Viết test thất bại**
 
 Tạo `src/services/class.service.test.js`:
 
@@ -827,12 +827,12 @@ describe('normalizeInvoiceConfig', () => {
 });
 ```
 
-- [ ] **Step 2: Chạy test để xác nhận fail**
+- [x] **Step 2: Chạy test để xác nhận fail**
 
 Run: `npx jest src/services/class.service.test.js`
 Expected: FAIL — `normalizeInvoiceConfig is not a function`
 
-- [ ] **Step 3: Thêm sub-schema vào model**
+- [x] **Step 3: Thêm sub-schema vào model**
 
 Trong `src/models/class.model.js`, thêm **sau** `studentSchema` (dòng 28) và **trước** `classSchema`:
 
@@ -864,7 +864,7 @@ Trong `classSchema`, thêm **sau** field `instructorCode` (dòng 109-113), trư�
     }
 ```
 
-- [ ] **Step 4: Thêm normalizeInvoiceConfig vào service**
+- [x] **Step 4: Thêm normalizeInvoiceConfig vào service**
 
 Trong `src/services/class.service.js`, thêm **trước** `function normalizeClassMetadata` (dòng 88):
 
@@ -912,7 +912,7 @@ module.exports.normalizeInvoiceConfig = normalizeInvoiceConfig;
 
 > Đọc kỹ dòng `module.exports` hiện tại của file trước khi sửa, và giữ nguyên hoàn toàn hình thức export cũ.
 
-- [ ] **Step 5: Thêm invoiceConfig vào serializeClass**
+- [x] **Step 5: Thêm invoiceConfig vào serializeClass**
 
 Trong `src/app.js`, trong object `return` của `serializeClass` (dòng 216-229), thêm sau `instructorCode`:
 
@@ -931,17 +931,17 @@ Trong `src/app.js`, trong object `return` của `serializeClass` (dòng 216-229)
 
 > Không bỏ field nào đang có trong object return này.
 
-- [ ] **Step 6: Chạy test để xác nhận pass**
+- [x] **Step 6: Chạy test để xác nhận pass**
 
 Run: `npx jest src/services/class.service.test.js`
 Expected: PASS — 5 test
 
-- [ ] **Step 7: Kiểm tra lint không hỏng file đã sửa**
+- [x] **Step 7: Kiểm tra lint không hỏng file đã sửa**
 
 Run: `npx eslint src/models/class.model.js src/services/class.service.js src/app.js src/utils/invoice.util.js`
 Expected: không có error mới (cảnh báo có sẵn từ trước thì bỏ qua)
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/models/class.model.js src/services/class.service.js src/services/class.service.test.js src/app.js
@@ -960,7 +960,7 @@ git commit -m "feat: them cau hinh hoa don invoiceConfig vao model Class"
 - Consumes: `buildInvoiceData` output (Task 3)
 - Produces: `createInvoiceWorkbook(invoiceData): Buffer` — buffer `.xlsx` một sheet tên `Hóa đơn`
 
-- [ ] **Step 1: Viết test thất bại**
+- [x] **Step 1: Viết test thất bại**
 
 Tạo `src/utils/excel.util.invoice.test.js`:
 
@@ -1053,12 +1053,12 @@ describe('createInvoiceWorkbook', () => {
 });
 ```
 
-- [ ] **Step 2: Chạy test để xác nhận fail**
+- [x] **Step 2: Chạy test để xác nhận fail**
 
 Run: `npx jest src/utils/excel.util.invoice.test.js`
 Expected: FAIL — `createInvoiceWorkbook is not a function`
 
-- [ ] **Step 3: Viết implementation**
+- [x] **Step 3: Viết implementation**
 
 Thêm vào `src/utils/excel.util.js` **trước** `module.exports` (giữ nguyên toàn bộ hàm hiện có):
 
@@ -1155,12 +1155,12 @@ module.exports = {
 };
 ```
 
-- [ ] **Step 4: Chạy test để xác nhận pass**
+- [x] **Step 4: Chạy test để xác nhận pass**
 
 Run: `npx jest src/utils/excel.util.invoice.test.js`
 Expected: PASS — 6 test
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/utils/excel.util.js src/utils/excel.util.invoice.test.js
@@ -1184,7 +1184,7 @@ git commit -m "feat: sinh workbook Excel cho hoa don hoc phi"
 
 > **Ràng buộc dữ liệu:** controller này CHỈ được gọi `AttendanceSession.find()` và `Class.findOne()`. Không có bất kỳ lệnh ghi nào.
 
-- [ ] **Step 1: Viết test thất bại**
+- [x] **Step 1: Viết test thất bại**
 
 Tạo `src/controllers/invoice.controller.test.js`. Test dùng `mongodb-memory-server` và gọi thẳng controller với mock `req`/`res` để tránh phải dựng luồng xác thực JWT:
 
@@ -1348,12 +1348,12 @@ describe('bất biến dữ liệu — yêu cầu tuyệt đối', () => {
 });
 ```
 
-- [ ] **Step 2: Chạy test để xác nhận fail**
+- [x] **Step 2: Chạy test để xác nhận fail**
 
 Run: `npx jest src/controllers/invoice.controller.test.js`
 Expected: FAIL — `Cannot find module './invoice.controller'`
 
-- [ ] **Step 3: Viết controller**
+- [x] **Step 3: Viết controller**
 
 Tạo `src/controllers/invoice.controller.js`:
 
@@ -1430,7 +1430,7 @@ exports.exportInvoiceExcel = async (req, res, next) => {
 exports.loadInvoice = loadInvoice;
 ```
 
-- [ ] **Step 4: Đăng ký route**
+- [x] **Step 4: Đăng ký route**
 
 Trong `src/routes/api.routes.js`, thêm require cạnh các require controller khác (quanh dòng 10):
 
@@ -1446,19 +1446,19 @@ router.get('/classes/:classId/invoice', authenticate, requireActiveLecturer, asy
 router.get('/classes/:classId/invoice/export', authenticate, requireActiveLecturer, asyncHandler(invoiceController.exportInvoiceExcel));
 ```
 
-- [ ] **Step 5: Chạy test để xác nhận pass**
+- [x] **Step 5: Chạy test để xác nhận pass**
 
 Run: `npx jest src/controllers/invoice.controller.test.js`
 Expected: PASS — 9 test, trong đó 3 test bất biến dữ liệu
 
 > Lần chạy đầu `mongodb-memory-server` sẽ tải binary MongoDB, có thể mất 1–2 phút. Nếu timeout, chạy lại với `--testTimeout=120000`.
 
-- [ ] **Step 6: Kiểm tra không có lệnh ghi nào lọt vào**
+- [x] **Step 6: Kiểm tra không có lệnh ghi nào lọt vào**
 
 Run: `grep -nE "delete(One|Many)|\.remove\(|drop\(|replaceOne|findOneAndReplace|bulkWrite|updateMany|\.save\(" src/controllers/invoice.controller.js src/utils/invoice.util.js`
 Expected: không có kết quả nào
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/controllers/invoice.controller.js src/controllers/invoice.controller.test.js src/routes/api.routes.js
@@ -1477,7 +1477,7 @@ git commit -m "feat: API xuat hoa don JSON va Excel (chi doc DB)"
 - Consumes: `invoiceController.loadInvoice(classId, query)` (Task 6)
 - Produces: `GET /classes/:classId/invoice?from=&to=` — trang HTML độc lập, không dùng layout master
 
-- [ ] **Step 1: Tạo trang hóa đơn**
+- [x] **Step 1: Tạo trang hóa đơn**
 
 Tạo `views/pages/invoice-print.ejs`:
 
@@ -1715,7 +1715,7 @@ Tạo `views/pages/invoice-print.ejs`:
 </html>
 ```
 
-- [ ] **Step 2: Thêm route render**
+- [x] **Step 2: Thêm route render**
 
 Trong `src/app.js`, thêm **sau** khi route `app.get('/classes/:classId/note', ...)` kết thúc (quanh dòng 588, trước `app.get('/branding', ...)` ở dòng 589):
 
@@ -1771,7 +1771,7 @@ const invoiceController = require('./controllers/invoice.controller');
 
 > Route này phải đặt **trước** bất kỳ route `/classes/:classId` catch-all nào. Route `/classes/:classId` hiện ở dòng 471 dùng path chính xác nên Express không nuốt `/classes/:classId/invoice` — vẫn đặt route mới cạnh `/classes/:classId/note` cho nhất quán.
 
-- [ ] **Step 3: Kiểm tra thủ công**
+- [x] **Step 3: Kiểm tra thủ công**
 
 Khởi động server: `npm run dev`
 
@@ -1782,7 +1782,7 @@ Kiểm tra:
 - Thêm `?from=2026-08-01&to=2026-08-31` → chỉ còn buổi trong tháng 8
 - `Cmd+P` → xem preview A4, thanh nút bị ẩn, bảng không bị cắt giữa hàng
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add views/pages/invoice-print.ejs src/app.js
@@ -1802,7 +1802,7 @@ git commit -m "feat: trang hoa don de in va luu PDF"
 - Consumes: `GET /api/classes/:classId/invoice`, `GET /api/classes/:classId/invoice/export`, `PUT /api/classes/:classId`, `BANKS` (Task 2), `classData.invoiceConfig` từ `serializeClass` (Task 4)
 - Produces: (kết thúc chuỗi — không có task sau)
 
-- [ ] **Step 1: Truyền danh sách ngân hàng vào view**
+- [x] **Step 1: Truyền danh sách ngân hàng vào view**
 
 Trong `src/app.js`, ở route `app.get('/classes/:classId', ...)` (dòng 471), thêm require ở đầu file:
 
@@ -1822,7 +1822,7 @@ và thêm `banks: BANKS` vào `pageData` của lời gọi `renderLayoutPage(req
       },
 ```
 
-- [ ] **Step 2: Thêm thanh lọc và nút xuất vào tab Lịch sử**
+- [x] **Step 2: Thêm thanh lọc và nút xuất vào tab Lịch sử**
 
 Trong `views/pages/class-detail.ejs`, thay khối `<div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">` … `</div>` ở dòng 2008-2016 bằng:
 
@@ -1863,7 +1863,7 @@ Trong `views/pages/class-detail.ejs`, thay khối `<div class="d-flex justify-co
                                 </div>
 ```
 
-- [ ] **Step 3: Thêm form cấu hình hóa đơn vào tab Cấu hình**
+- [x] **Step 3: Thêm form cấu hình hóa đơn vào tab Cấu hình**
 
 Trong `views/pages/class-detail.ejs`, trong tab `#attendance-config`, thêm **giữa** khối `<div class="mb-4">` chứa `#attConfigHourlyRate` và nút `#btnSaveAttendanceConfig`:
 
@@ -1923,7 +1923,7 @@ Trong `views/pages/class-detail.ejs`, trong tab `#attendance-config`, thêm **gi
                                 </div>
 ```
 
-- [ ] **Step 4: Tạo module JS cho hóa đơn**
+- [x] **Step 4: Tạo module JS cho hóa đơn**
 
 Tạo `public/js/pages/class-detail-invoice.js`:
 
@@ -2011,7 +2011,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 ```
 
-- [ ] **Step 5: Nạp module trong view**
+- [x] **Step 5: Nạp module trong view**
 
 Trong `views/pages/class-detail.ejs`, thêm sau dòng 2059:
 
@@ -2019,7 +2019,7 @@ Trong `views/pages/class-detail.ejs`, thêm sau dòng 2059:
 <script type="module" src="/js/pages/class-detail-invoice.js"></script>
 ```
 
-- [ ] **Step 6: Cho lịch sử tôn trọng khoảng ngày và lưu kèm cấu hình hóa đơn**
+- [x] **Step 6: Cho lịch sử tôn trọng khoảng ngày và lưu kèm cấu hình hóa đơn**
 
 Trong `public/js/pages/class-detail-attendance.js`:
 
@@ -2046,7 +2046,7 @@ Trong handler `btnSaveConfig` (dòng 83), sửa phần dựng body request:
 
 và dùng `payload` trong `body: JSON.stringify(payload)`.
 
-- [ ] **Step 7: Cho API điểm danh nhận khoảng ngày**
+- [x] **Step 7: Cho API điểm danh nhận khoảng ngày**
 
 `getSessionsByClass` hiện bỏ qua query. Trong `src/controllers/attendance.controller.js`, sửa **duy nhất** phần dựng filter (không đụng gì khác):
 
@@ -2067,7 +2067,7 @@ Chuyển `require` lên đầu file cạnh các require khác thay vì đặt tr
 
 > Đây là ngoại lệ duy nhất được phép với `attendance.controller.js`: chỉ thêm bộ lọc đọc, không thêm thao tác ghi. Nếu không có query thì hành vi giữ nguyên như cũ.
 
-- [ ] **Step 8: Kiểm tra thủ công đầy đủ luồng**
+- [x] **Step 8: Kiểm tra thủ công đầy đủ luồng**
 
 Khởi động: `npm run dev`, mở `http://localhost:3000/classes/class_1782608848247`
 
@@ -2079,7 +2079,7 @@ Khởi động: `npm run dev`, mở `http://localhost:3000/classes/class_1782608
 6. Bấm **Tải Excel** → file `HD-*.xlsx` tải về, mở lên thấy bảng buổi học + tổng tiền + thông tin CK
 7. Kiểm tra dữ liệu không đổi: mở lại tab Lịch sử, xóa khoảng ngày, **Áp dụng** → vẫn đủ **15 buổi** và tổng `6.000.000 đ` như ban đầu
 
-- [ ] **Step 9: Chạy lại toàn bộ test và lint**
+- [x] **Step 9: Chạy lại toàn bộ test và lint**
 
 Run: `npx jest src/utils/invoice.util.test.js src/utils/excel.util.invoice.test.js src/services/class.service.test.js src/controllers/invoice.controller.test.js`
 Expected: PASS toàn bộ
@@ -2087,7 +2087,7 @@ Expected: PASS toàn bộ
 Run: `npx eslint src/ public/js/pages/class-detail-invoice.js public/js/pages/class-detail-attendance.js`
 Expected: không có error mới
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add views/pages/class-detail.ejs public/js/pages/class-detail-invoice.js public/js/pages/class-detail-attendance.js src/controllers/attendance.controller.js src/app.js
