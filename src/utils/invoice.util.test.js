@@ -15,9 +15,9 @@ const makeSession = (dateIso, overrides = {}) => ({
   totalCost: 400000,
   records: [
     { mssv: 'SV01', status: 'present' },
-    { mssv: 'SV02', status: 'absent' }
+    { mssv: 'SV02', status: 'absent' },
   ],
-  ...overrides
+  ...overrides,
 });
 
 describe('numberToVietnameseWords', () => {
@@ -50,9 +50,7 @@ describe('numberToVietnameseWords', () => {
   });
 
   it('chèn "không trăm" cho nhóm giữa', () => {
-    expect(numberToVietnameseWords(1015000)).toBe(
-      'Một triệu không trăm mười lăm nghìn đồng chẵn'
-    );
+    expect(numberToVietnameseWords(1015000)).toBe('Một triệu không trăm mười lăm nghìn đồng chẵn');
   });
 
   it('đọc số hàng tỷ', () => {
@@ -98,7 +96,7 @@ describe('buildVietQrUrl', () => {
       bankAccount: '0011001234567',
       bankAccountName: 'NGUYEN VAN A',
       amount: 6000000,
-      addInfo: 'HD-848247-202608'
+      addInfo: 'HD-848247-202608',
     });
     expect(url).toContain('https://img.vietqr.io/image/970436-0011001234567-compact2.png');
     expect(url).toContain('amount=6000000');
@@ -110,7 +108,7 @@ describe('buildVietQrUrl', () => {
     const url = buildVietQrUrl({
       bankCode: '970436',
       bankAccount: '123',
-      addInfo: 'Học phí tháng 8'
+      addInfo: 'Học phí tháng 8',
     });
     expect(url).toContain('addInfo=H%E1%BB%8Dc%20ph%C3%AD%20th%C3%A1ng%208');
   });
@@ -173,7 +171,7 @@ describe('filterSessionsByRange', () => {
   const sessions = [
     makeSession('2026-07-01T10:00:00'),
     makeSession('2026-07-15T10:00:00'),
-    makeSession('2026-08-10T11:36:00')
+    makeSession('2026-08-10T11:36:00'),
   ];
 
   it('trả toàn bộ khi không có khoảng lọc', () => {
@@ -221,8 +219,8 @@ describe('buildInvoiceData', () => {
       payerName: 'Phụ huynh Nguyễn Văn A',
       bankCode: '970436',
       bankAccount: '0011001234567',
-      bankAccountName: 'NGUYEN VAN A'
-    }
+      bankAccountName: 'NGUYEN VAN A',
+    },
   };
   const branding = { logoDataUrl: '', subtext: 'FPT Polytechnic', primaryColor: '#FF6C00' };
 
@@ -238,7 +236,7 @@ describe('buildInvoiceData', () => {
   it('giữ nguyên hourlyRate snapshot của từng buổi', () => {
     const sessions = [
       makeSession('2026-08-01T10:00:00', { hourlyRate: 200000, totalCost: 400000 }),
-      makeSession('2026-08-10T10:00:00', { hourlyRate: 300000, totalCost: 600000 })
+      makeSession('2026-08-10T10:00:00', { hourlyRate: 300000, totalCost: 600000 }),
     ];
     const result = buildInvoiceData({ classData, sessions, from: null, to: null, branding });
     expect(result.rows[0].hourlyRate).toBe(200000);
@@ -250,7 +248,9 @@ describe('buildInvoiceData', () => {
     const result = buildInvoiceData({
       classData,
       sessions: [makeSession('2026-08-01T10:00:00')],
-      from: null, to: null, branding
+      from: null,
+      to: null,
+      branding,
     });
     expect(result.rows[0].presentCount).toBe(1);
     expect(result.rows[0].totalStudents).toBe(2);
@@ -267,7 +267,9 @@ describe('buildInvoiceData', () => {
     const result = buildInvoiceData({
       classData,
       sessions: [makeSession('2026-08-01T10:00:00')],
-      from: null, to: null, branding
+      from: null,
+      to: null,
+      branding,
     });
     expect(result.qrUrl).toContain('970436-0011001234567');
     expect(result.qrUrl).toContain('amount=400000');
@@ -278,7 +280,9 @@ describe('buildInvoiceData', () => {
     const result = buildInvoiceData({
       classData: { ...classData, invoiceConfig: { centerName: 'X' } },
       sessions: [makeSession('2026-08-01T10:00:00')],
-      from: null, to: null, branding
+      from: null,
+      to: null,
+      branding,
     });
     expect(result.qrUrl).toBeNull();
   });
@@ -294,7 +298,10 @@ describe('buildInvoiceData', () => {
   it('xử lý lớp chưa có invoiceConfig', () => {
     const result = buildInvoiceData({
       classData: { classId: 'c1', name: 'X' },
-      sessions: [], from: null, to: null, branding: null
+      sessions: [],
+      from: null,
+      to: null,
+      branding: null,
     });
     expect(result.config.centerName).toBe('');
     expect(result.branding.subtext).toBe('');

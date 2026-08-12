@@ -28,6 +28,20 @@ const studentSchema = new mongoose.Schema({
 }, { _id: false });
 
 /**
+ * Invoice Config Sub-Schema - Thông tin xuất hóa đơn của lớp
+ */
+const invoiceConfigSchema = new mongoose.Schema({
+    centerName: { type: String, default: '', trim: true, maxlength: 120 },
+    payerName: { type: String, default: '', trim: true, maxlength: 120 },
+    payerPhone: { type: String, default: '', trim: true, maxlength: 30 },
+    payerAddress: { type: String, default: '', trim: true, maxlength: 200 },
+    bankCode: { type: String, default: '', trim: true, maxlength: 20 },
+    bankAccount: { type: String, default: '', trim: true, maxlength: 30 },
+    bankAccountName: { type: String, default: '', trim: true, maxlength: 120 },
+    note: { type: String, default: '', trim: true, maxlength: 300 }
+}, { _id: false });
+
+/**
  * Class Schema - Lưu trữ thông tin lớp học
  */
 const classSchema = new mongoose.Schema({
@@ -110,6 +124,12 @@ const classSchema = new mongoose.Schema({
         type: String,
         default: '',
         trim: true
+    },
+
+    // Cấu hình xuất hóa đơn (thêm mới - lớp cũ không có field này vẫn hoạt động bình thường)
+    invoiceConfig: {
+        type: invoiceConfigSchema,
+        default: () => ({})
     }
 }, {
     timestamps: true,

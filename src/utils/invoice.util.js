@@ -64,9 +64,10 @@ function numberToVietnameseWords(amount) {
   const chunks = [];
 
   for (let i = highestIndex; i >= 0; i -= 1) {
-    if (groups[i] === 0) continue;
-    const text = readTriple(groups[i], i === highestIndex);
-    chunks.push(`${text}${SCALES[i] || ''}`);
+    if (groups[i] !== 0) {
+      const text = readTriple(groups[i], i === highestIndex);
+      chunks.push(`${text}${SCALES[i] || ''}`);
+    }
   }
 
   const sentence = chunks.join(' ').replace(/\s+/g, ' ').trim();
@@ -187,7 +188,8 @@ function parseDateRange(fromRaw, toRaw) {
 function filterSessionsByRange(sessions, from, to) {
   const list = Array.isArray(sessions) ? sessions : [];
   return list.filter(session => {
-    const date = session && session.date instanceof Date ? session.date : new Date(session && session.date);
+    const date =
+      session && session.date instanceof Date ? session.date : new Date(session && session.date);
     if (Number.isNaN(date.getTime())) return false;
     if (from && date < from) return false;
     if (to && date > to) return false;
@@ -221,10 +223,21 @@ function buildPeriodLabel(from, to) {
 /**
  * Dựng toàn bộ dữ liệu hóa đơn để render ra HTML hoặc Excel.
  * Hàm thuần — không đọc / ghi database.
- * @param {{classData: object, sessions: Array, from: Date|null, to: Date|null, branding: object|null}} params
+ * @param {object} params
+ * @param {object} params.classData - document lớp (dạng lean)
+ * @param {Array} params.sessions - danh sách buổi điểm danh
+ * @param {Date|null} params.from - cận dưới khoảng ngày
+ * @param {Date|null} params.to - cận trên khoảng ngày
+ * @param {object|null} params.branding - cấu hình thương hiệu toàn cục
  * @returns {object}
  */
-function buildInvoiceData({ classData = {}, sessions = [], from = null, to = null, branding = null } = {}) {
+function buildInvoiceData({
+  classData = {},
+  sessions = [],
+  from = null,
+  to = null,
+  branding = null,
+} = {}) {
   const filtered = filterSessionsByRange(sessions, from, to)
     .slice()
     .sort((a, b) => new Date(a.date) - new Date(b.date));

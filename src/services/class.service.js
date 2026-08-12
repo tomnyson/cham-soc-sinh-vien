@@ -79,6 +79,32 @@ function normalizeStudentUpdates(updates = {}) {
 
 const VALID_SEMESTERS = new Set(['', 'spring', 'summer', 'fall']);
 
+// Whitelist các field cấu hình hóa đơn kèm độ dài tối đa
+const INVOICE_CONFIG_FIELDS = {
+    centerName: 120,
+    payerName: 120,
+    payerPhone: 30,
+    payerAddress: 200,
+    bankCode: 20,
+    bankAccount: 30,
+    bankAccountName: 120,
+    note: 300
+};
+
+/**
+ * Chuẩn hoá cấu hình hóa đơn: chỉ giữ field trong whitelist, trim và cắt theo maxlength.
+ * @param {object} input
+ * @returns {object}
+ */
+function normalizeInvoiceConfig(input = {}) {
+    const source = input && typeof input === 'object' ? input : {};
+    return Object.entries(INVOICE_CONFIG_FIELDS).reduce((acc, [field, maxLength]) => {
+        const raw = Object.prototype.hasOwnProperty.call(source, field) ? source[field] : '';
+        acc[field] = String(raw === null || raw === undefined ? '' : raw).trim().slice(0, maxLength);
+        return acc;
+    }, {});
+}
+
 /**
  * Normalize and validate the optional class metadata fields (year, block,
  * semester, instructorCode). Returns a plain object containing only the
@@ -131,6 +157,10 @@ function normalizeClassMetadata(input = {}) {
         } else {
             result.hourlyRate = 0;
         }
+    }
+
+    if (input.invoiceConfig !== undefined) {
+        result.invoiceConfig = normalizeInvoiceConfig(input.invoiceConfig);
     }
 
     return result;
@@ -508,3 +538,6 @@ class ClassService {
 }
 
 module.exports = new ClassService();
+
+// Export thêm hàm thuần để test được độc lập với instance service
+module.exports.normalizeInvoiceConfig = normalizeInvoiceConfig;
