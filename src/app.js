@@ -19,6 +19,10 @@ const { optionalAuth, evaluateLecturerAccess } = require('./middleware/auth.midd
 
 // Controllers
 const dashboardController = require('./controllers/dashboard.controller');
+const invoiceController = require('./controllers/invoice.controller');
+
+// Utils
+const { BANKS } = require('./utils/invoice.util');
 
 // Routes
 const apiRoutes = require('./routes/api.routes');
@@ -535,6 +539,7 @@ app.get('/classes/:classId', optionalAuth, async (req, res, next) => {
         profiles,
         selectedProfileId,
         googleServiceAccountEmail: googleSheetService.getServiceAccountEmail(),
+        banks: BANKS,
       },
       initialData: {
         classDetail: classData,
@@ -544,6 +549,71 @@ app.get('/classes/:classId', optionalAuth, async (req, res, next) => {
     });
   } catch (error) {
     console.error('Error rendering class detail:', error);
+    next(error);
+  }
+});
+
+const SEMESTER_LABELS = { spring: 'Spring', summer: 'Summer', fall: 'Fall' };
+
+const formatInvoiceDate = value => {
+  if (!value) return '';
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return parsed.toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+};
+
+const formatInvoiceMoney = value => Number(value || 0).toLocaleString('vi-VN');
+
+// Trang in hóa đơn / bảng kê học phí — chỉ đọc dữ liệu, không ghi database
+app.get('/classes/:classId/invoice', optionalAuth, async (req, res, next) => {
+  if (!ensureLecturerAccess(req, res)) return;
+
+  const userId = req.user._id;
+
+  try {
+    const { classId } = req.params;
+
+    try {
+      await classService.getClassById(classId, userId);
+    } catch (err) {
+      if (err.message.includes('Class not found')) {
+        return renderLayoutPage(req, res, 'class-not-found', {
+          title: 'Không tìm thấy lớp - FPT Polytechnic',
+          currentRoute: '/classes',
+          pageData: { classId },
+        });
+      }
+      throw err;
+    }
+
+    const invoice = await invoiceController.loadInvoice(classId, req.query);
+
+    const semesterLabel = [
+      SEMESTER_LABELS[invoice.class.semester] || '',
+      invoice.class.year || '',
+      invoice.class.block ? `Block ${invoice.class.block}` : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
+
+    const exportParams = new URLSearchParams();
+    if (req.query.from) exportParams.set('from', req.query.from);
+    if (req.query.to) exportParams.set('to', req.query.to);
+    const exportQuery = exportParams.toString() ? `?${exportParams.toString()}` : '';
+
+    res.render('pages/invoice-print', {
+      invoice,
+      semesterLabel,
+      exportQuery,
+      fmtDate: formatInvoiceDate,
+      fmtMoney: formatInvoiceMoney,
+    });
+  } catch (error) {
+    console.error('Error rendering invoice print page:', error);
     next(error);
   }
 });

@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bảng kê học phí <%= invoice.class.name %> - <%= invoice.invoiceNo %></title>
+    <style>
+      :root {
+        --ink: #1a1a1a;
+        --ink-soft: #5b5b5b;
+        --line: #d8dbe0;
+        --line-strong: #9aa0a8;
+        --accent: <%= invoice.branding.primaryColor || '#FF6C00' %>;
+        --surface-alt: #f6f7f9;
+        --space-block: 18px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #eceef1;
+        color: var(--ink);
+        font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .sheet {
+        width: 210mm;
+        min-height: 297mm;
+        margin: 0 auto;
+        padding: 16mm 14mm;
+        background: #fff;
+        box-shadow: 0 10px 40px rgb(0 0 0 / 12%);
+      }
+
+      /* ===== Thanh công cụ (ẩn khi in) ===== */
+      .toolbar {
+        width: 210mm;
+        margin: 0 auto 16px;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+      }
+
+      .btn {
+        padding: 9px 18px;
+        border: 1px solid var(--line-strong);
+        border-radius: 6px;
+        background: #fff;
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+      }
+
+      .btn:hover {
+        border-color: var(--accent);
+        transform: translateY(-1px);
+      }
+
+      .btn:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .btn--primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+
+      /* ===== Đầu hóa đơn ===== */
+      .invoice-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        padding-bottom: 14px;
+        border-bottom: 2px solid var(--accent);
+      }
+
+      .brand__logo {
+        max-height: 48px;
+        max-width: 180px;
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .brand__center {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+      }
+
+      .brand__sub {
+        margin: 2px 0 0;
+        color: var(--ink-soft);
+        font-size: 12px;
+      }
+
+      .invoice-head__right {
+        text-align: right;
+      }
+
+      .invoice-title {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--accent);
+      }
+
+      .invoice-meta {
+        margin: 6px 0 0;
+        font-size: 12px;
+        color: var(--ink-soft);
+      }
+
+      .invoice-meta strong {
+        color: var(--ink);
+      }
+
+      /* ===== Khối thông tin ===== */
+      .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 28px;
+        margin: var(--space-block) 0;
+      }
+
+      .info-row {
+        display: flex;
+        gap: 8px;
+      }
+
+      .info-row__label {
+        min-width: 96px;
+        color: var(--ink-soft);
+      }
+
+      .info-row__value {
+        font-weight: 600;
+      }
+
+      /* ===== Bảng buổi học ===== */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: var(--space-block);
+      }
+
+      thead th {
+        padding: 9px 8px;
+        background: var(--accent);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 600;
+        text-align: left;
+        border: 1px solid var(--accent);
+      }
+
+      tbody td {
+        padding: 7px 8px;
+        border: 1px solid var(--line);
+      }
+
+      tbody tr:nth-child(even) td {
+        background: var(--surface-alt);
+      }
+
+      .num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .center {
+        text-align: center;
+      }
+
+      tfoot td {
+        padding: 10px 8px;
+        border: 1px solid var(--line-strong);
+        font-weight: 700;
+        background: var(--surface-alt);
+      }
+
+      tfoot .grand {
+        font-size: 15px;
+        color: var(--accent);
+      }
+
+      .empty-row td {
+        padding: 22px 8px;
+        text-align: center;
+        color: var(--ink-soft);
+        font-style: italic;
+      }
+
+      .amount-words {
+        margin: 0 0 var(--space-block);
+        padding: 9px 12px;
+        border-left: 3px solid var(--accent);
+        background: var(--surface-alt);
+      }
+
+      .amount-words span {
+        color: var(--ink-soft);
+      }
+
+      /* ===== Chuyển khoản + QR ===== */
+      .payment {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+        padding: 14px;
+        border: 1px dashed var(--line-strong);
+        border-radius: 8px;
+        page-break-inside: avoid;
+      }
+
+      .payment__title {
+        margin: 0 0 8px;
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--accent);
+      }
+
+      .payment__qr {
+        width: 150px;
+        height: auto;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+      }
+
+      .payment__qr-hint {
+        margin: 6px 0 0;
+        font-size: 11px;
+        color: var(--ink-soft);
+        text-align: center;
+        max-width: 150px;
+      }
+
+      .note {
+        margin-top: var(--space-block);
+        padding-top: 10px;
+        border-top: 1px solid var(--line);
+        color: var(--ink-soft);
+        white-space: pre-wrap;
+      }
+
+      .signatures {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 32px;
+        text-align: center;
+        page-break-inside: avoid;
+      }
+
+      .signatures__block {
+        min-width: 180px;
+      }
+
+      .signatures__role {
+        font-weight: 700;
+      }
+
+      .signatures__hint {
+        margin: 2px 0 56px;
+        font-size: 11px;
+        font-style: italic;
+        color: var(--ink-soft);
+      }
+
+      /* ===== In ===== */
+      @page {
+        size: A4;
+        margin: 12mm;
+      }
+
+      @media print {
+        body {
+          padding: 0;
+          background: #fff;
+          print-color-adjust: exact;
+          -webkit-print-color-adjust: exact;
+        }
+
+        .sheet {
+          width: auto;
+          min-height: 0;
+          margin: 0;
+          padding: 0;
+          box-shadow: none;
+        }
+
+        .toolbar {
+          display: none;
+        }
+
+        thead {
+          display: table-header-group;
+        }
+
+        tr {
+          page-break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="toolbar">
+      <button type="button" class="btn" onclick="window.close()">Đóng</button>
+      <a class="btn" href="/api/classes/<%= invoice.class.classId %>/invoice/export<%= exportQuery %>"
+        >Tải Excel</a
+      >
+      <button type="button" class="btn btn--primary" onclick="window.print()">In / Lưu PDF</button>
+    </div>
+
+    <main class="sheet">
+      <header class="invoice-head">
+        <div class="brand">
+          <% if (invoice.branding.logoDataUrl) { %>
+          <img class="brand__logo" src="<%= invoice.branding.logoDataUrl %>" alt="" />
+          <% } %>
+          <p class="brand__center"><%= invoice.config.centerName || 'BẢNG KÊ HỌC PHÍ' %></p>
+          <% if (invoice.branding.subtext) { %>
+          <p class="brand__sub"><%= invoice.branding.subtext %></p>
+          <% } %>
+        </div>
+        <div class="invoice-head__right">
+          <h1 class="invoice-title">Bảng kê học phí</h1>
+          <p class="invoice-meta">
+            Số: <strong><%= invoice.invoiceNo %></strong><br />
+            Ngày xuất: <strong><%= fmtDate(invoice.issuedAt) %></strong>
+          </p>
+        </div>
+      </header>
+
+      <section class="info-grid" aria-label="Thông tin lớp và người nhận">
+        <div class="info-row">
+          <span class="info-row__label">Lớp:</span>
+          <span class="info-row__value"><%= invoice.class.name %></span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Kính gửi:</span>
+          <span class="info-row__value"><%= invoice.config.payerName || '—' %></span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Kỳ học:</span>
+          <span class="info-row__value"><%= semesterLabel || '—' %></span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Điện thoại:</span>
+          <span class="info-row__value"><%= invoice.config.payerPhone || '—' %></span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Giảng viên:</span>
+          <span class="info-row__value"><%= invoice.class.instructorCode || '—' %></span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Địa chỉ:</span>
+          <span class="info-row__value"><%= invoice.config.payerAddress || '—' %></span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Kỳ thanh toán:</span>
+          <span class="info-row__value"><%= invoice.period.label %></span>
+        </div>
+        <div class="info-row">
+          <span class="info-row__label">Sĩ số lớp:</span>
+          <span class="info-row__value"><%= invoice.class.studentCount %> sinh viên</span>
+        </div>
+      </section>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 44px">STT</th>
+            <th>Ngày học</th>
+            <th class="center" style="width: 90px">Số giờ</th>
+            <th class="center" style="width: 80px">Sĩ số</th>
+            <th class="num" style="width: 110px">Đơn giá/giờ</th>
+            <th class="num" style="width: 120px">Thành tiền</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!invoice.rows.length) { %>
+          <tr class="empty-row">
+            <td colspan="6">Không có buổi học nào trong khoảng thời gian đã chọn</td>
+          </tr>
+          <% } %> <% invoice.rows.forEach(function (row) { %>
+          <tr>
+            <td class="center"><%= row.index %></td>
+            <td><%= fmtDate(row.date) %></td>
+            <td class="center"><%= row.durationHours %></td>
+            <td class="center"><%= row.presentCount %>/<%= row.totalStudents %></td>
+            <td class="num"><%= fmtMoney(row.hourlyRate) %></td>
+            <td class="num"><%= fmtMoney(row.totalCost) %></td>
+          </tr>
+          <% }); %>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2">TỔNG CỘNG (<%= invoice.totals.sessionCount %> buổi)</td>
+            <td class="center"><%= invoice.totals.totalHours %></td>
+            <td colspan="2"></td>
+            <td class="num grand"><%= fmtMoney(invoice.totals.totalAmount) %></td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <p class="amount-words">
+        <span>Bằng chữ:</span> <strong><%= invoice.amountInWords %></strong>
+      </p>
+
+      <% if (invoice.config.bankAccount) { %>
+      <section class="payment" aria-label="Thông tin chuyển khoản">
+        <div>
+          <p class="payment__title">Thông tin chuyển khoản</p>
+          <div class="info-row">
+            <span class="info-row__label">Ngân hàng:</span>
+            <span class="info-row__value">
+              <% if (invoice.bank) { %><%= invoice.bank.shortName %> — <%= invoice.bank.name %><% }
+              else { %><%= invoice.config.bankCode || '—' %><% } %>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-row__label">Số tài khoản:</span>
+            <span class="info-row__value"><%= invoice.config.bankAccount %></span>
+          </div>
+          <div class="info-row">
+            <span class="info-row__label">Chủ tài khoản:</span>
+            <span class="info-row__value"><%= invoice.config.bankAccountName || '—' %></span>
+          </div>
+          <div class="info-row">
+            <span class="info-row__label">Nội dung CK:</span>
+            <span class="info-row__value"><%= invoice.invoiceNo %></span>
+          </div>
+          <div class="info-row">
+            <span class="info-row__label">Số tiền:</span>
+            <span class="info-row__value"><%= fmtMoney(invoice.totals.totalAmount) %> đ</span>
+          </div>
+        </div>
+        <% if (invoice.qrUrl) { %>
+        <figure style="margin: 0">
+          <img class="payment__qr" src="<%= invoice.qrUrl %>" alt="Mã QR chuyển khoản" />
+          <figcaption class="payment__qr-hint">Quét bằng app ngân hàng để chuyển khoản</figcaption>
+        </figure>
+        <% } %>
+      </section>
+      <% } %> <% if (invoice.config.note) { %>
+      <p class="note"><%= invoice.config.note %></p>
+      <% } %>
+
+      <section class="signatures">
+        <div class="signatures__block">
+          <p class="signatures__role">Người nộp tiền</p>
+          <p class="signatures__hint">(Ký, ghi rõ họ tên)</p>
+        </div>
+        <div class="signatures__block">
+          <p class="signatures__role">Người lập bảng kê</p>
+          <p class="signatures__hint">(Ký, ghi rõ họ tên)</p>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
