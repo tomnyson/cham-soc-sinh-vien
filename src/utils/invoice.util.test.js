@@ -3,7 +3,22 @@ const {
   BANKS,
   buildVietQrUrl,
   generateInvoiceNo,
+  parseDateRange,
+  filterSessionsByRange,
+  buildInvoiceData,
 } = require('./invoice.util');
+
+const makeSession = (dateIso, overrides = {}) => ({
+  date: new Date(dateIso),
+  durationHours: 2,
+  hourlyRate: 200000,
+  totalCost: 400000,
+  records: [
+    { mssv: 'SV01', status: 'present' },
+    { mssv: 'SV02', status: 'absent' }
+  ],
+  ...overrides
+});
 
 describe('numberToVietnameseWords', () => {
   it('đọc số 0', () => {
@@ -126,5 +141,172 @@ describe('generateInvoiceNo', () => {
 
   it('xử lý classId ngắn hơn 6 ký tự', () => {
     expect(generateInvoiceNo('ab', null, null)).toBe('HD-AB-ALL-ALL');
+  });
+});
+
+describe('parseDateRange', () => {
+  it('trả null cho cả hai khi đầu vào rỗng', () => {
+    expect(parseDateRange('', '')).toEqual({ from: null, to: null });
+    expect(parseDateRange(undefined, undefined)).toEqual({ from: null, to: null });
+  });
+
+  it('đẩy "to" tới cuối ngày', () => {
+    const { to } = parseDateRange('', '2026-08-10');
+    expect(to.getHours()).toBe(23);
+    expect(to.getMinutes()).toBe(59);
+    expect(to.getSeconds()).toBe(59);
+    expect(to.getMilliseconds()).toBe(999);
+  });
+
+  it('đặt "from" về đầu ngày', () => {
+    const { from } = parseDateRange('2026-07-01', '');
+    expect(from.getHours()).toBe(0);
+    expect(from.getMinutes()).toBe(0);
+  });
+
+  it('bỏ qua ngày không hợp lệ', () => {
+    expect(parseDateRange('khong-phai-ngay', 'abc')).toEqual({ from: null, to: null });
+  });
+});
+
+describe('filterSessionsByRange', () => {
+  const sessions = [
+    makeSession('2026-07-01T10:00:00'),
+    makeSession('2026-07-15T10:00:00'),
+    makeSession('2026-08-10T11:36:00')
+  ];
+
+  it('trả toàn bộ khi không có khoảng lọc', () => {
+    expect(filterSessionsByRange(sessions, null, null)).toHaveLength(3);
+  });
+
+  it('lọc theo cận dưới', () => {
+    const { from } = parseDateRange('2026-07-15', '');
+    expect(filterSessionsByRange(sessions, from, null)).toHaveLength(2);
+  });
+
+  it('lọc theo cận trên, bao gồm cả buổi trong ngày cuối', () => {
+    const { to } = parseDateRange('', '2026-08-10');
+    expect(filterSessionsByRange(sessions, null, to)).toHaveLength(3);
+  });
+
+  it('lọc theo cả hai cận', () => {
+    const { from, to } = parseDateRange('2026-07-10', '2026-07-20');
+    expect(filterSessionsByRange(sessions, from, to)).toHaveLength(1);
+  });
+
+  it('trả mảng rỗng khi không buổi nào khớp', () => {
+    const { from, to } = parseDateRange('2026-01-01', '2026-01-31');
+    expect(filterSessionsByRange(sessions, from, to)).toEqual([]);
+  });
+
+  it('không mutate mảng đầu vào', () => {
+    const original = [...sessions];
+    filterSessionsByRange(sessions, null, null);
+    expect(sessions).toEqual(original);
+  });
+});
+
+describe('buildInvoiceData', () => {
+  const classData = {
+    classId: 'class_1782608848247',
+    name: 'SOF308',
+    semester: 'fall',
+    year: 2026,
+    block: 1,
+    instructorCode: 'HungNX',
+    students: [{ mssv: 'SV01' }, { mssv: 'SV02' }],
+    invoiceConfig: {
+      centerName: 'Trung tâm ABC',
+      payerName: 'Phụ huynh Nguyễn Văn A',
+      bankCode: '970436',
+      bankAccount: '0011001234567',
+      bankAccountName: 'NGUYEN VAN A'
+    }
+  };
+  const branding = { logoDataUrl: '', subtext: 'FPT Polytechnic', primaryColor: '#FF6C00' };
+
+  it('cộng đúng tổng số buổi, tổng giờ và tổng tiền', () => {
+    const sessions = [makeSession('2026-08-01T10:00:00'), makeSession('2026-08-10T10:00:00')];
+    const result = buildInvoiceData({ classData, sessions, from: null, to: null, branding });
+    expect(result.totals.sessionCount).toBe(2);
+    expect(result.totals.totalHours).toBe(4);
+    expect(result.totals.totalAmount).toBe(800000);
+    expect(result.amountInWords).toBe('Tám trăm nghìn đồng chẵn');
+  });
+
+  it('giữ nguyên hourlyRate snapshot của từng buổi', () => {
+    const sessions = [
+      makeSession('2026-08-01T10:00:00', { hourlyRate: 200000, totalCost: 400000 }),
+      makeSession('2026-08-10T10:00:00', { hourlyRate: 300000, totalCost: 600000 })
+    ];
+    const result = buildInvoiceData({ classData, sessions, from: null, to: null, branding });
+    expect(result.rows[0].hourlyRate).toBe(200000);
+    expect(result.rows[1].hourlyRate).toBe(300000);
+    expect(result.totals.totalAmount).toBe(1000000);
+  });
+
+  it('đếm đúng sĩ số có mặt trên tổng số bản ghi', () => {
+    const result = buildInvoiceData({
+      classData,
+      sessions: [makeSession('2026-08-01T10:00:00')],
+      from: null, to: null, branding
+    });
+    expect(result.rows[0].presentCount).toBe(1);
+    expect(result.rows[0].totalStudents).toBe(2);
+  });
+
+  it('đánh số thứ tự tăng dần theo ngày', () => {
+    const sessions = [makeSession('2026-08-10T10:00:00'), makeSession('2026-08-01T10:00:00')];
+    const result = buildInvoiceData({ classData, sessions, from: null, to: null, branding });
+    expect(result.rows.map(r => r.index)).toEqual([1, 2]);
+    expect(result.rows[0].date.getTime()).toBeLessThan(result.rows[1].date.getTime());
+  });
+
+  it('sinh qrUrl khi đã cấu hình ngân hàng', () => {
+    const result = buildInvoiceData({
+      classData,
+      sessions: [makeSession('2026-08-01T10:00:00')],
+      from: null, to: null, branding
+    });
+    expect(result.qrUrl).toContain('970436-0011001234567');
+    expect(result.qrUrl).toContain('amount=400000');
+    expect(result.qrUrl).toContain(`addInfo=${result.invoiceNo}`);
+  });
+
+  it('qrUrl là null khi chưa cấu hình ngân hàng', () => {
+    const result = buildInvoiceData({
+      classData: { ...classData, invoiceConfig: { centerName: 'X' } },
+      sessions: [makeSession('2026-08-01T10:00:00')],
+      from: null, to: null, branding
+    });
+    expect(result.qrUrl).toBeNull();
+  });
+
+  it('xử lý lớp không có buổi nào', () => {
+    const result = buildInvoiceData({ classData, sessions: [], from: null, to: null, branding });
+    expect(result.rows).toEqual([]);
+    expect(result.totals).toEqual({ sessionCount: 0, totalHours: 0, totalAmount: 0 });
+    expect(result.amountInWords).toBe('Không đồng');
+    expect(result.qrUrl).toBeNull();
+  });
+
+  it('xử lý lớp chưa có invoiceConfig', () => {
+    const result = buildInvoiceData({
+      classData: { classId: 'c1', name: 'X' },
+      sessions: [], from: null, to: null, branding: null
+    });
+    expect(result.config.centerName).toBe('');
+    expect(result.branding.subtext).toBe('');
+    expect(result.qrUrl).toBeNull();
+  });
+
+  it('dựng nhãn khoảng thời gian', () => {
+    const { from, to } = parseDateRange('2026-07-01', '2026-08-10');
+    const withRange = buildInvoiceData({ classData, sessions: [], from, to, branding });
+    expect(withRange.period.label).toBe('01/07/2026 – 10/08/2026');
+
+    const noRange = buildInvoiceData({ classData, sessions: [], from: null, to: null, branding });
+    expect(noRange.period.label).toBe('Toàn bộ');
   });
 });

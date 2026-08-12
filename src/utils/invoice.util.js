@@ -157,9 +157,158 @@ function generateInvoiceNo(classId, from, to) {
   return `HD-${suffix}-${toPeriodKey(from)}-${toPeriodKey(to)}`;
 }
 
+/**
+ * Chuẩn hoá tham số khoảng ngày từ query string.
+ * from → 00:00:00.000, to → 23:59:59.999 để bao trọn ngày cuối.
+ * @param {string} fromRaw
+ * @param {string} toRaw
+ * @returns {{ from: Date|null, to: Date|null }}
+ */
+function parseDateRange(fromRaw, toRaw) {
+  const parse = (raw, endOfDay) => {
+    if (!raw) return null;
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) return null;
+    if (endOfDay) parsed.setHours(23, 59, 59, 999);
+    else parsed.setHours(0, 0, 0, 0);
+    return parsed;
+  };
+
+  return { from: parse(fromRaw, false), to: parse(toRaw, true) };
+}
+
+/**
+ * Lọc buổi học theo khoảng ngày. Không mutate đầu vào.
+ * @param {Array} sessions
+ * @param {Date|null} from
+ * @param {Date|null} to
+ * @returns {Array}
+ */
+function filterSessionsByRange(sessions, from, to) {
+  const list = Array.isArray(sessions) ? sessions : [];
+  return list.filter(session => {
+    const date = session && session.date instanceof Date ? session.date : new Date(session && session.date);
+    if (Number.isNaN(date.getTime())) return false;
+    if (from && date < from) return false;
+    if (to && date > to) return false;
+    return true;
+  });
+}
+
+/**
+ * @param {Date|string} date
+ * @returns {string} dd/mm/yyyy
+ */
+function formatDdMmYyyy(date) {
+  const parsed = date instanceof Date ? date : new Date(date);
+  const day = String(parsed.getDate()).padStart(2, '0');
+  const month = String(parsed.getMonth() + 1).padStart(2, '0');
+  return `${day}/${month}/${parsed.getFullYear()}`;
+}
+
+/**
+ * @param {Date|null} from
+ * @param {Date|null} to
+ * @returns {string}
+ */
+function buildPeriodLabel(from, to) {
+  if (from && to) return `${formatDdMmYyyy(from)} – ${formatDdMmYyyy(to)}`;
+  if (from) return `Từ ${formatDdMmYyyy(from)}`;
+  if (to) return `Đến ${formatDdMmYyyy(to)}`;
+  return 'Toàn bộ';
+}
+
+/**
+ * Dựng toàn bộ dữ liệu hóa đơn để render ra HTML hoặc Excel.
+ * Hàm thuần — không đọc / ghi database.
+ * @param {{classData: object, sessions: Array, from: Date|null, to: Date|null, branding: object|null}} params
+ * @returns {object}
+ */
+function buildInvoiceData({ classData = {}, sessions = [], from = null, to = null, branding = null } = {}) {
+  const filtered = filterSessionsByRange(sessions, from, to)
+    .slice()
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  const rows = filtered.map((session, i) => {
+    const records = Array.isArray(session.records) ? session.records : [];
+    return {
+      index: i + 1,
+      date: session.date instanceof Date ? session.date : new Date(session.date),
+      durationHours: Number(session.durationHours) || 0,
+      presentCount: records.filter(r => r && r.status === 'present').length,
+      totalStudents: records.length,
+      hourlyRate: Number(session.hourlyRate) || 0,
+      totalCost: Number(session.totalCost) || 0,
+    };
+  });
+
+  const totals = rows.reduce(
+    (acc, row) => ({
+      sessionCount: acc.sessionCount + 1,
+      totalHours: acc.totalHours + row.durationHours,
+      totalAmount: acc.totalAmount + row.totalCost,
+    }),
+    { sessionCount: 0, totalHours: 0, totalAmount: 0 }
+  );
+
+  const rawConfig = classData.invoiceConfig || {};
+  const config = {
+    centerName: String(rawConfig.centerName || ''),
+    payerName: String(rawConfig.payerName || ''),
+    payerPhone: String(rawConfig.payerPhone || ''),
+    payerAddress: String(rawConfig.payerAddress || ''),
+    bankCode: String(rawConfig.bankCode || ''),
+    bankAccount: String(rawConfig.bankAccount || ''),
+    bankAccountName: String(rawConfig.bankAccountName || ''),
+    note: String(rawConfig.note || ''),
+  };
+
+  const bank = BANKS.find(b => b.bin === config.bankCode) || null;
+  const invoiceNo = generateInvoiceNo(classData.classId, from, to);
+
+  return {
+    invoiceNo,
+    issuedAt: new Date(),
+    class: {
+      classId: String(classData.classId || ''),
+      name: String(classData.name || ''),
+      semester: String(classData.semester || ''),
+      year: classData.year === undefined ? null : classData.year,
+      block: classData.block === undefined ? null : classData.block,
+      instructorCode: String(classData.instructorCode || ''),
+      studentCount: Array.isArray(classData.students) ? classData.students.length : 0,
+    },
+    period: { from, to, label: buildPeriodLabel(from, to) },
+    config,
+    bank,
+    branding: {
+      logoDataUrl: String((branding && branding.logoDataUrl) || ''),
+      subtext: String((branding && branding.subtext) || ''),
+      primaryColor: String((branding && branding.primaryColor) || '#FF6C00'),
+    },
+    rows,
+    totals,
+    amountInWords: numberToVietnameseWords(totals.totalAmount),
+    // Không sinh QR khi tổng tiền bằng 0 — QR không có số tiền dễ gây hiểu nhầm
+    qrUrl:
+      totals.totalAmount > 0
+        ? buildVietQrUrl({
+            bankCode: config.bankCode,
+            bankAccount: config.bankAccount,
+            bankAccountName: config.bankAccountName,
+            amount: totals.totalAmount,
+            addInfo: invoiceNo,
+          })
+        : null,
+  };
+}
+
 module.exports = {
   numberToVietnameseWords,
   BANKS,
   buildVietQrUrl,
   generateInvoiceNo,
+  parseDateRange,
+  filterSessionsByRange,
+  buildInvoiceData,
 };
