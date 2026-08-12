@@ -1,4 +1,5 @@
 import { uiState } from '/js/modules/uiState.js';
+import { getInvoiceRangeQuery, collectInvoiceConfig } from '/js/pages/class-detail-invoice.js';
 
 // Attendance Logic
 document.addEventListener('DOMContentLoaded', function() {
@@ -84,6 +85,8 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 const classId = document.getElementById('classDetailPage').dataset.classId;
                 const hourlyRate = parseFloat(configRateInput.value) || 0;
+                const invoiceConfig = collectInvoiceConfig();
+                const payload = invoiceConfig ? { hourlyRate, invoiceConfig } : { hourlyRate };
 
                 btnSaveConfig.disabled = true;
                 btnSaveConfig.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang lưu...';
@@ -91,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const res = await fetch(`/api/classes/${classId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ hourlyRate })
+                    body: JSON.stringify(payload)
                 });
                 const data = await res.json();
                 
@@ -123,7 +126,7 @@ window.loadAttendanceHistory = async function loadAttendanceHistory() {
     
     try {
         tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3">Đang tải...</td></tr>';
-        const res = await fetch(`/api/classes/${classId}/attendance`);
+        const res = await fetch(`/api/classes/${classId}/attendance${getInvoiceRangeQuery()}`);
         const data = await res.json();
         
         if (data.success) {

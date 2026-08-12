@@ -2005,7 +2005,7 @@
                     <div class="tab-pane fade" id="attendance-history" role="tabpanel">
                         <div class="card border-0 shadow-sm rounded-4 h-100">
                             <div class="card-body p-4">
-                                <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+                                <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
                                     <h6 class="fw-bold d-flex align-items-center gap-2 mb-0">
                                         <i class="bi bi-clock-history text-primary"></i> Lịch sử buổi học
                                     </h6>
@@ -2013,6 +2013,31 @@
                                         <span class="text-muted small fw-bold text-uppercase tracking-wide" style="font-size: 0.75rem;">Tổng doanh thu</span>
                                         <h4 class="text-success fw-bold mb-0 mt-1" id="attTotalRevenue">0 đ</h4>
                                     </div>
+                                </div>
+                                <div class="d-flex flex-wrap align-items-end gap-2 mb-4">
+                                    <div>
+                                        <label class="form-label text-muted small fw-bold text-uppercase tracking-wide mb-1" for="invoiceFromDate">Từ ngày</label>
+                                        <input type="date" class="form-control border-0 bg-light" id="invoiceFromDate">
+                                    </div>
+                                    <div>
+                                        <label class="form-label text-muted small fw-bold text-uppercase tracking-wide mb-1" for="invoiceToDate">Đến ngày</label>
+                                        <input type="date" class="form-control border-0 bg-light" id="invoiceToDate">
+                                    </div>
+                                    <button class="btn btn-light border rounded-pill fw-semibold px-3" id="btnApplyInvoiceRange">
+                                        <i class="bi bi-funnel me-1"></i> Áp dụng
+                                    </button>
+                                    <div class="ms-auto d-flex gap-2">
+                                        <button class="btn btn-outline-success rounded-pill fw-semibold px-3" id="btnExportInvoiceExcel">
+                                            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Tải Excel
+                                        </button>
+                                        <button class="btn btn-primary rounded-pill fw-bold px-3 shadow-sm" id="btnPrintInvoice">
+                                            <i class="bi bi-printer me-1"></i> In / PDF
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="invoiceConfigWarning" class="alert alert-warning py-2 px-3 small rounded-3 d-none">
+                                    Chưa cấu hình tài khoản ngân hàng — hóa đơn sẽ không có mã QR chuyển khoản.
+                                    Vào tab <strong>Cấu hình</strong> để bổ sung.
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-hover align-middle border-top-0">
@@ -2044,6 +2069,59 @@
                                     <input type="number" class="form-control form-control-lg border-0 fw-semibold bg-light" id="attConfigHourlyRate" value="<%= classData.hourlyRate || 0 %>">
                                     <div class="form-text mt-2">Đơn giá này sẽ được tự động điền khi tạo điểm danh mới.</div>
                                 </div>
+                                <hr class="my-4">
+                                <h6 class="fw-bold d-flex align-items-center gap-2 mb-3">
+                                    <i class="bi bi-receipt text-primary"></i> Thông tin hóa đơn
+                                </h6>
+                                <div class="row g-3 mb-4">
+                                    <div class="col-md-6">
+                                        <label class="form-label text-muted small fw-bold text-uppercase tracking-wide" for="invCenterName">Tên trung tâm</label>
+                                        <input type="text" class="form-control border-0 bg-light" id="invCenterName" maxlength="120"
+                                            value="<%= classData.invoiceConfig?.centerName || '' %>">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-muted small fw-bold text-uppercase tracking-wide" for="invPayerName">Người nhận / Phụ huynh</label>
+                                        <input type="text" class="form-control border-0 bg-light" id="invPayerName" maxlength="120"
+                                            value="<%= classData.invoiceConfig?.payerName || '' %>">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-muted small fw-bold text-uppercase tracking-wide" for="invPayerPhone">Điện thoại</label>
+                                        <input type="text" class="form-control border-0 bg-light" id="invPayerPhone" maxlength="30"
+                                            value="<%= classData.invoiceConfig?.payerPhone || '' %>">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-muted small fw-bold text-uppercase tracking-wide" for="invPayerAddress">Địa chỉ</label>
+                                        <input type="text" class="form-control border-0 bg-light" id="invPayerAddress" maxlength="200"
+                                            value="<%= classData.invoiceConfig?.payerAddress || '' %>">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-muted small fw-bold text-uppercase tracking-wide" for="invBankCode">Ngân hàng</label>
+                                        <select class="form-select border-0 bg-light" id="invBankCode">
+                                            <option value="">— Chưa chọn —</option>
+                                            <% (banks || []).forEach(function (bank) { %>
+                                                <option value="<%= bank.bin %>"
+                                                    <%= classData.invoiceConfig?.bankCode === bank.bin ? 'selected' : '' %>>
+                                                    <%= bank.shortName %> — <%= bank.name %>
+                                                </option>
+                                            <% }); %>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-muted small fw-bold text-uppercase tracking-wide" for="invBankAccount">Số tài khoản</label>
+                                        <input type="text" class="form-control border-0 bg-light" id="invBankAccount" maxlength="30"
+                                            value="<%= classData.invoiceConfig?.bankAccount || '' %>">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-muted small fw-bold text-uppercase tracking-wide" for="invBankAccountName">Chủ tài khoản</label>
+                                        <input type="text" class="form-control border-0 bg-light" id="invBankAccountName" maxlength="120"
+                                            value="<%= classData.invoiceConfig?.bankAccountName || '' %>">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-muted small fw-bold text-uppercase tracking-wide" for="invNote">Ghi chú trên hóa đơn</label>
+                                        <input type="text" class="form-control border-0 bg-light" id="invNote" maxlength="300"
+                                            value="<%= classData.invoiceConfig?.note || '' %>">
+                                    </div>
+                                </div>
                                 <button class="btn btn-primary rounded-pill fw-bold px-4 shadow-sm" id="btnSaveAttendanceConfig">
                                     Lưu Cấu Hình
                                 </button>
@@ -2056,6 +2134,7 @@
     </div>
 </div>
 
+<script type="module" src="/js/pages/class-detail-invoice.js"></script>
 <script type="module" src="/js/pages/class-detail-attendance.js"></script>
 
 <script type="module" src="<%- assetPath('/js/pages/class-detail.js') %>"></script>
