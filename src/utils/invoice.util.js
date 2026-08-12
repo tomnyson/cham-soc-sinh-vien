@@ -73,6 +73,93 @@ function numberToVietnameseWords(amount) {
   return `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)} đồng chẵn`;
 }
 
+/**
+ * Danh sách ngân hàng hỗ trợ VietQR (BIN theo chuẩn NAPAS).
+ */
+const BANKS = [
+  { bin: '970436', shortName: 'Vietcombank', name: 'Ngân hàng TMCP Ngoại Thương Việt Nam' },
+  { bin: '970415', shortName: 'VietinBank', name: 'Ngân hàng TMCP Công Thương Việt Nam' },
+  { bin: '970418', shortName: 'BIDV', name: 'Ngân hàng TMCP Đầu tư và Phát triển Việt Nam' },
+  { bin: '970405', shortName: 'Agribank', name: 'Ngân hàng NN&PTNT Việt Nam' },
+  { bin: '970422', shortName: 'MBBank', name: 'Ngân hàng TMCP Quân đội' },
+  { bin: '970407', shortName: 'Techcombank', name: 'Ngân hàng TMCP Kỹ Thương Việt Nam' },
+  { bin: '970416', shortName: 'ACB', name: 'Ngân hàng TMCP Á Châu' },
+  { bin: '970432', shortName: 'VPBank', name: 'Ngân hàng TMCP Việt Nam Thịnh Vượng' },
+  { bin: '970423', shortName: 'TPBank', name: 'Ngân hàng TMCP Tiên Phong' },
+  { bin: '970403', shortName: 'Sacombank', name: 'Ngân hàng TMCP Sài Gòn Thương Tín' },
+  { bin: '970443', shortName: 'SHB', name: 'Ngân hàng TMCP Sài Gòn - Hà Nội' },
+  { bin: '970426', shortName: 'MSB', name: 'Ngân hàng TMCP Hàng Hải' },
+  { bin: '970441', shortName: 'VIB', name: 'Ngân hàng TMCP Quốc tế Việt Nam' },
+  { bin: '970437', shortName: 'HDBank', name: 'Ngân hàng TMCP Phát triển TP.HCM' },
+  { bin: '970431', shortName: 'Eximbank', name: 'Ngân hàng TMCP Xuất Nhập Khẩu Việt Nam' },
+  { bin: '970448', shortName: 'OCB', name: 'Ngân hàng TMCP Phương Đông' },
+  { bin: '970440', shortName: 'SeABank', name: 'Ngân hàng TMCP Đông Nam Á' },
+  { bin: '970449', shortName: 'LPBank', name: 'Ngân hàng TMCP Lộc Phát Việt Nam' },
+  { bin: '970425', shortName: 'ABBANK', name: 'Ngân hàng TMCP An Bình' },
+  { bin: '970429', shortName: 'SCB', name: 'Ngân hàng TMCP Sài Gòn' },
+  { bin: '970454', shortName: 'BVBank', name: 'Ngân hàng TMCP Bản Việt' },
+  { bin: '970409', shortName: 'BacABank', name: 'Ngân hàng TMCP Bắc Á' },
+];
+
+/**
+ * Dựng URL ảnh QR chuyển khoản VietQR.
+ * Trả null nếu chưa cấu hình đủ ngân hàng + số tài khoản.
+ * @returns {string|null}
+ */
+function buildVietQrUrl({ bankCode, bankAccount, bankAccountName, amount, addInfo } = {}) {
+  const bank = String(bankCode || '').trim();
+  const account = String(bankAccount || '').trim();
+  if (!bank || !account) return null;
+
+  const params = [];
+  const numericAmount = Math.floor(Number(amount));
+  if (Number.isFinite(numericAmount) && numericAmount > 0) {
+    params.push(`amount=${numericAmount}`);
+  }
+  if (addInfo) {
+    params.push(`addInfo=${encodeURIComponent(String(addInfo))}`);
+  }
+  if (bankAccountName) {
+    params.push(`accountName=${encodeURIComponent(String(bankAccountName))}`);
+  }
+
+  const query = params.length ? `?${params.join('&')}` : '';
+  return `https://img.vietqr.io/image/${bank}-${account}-compact2.png${query}`;
+}
+
+/**
+ * Định dạng Date thành YYYYMM, trả 'ALL' nếu không có ngày.
+ * @param {Date|string|null} date
+ * @returns {string}
+ */
+function toPeriodKey(date) {
+  if (!date) return 'ALL';
+  const parsed = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(parsed.getTime())) return 'ALL';
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, '0');
+  return `${year}${month}`;
+}
+
+/**
+ * Sinh số hóa đơn tất định — cùng tham số luôn cho cùng kết quả, không cần lưu DB.
+ * @param {string} classId
+ * @param {Date|null} from
+ * @param {Date|null} to
+ * @returns {string} VD: HD-848247-202607-202608
+ */
+function generateInvoiceNo(classId, from, to) {
+  const suffix =
+    String(classId || '')
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .slice(-6)
+      .toUpperCase() || 'UNKNOWN';
+  return `HD-${suffix}-${toPeriodKey(from)}-${toPeriodKey(to)}`;
+}
+
 module.exports = {
   numberToVietnameseWords,
+  BANKS,
+  buildVietQrUrl,
+  generateInvoiceNo,
 };
