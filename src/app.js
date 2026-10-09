@@ -600,9 +600,9 @@ app.get('/classes/:classId/invoice', optionalAuth, async (req, res, next) => {
       .filter(Boolean)
       .join(' ');
 
-    // Giữ nguyên khoảng ngày + voucher để link tải Excel khớp với bản in
+    // Giữ nguyên khoảng ngày + voucher + học viên để link tải Excel khớp với bản in
     const exportParams = new URLSearchParams();
-    ['from', 'to', 'voucherCode', 'discountType', 'discountValue'].forEach(key => {
+    ['from', 'to', 'voucherCode', 'discountType', 'discountValue', 'mssv'].forEach(key => {
       if (req.query[key]) exportParams.set(key, req.query[key]);
     });
     const exportQuery = exportParams.toString() ? `?${exportParams.toString()}` : '';

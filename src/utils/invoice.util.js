@@ -4,6 +4,13 @@
  * Không đọc / ghi database.
  */
 
+const {
+  PAYMENT_METHODS,
+  allocateSessionCost,
+  isActivePayment,
+  sumActivePayments,
+} = require('./payment.util');
+
 const DIGITS = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
 const SCALES = ['', ' nghìn', ' triệu', ' tỷ'];
 
@@ -147,15 +154,20 @@ function toPeriodKey(date) {
  * @param {string} classId
  * @param {Date|null} from
  * @param {Date|null} to
- * @returns {string} VD: HD-848247-202607-202608
+ * @param {string} [mssv] - có khi in hóa đơn cho một học viên
+ * @returns {string} VD: HD-848247-202607-202608 hoặc HD-848247-202607-202608-PS12345
  */
-function generateInvoiceNo(classId, from, to) {
+function generateInvoiceNo(classId, from, to, mssv) {
   const suffix =
     String(classId || '')
       .replace(/[^a-zA-Z0-9]/g, '')
       .slice(-6)
       .toUpperCase() || 'UNKNOWN';
-  return `HD-${suffix}-${toPeriodKey(from)}-${toPeriodKey(to)}`;
+  const base = `HD-${suffix}-${toPeriodKey(from)}-${toPeriodKey(to)}`;
+  const studentKey = String(mssv || '')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toUpperCase();
+  return studentKey ? `${base}-${studentKey}` : base;
 }
 
 /**
@@ -268,6 +280,61 @@ function buildVoucherLabel(voucher) {
 }
 
 /**
+ * Dựng một dòng bảng kê từ buổi học.
+ * Có mssv: thành tiền là phần chia của học viên, kèm tiền cả buổi và trạng thái điểm danh.
+ * @param {object} session
+ * @param {number} index
+ * @param {string} mssv
+ * @returns {object}
+ */
+function buildInvoiceRow(session, index, mssv) {
+  const records = Array.isArray(session.records) ? session.records : [];
+  const sessionCost = Number(session.totalCost) || 0;
+  const row = {
+    index,
+    date: session.date instanceof Date ? session.date : new Date(session.date),
+    durationHours: Number(session.durationHours) || 0,
+    presentCount: records.filter(r => r && r.status === 'present').length,
+    totalStudents: records.length,
+    hourlyRate: Number(session.hourlyRate) || 0,
+    totalCost: sessionCost,
+  };
+  if (!mssv) return row;
+
+  const record = records.find(r => r && String(r.mssv) === mssv);
+  return {
+    ...row,
+    totalCost: allocateSessionCost(session).get(mssv) || 0,
+    sessionCost,
+    attendanceStatus: record ? record.status : '',
+  };
+}
+
+/**
+ * Danh sách khoản thu còn hiệu lực để in trên hóa đơn, sắp theo ngày thu tăng dần.
+ * @param {Array} payments
+ * @param {string} mssv - rỗng = cả lớp
+ * @param {Array} students - danh sách học viên của lớp (để lấy tên)
+ * @returns {Array}
+ */
+function buildInvoicePayments(payments, mssv, students) {
+  const names = new Map(students.map(s => [String(s.mssv), String(s.name || '')]));
+  return (Array.isArray(payments) ? payments : [])
+    .filter(isActivePayment)
+    .filter(p => !mssv || p.mssv === mssv)
+    .map(p => ({
+      mssv: String(p.mssv || ''),
+      studentName: names.get(String(p.mssv)) || '',
+      amount: Number(p.amount) || 0,
+      paidAt: p.paidAt instanceof Date ? p.paidAt : new Date(p.paidAt),
+      method: p.method || 'cash',
+      methodLabel: PAYMENT_METHODS[p.method] || PAYMENT_METHODS.cash,
+      note: String(p.note || ''),
+    }))
+    .sort((a, b) => a.paidAt - b.paidAt);
+}
+
+/**
  * Dựng toàn bộ dữ liệu hóa đơn để render ra HTML hoặc Excel.
  * Hàm thuần — không đọc / ghi database.
  * @param {object} params
@@ -277,6 +344,8 @@ function buildVoucherLabel(voucher) {
  * @param {Date|null} params.to - cận trên khoảng ngày
  * @param {object|null} params.branding - cấu hình thương hiệu toàn cục
  * @param {object|null} params.voucher - voucher giảm giá đã chuẩn hoá
+ * @param {string} [params.mssv] - in cho một học viên; rỗng = cả lớp
+ * @param {Array} [params.payments] - các khoản đã thu trong kỳ
  * @returns {object}
  */
 function buildInvoiceData({
@@ -286,23 +355,19 @@ function buildInvoiceData({
   to = null,
   branding = null,
   voucher = null,
+  mssv = '',
+  payments = [],
 } = {}) {
+  const studentMssv = String(mssv || '').trim();
+  const students = Array.isArray(classData.students) ? classData.students : [];
+  const hasStudent = session =>
+    Array.isArray(session.records) && session.records.some(r => r && String(r.mssv) === studentMssv);
+
   const filtered = filterSessionsByRange(sessions, from, to)
-    .slice()
+    .filter(session => !studentMssv || hasStudent(session))
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-  const rows = filtered.map((session, i) => {
-    const records = Array.isArray(session.records) ? session.records : [];
-    return {
-      index: i + 1,
-      date: session.date instanceof Date ? session.date : new Date(session.date),
-      durationHours: Number(session.durationHours) || 0,
-      presentCount: records.filter(r => r && r.status === 'present').length,
-      totalStudents: records.length,
-      hourlyRate: Number(session.hourlyRate) || 0,
-      totalCost: Number(session.totalCost) || 0,
-    };
-  });
+  const rows = filtered.map((session, i) => buildInvoiceRow(session, i + 1, studentMssv));
 
   const summed = rows.reduce(
     (acc, row) => ({
@@ -314,12 +379,18 @@ function buildInvoiceData({
   );
 
   const discountAmount = calcDiscountAmount(summed.subtotal, voucher);
+  const totalAmount = summed.subtotal - discountAmount;
+  const paidAmount = sumActivePayments(payments, studentMssv || undefined);
   const totals = {
     ...summed,
     discountAmount,
     // totalAmount luôn là số tiền phải trả sau khi trừ voucher
-    totalAmount: summed.subtotal - discountAmount,
+    totalAmount,
+    paidAmount,
+    // Âm khi học viên trả thừa
+    remainingAmount: totalAmount - paidAmount,
   };
+  const amountDue = Math.max(totals.remainingAmount, 0);
 
   const rawConfig = classData.invoiceConfig || {};
   const config = {
@@ -334,7 +405,13 @@ function buildInvoiceData({
   };
 
   const bank = BANKS.find(b => b.bin === config.bankCode) || null;
-  const invoiceNo = generateInvoiceNo(classData.classId, from, to);
+  const invoiceNo = generateInvoiceNo(classData.classId, from, to, studentMssv);
+  const studentInfo = studentMssv
+    ? {
+        mssv: studentMssv,
+        name: String((students.find(s => String(s.mssv) === studentMssv) || {}).name || ''),
+      }
+    : null;
 
   return {
     invoiceNo,
@@ -346,7 +423,7 @@ function buildInvoiceData({
       year: classData.year === undefined ? null : classData.year,
       block: classData.block === undefined ? null : classData.block,
       instructorCode: String(classData.instructorCode || ''),
-      studentCount: Array.isArray(classData.students) ? classData.students.length : 0,
+      studentCount: students.length,
     },
     period: { from, to, label: buildPeriodLabel(from, to) },
     config,
@@ -356,18 +433,21 @@ function buildInvoiceData({
       subtext: String((branding && branding.subtext) || ''),
       primaryColor: String((branding && branding.primaryColor) || '#FF6C00'),
     },
+    student: studentInfo,
     rows,
     totals,
+    payments: buildInvoicePayments(payments, studentMssv, students),
     voucher: voucher ? { ...voucher, label: buildVoucherLabel(voucher) } : null,
-    amountInWords: numberToVietnameseWords(totals.totalAmount),
-    // Không sinh QR khi tổng tiền bằng 0 — QR không có số tiền dễ gây hiểu nhầm
+    // Bằng chữ + QR theo số tiền còn phải trả sau khi trừ các khoản đã thu
+    amountInWords: numberToVietnameseWords(amountDue),
+    // Không sinh QR khi không còn tiền phải trả — QR không có số tiền dễ gây hiểu nhầm
     qrUrl:
-      totals.totalAmount > 0
+      amountDue > 0
         ? buildVietQrUrl({
             bankCode: config.bankCode,
             bankAccount: config.bankAccount,
             bankAccountName: config.bankAccountName,
-            amount: totals.totalAmount,
+            amount: amountDue,
             addInfo: invoiceNo,
           })
         : null,

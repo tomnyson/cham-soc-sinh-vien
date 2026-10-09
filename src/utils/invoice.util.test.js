@@ -297,6 +297,8 @@ describe('buildInvoiceData', () => {
       subtotal: 0,
       discountAmount: 0,
       totalAmount: 0,
+      paidAmount: 0,
+      remainingAmount: 0,
     });
     expect(result.amountInWords).toBe('Không đồng');
     expect(result.qrUrl).toBeNull();
@@ -456,5 +458,123 @@ describe('buildInvoiceData - áp dụng voucher', () => {
     expect(result.totals.discountAmount).toBe(0);
     expect(result.totals.totalAmount).toBe(0);
     expect(result.qrUrl).toBeNull();
+  });
+});
+
+describe('generateInvoiceNo - theo học viên', () => {
+  it('thêm hậu tố mssv khi in hóa đơn cho một học viên', () => {
+    const from = new Date(2026, 6, 1);
+    expect(generateInvoiceNo('class_1782608848247', from, null, 'ps-12345')).toBe(
+      'HD-848247-202607-ALL-PS12345'
+    );
+  });
+
+  it('không đổi số hóa đơn khi không truyền mssv', () => {
+    expect(generateInvoiceNo('ab', null, null, '')).toBe('HD-AB-ALL-ALL');
+  });
+});
+
+describe('buildInvoiceData - thanh toán và hóa đơn theo học viên', () => {
+  const classData = {
+    classId: 'class_1782608848247',
+    name: 'SOF308',
+    students: [
+      { mssv: 'SV01', name: 'Nguyễn Văn A' },
+      { mssv: 'SV02', name: 'Trần Thị B' },
+    ],
+    invoiceConfig: { bankCode: '970436', bankAccount: '0011001234567' },
+  };
+  const sessions = [
+    makeSession('2026-08-01T10:00:00'),
+    makeSession('2026-08-10T10:00:00', {
+      records: [
+        { mssv: 'SV01', status: 'present' },
+        { mssv: 'SV02', status: 'present' },
+        { mssv: 'SV03', status: 'present' },
+      ],
+      totalCost: 300000,
+    }),
+    makeSession('2026-08-20T10:00:00', { records: [{ mssv: 'SV02', status: 'present' }] }),
+  ];
+  const payments = [
+    { mssv: 'SV01', amount: 200000, paidAt: new Date(2026, 7, 12), method: 'cash', note: 'Đợt 1' },
+    { mssv: 'SV02', amount: 100000, paidAt: new Date(2026, 7, 5), method: 'transfer' },
+    { mssv: 'SV01', amount: 50000, paidAt: new Date(2026, 7, 6), method: 'cash', status: 'voided' },
+  ];
+
+  it('không truyền payments thì giữ nguyên kết quả cũ, đã thanh toán = 0', () => {
+    const result = buildInvoiceData({ classData, sessions });
+    expect(result.totals.totalAmount).toBe(1100000);
+    expect(result.totals.paidAmount).toBe(0);
+    expect(result.totals.remainingAmount).toBe(1100000);
+    expect(result.student).toBeNull();
+    expect(result.payments).toEqual([]);
+    expect(result.invoiceNo).toBe('HD-848247-ALL-ALL');
+  });
+
+  it('cả lớp: trừ các khoản đã thu còn hiệu lực, QR theo số còn lại', () => {
+    const result = buildInvoiceData({ classData, sessions, payments });
+    expect(result.totals.paidAmount).toBe(300000);
+    expect(result.totals.remainingAmount).toBe(800000);
+    expect(result.amountInWords).toBe('Tám trăm nghìn đồng chẵn');
+    expect(result.qrUrl).toContain('amount=800000');
+    expect(result.payments.map(p => p.amount)).toEqual([100000, 200000]);
+    expect(result.payments[0]).toMatchObject({
+      mssv: 'SV02',
+      studentName: 'Trần Thị B',
+      methodLabel: 'Chuyển khoản',
+    });
+  });
+
+  it('theo học viên: chỉ lấy buổi có học viên, thành tiền là phần chia', () => {
+    const result = buildInvoiceData({ classData, sessions, payments, mssv: 'SV01' });
+
+    expect(result.student).toEqual({ mssv: 'SV01', name: 'Nguyễn Văn A' });
+    expect(result.rows).toHaveLength(2);
+    expect(result.rows[0]).toMatchObject({
+      index: 1,
+      totalCost: 200000,
+      sessionCost: 400000,
+      attendanceStatus: 'present',
+    });
+    expect(result.rows[1]).toMatchObject({ totalCost: 100000, sessionCost: 300000 });
+    expect(result.totals.subtotal).toBe(300000);
+    expect(result.totals.paidAmount).toBe(200000);
+    expect(result.totals.remainingAmount).toBe(100000);
+    expect(result.payments).toHaveLength(1);
+    expect(result.invoiceNo).toBe('HD-848247-ALL-ALL-SV01');
+    expect(result.qrUrl).toContain('amount=100000');
+  });
+
+  it('theo học viên: voucher áp trên phần của học viên rồi mới trừ đã thu', () => {
+    const result = buildInvoiceData({
+      classData,
+      sessions,
+      payments,
+      mssv: 'SV01',
+      voucher: { code: '', type: 'percent', value: 10 },
+    });
+    expect(result.totals.discountAmount).toBe(30000);
+    expect(result.totals.totalAmount).toBe(270000);
+    expect(result.totals.remainingAmount).toBe(70000);
+  });
+
+  it('trả thừa: còn lại âm, bằng chữ là Không đồng và không sinh QR', () => {
+    const result = buildInvoiceData({
+      classData,
+      sessions,
+      mssv: 'SV01',
+      payments: [{ mssv: 'SV01', amount: 500000, paidAt: new Date(2026, 7, 2), method: 'cash' }],
+    });
+    expect(result.totals.remainingAmount).toBe(-200000);
+    expect(result.amountInWords).toBe('Không đồng');
+    expect(result.qrUrl).toBeNull();
+  });
+
+  it('học viên đã rời lớp vẫn in được, tên để trống', () => {
+    const result = buildInvoiceData({ classData, sessions, mssv: 'SV03' });
+    expect(result.student).toEqual({ mssv: 'SV03', name: '' });
+    expect(result.rows).toHaveLength(1);
+    expect(result.totals.subtotal).toBe(100000);
   });
 });

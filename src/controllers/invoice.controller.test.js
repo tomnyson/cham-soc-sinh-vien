@@ -3,6 +3,7 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 
 const Class = require('../models/class.model');
 const AttendanceSession = require('../models/attendance.model');
+const Payment = require('../models/payment.model');
 const invoiceController = require('./invoice.controller');
 
 let mongoServer;
@@ -84,6 +85,7 @@ afterEach(async () => {
   // Dọn dẹp CHỈ dữ liệu do test tạo trong DB in-memory (không phải DB thật)
   await Class.deleteMany({});
   await AttendanceSession.deleteMany({});
+  await Payment.deleteMany({});
 });
 
 describe('getInvoiceData', () => {
@@ -278,5 +280,61 @@ describe('bất biến dữ liệu — yêu cầu tuyệt đối', () => {
 
     const after = await Class.findOne({ classId: 'class_test_1' }).lean();
     expect(after).toEqual(before);
+  });
+});
+
+describe('đã thanh toán / còn lại', () => {
+  const seedPayments = () =>
+    Payment.create([
+      { classId: 'class_test_1', mssv: 'SV01', amount: 300000, paidAt: new Date(2026, 7, 12), createdBy: 'user_1' },
+      { classId: 'class_test_1', mssv: 'SV01', amount: 100000, paidAt: new Date(2026, 5, 1), createdBy: 'user_1' },
+      { classId: 'class_test_1', mssv: 'SV01', amount: 999000, paidAt: new Date(2026, 7, 13), createdBy: 'user_1', status: 'voided' },
+      { classId: 'class_khac', mssv: 'SV01', amount: 777000, paidAt: new Date(2026, 7, 13), createdBy: 'user_1' },
+    ]);
+
+  it('trừ các khoản đã thu còn hiệu lực của lớp trong kỳ', async () => {
+    await seedPayments();
+    const res = makeRes();
+    await invoiceController.getInvoiceData(makeReq(), res, jest.fn());
+
+    const { totals, payments, qrUrl } = res.body.data;
+    expect(totals.paidAmount).toBe(400000);
+    expect(totals.remainingAmount).toBe(400000);
+    expect(payments).toHaveLength(2);
+    expect(qrUrl).toContain('amount=400000');
+  });
+
+  it('chỉ tính khoản thu có ngày thu trong khoảng ngày của hóa đơn', async () => {
+    await seedPayments();
+    const res = makeRes();
+    await invoiceController.getInvoiceData(
+      makeReq({ from: '2026-08-01', to: '2026-08-31' }),
+      res,
+      jest.fn()
+    );
+
+    expect(res.body.data.totals.paidAmount).toBe(300000);
+    expect(res.body.data.totals.remainingAmount).toBe(100000);
+  });
+
+  it('in theo học viên qua query mssv', async () => {
+    await seedPayments();
+    const res = makeRes();
+    await invoiceController.getInvoiceData(makeReq({ mssv: 'SV01' }), res, jest.fn());
+
+    const { student, invoiceNo, rows } = res.body.data;
+    expect(student).toEqual({ mssv: 'SV01', name: 'Nguyễn Văn A' });
+    expect(invoiceNo).toMatch(/-SV01$/);
+    expect(rows[0].attendanceStatus).toBe('present');
+  });
+
+  it('xuất hóa đơn không ghi gì vào collection payments', async () => {
+    await seedPayments();
+    const before = await Payment.find().sort({ _id: 1 }).lean();
+
+    await invoiceController.getInvoiceData(makeReq({ mssv: 'SV01' }), makeRes(), jest.fn());
+    await invoiceController.exportInvoiceExcel(makeReq({ mssv: 'SV01' }), makeRes(), jest.fn());
+
+    expect(await Payment.find().sort({ _id: 1 }).lean()).toEqual(before);
   });
 });

@@ -131,3 +131,78 @@ describe('createInvoiceWorkbook', () => {
     expect(rows.flat().map(String).join(' ')).toContain('Không đồng');
   });
 });
+
+describe('createInvoiceWorkbook - thanh toán và học viên', () => {
+  const classData = {
+    classId: 'c1',
+    name: 'SOF308',
+    students: [
+      { mssv: 'SV01', name: 'Nguyễn Văn A' },
+      { mssv: 'SV02', name: 'Trần Thị B' },
+    ],
+  };
+  const sessions = [
+    {
+      date: new Date(2026, 7, 1),
+      durationHours: 2,
+      hourlyRate: 200000,
+      totalCost: 400000,
+      records: [
+        { mssv: 'SV01', status: 'present' },
+        { mssv: 'SV02', status: 'absent' },
+      ],
+    },
+    {
+      date: new Date(2026, 7, 10),
+      durationHours: 2,
+      hourlyRate: 200000,
+      totalCost: 400000,
+      records: [
+        { mssv: 'SV01', status: 'absent' },
+        { mssv: 'SV02', status: 'present' },
+      ],
+    },
+  ];
+  const payments = [
+    { mssv: 'SV01', amount: 150000, paidAt: new Date(2026, 7, 12), method: 'transfer', note: 'Đợt 1' },
+  ];
+
+  it('không có khoản thu thì không hiện dòng đã thanh toán', () => {
+    const { rows } = readSheetText(createInvoiceWorkbook(invoiceData));
+    const labels = rows.flat().filter(Boolean).map(String);
+    expect(labels).not.toContain('ĐÃ THANH TOÁN');
+    expect(labels).not.toContain('LỊCH SỬ THANH TOÁN');
+    expect(rows.find(r => r[0] === 'STT')).toHaveLength(6);
+  });
+
+  it('cả lớp: hiện đã thanh toán (số âm), còn lại và lịch sử thu', () => {
+    const data = buildInvoiceData({ classData, sessions, payments });
+    const { rows } = readSheetText(createInvoiceWorkbook(data));
+    const flat = rows.flat();
+    const labels = flat.filter(Boolean).map(String);
+
+    expect(labels).toContain('ĐÃ THANH TOÁN');
+    expect(labels).toContain('CÒN LẠI');
+    expect(flat).toContain(-150000);
+    expect(flat).toContain(650000);
+    expect(labels).toContain('LỊCH SỬ THANH TOÁN');
+    expect(labels).toContain('Chuyển khoản');
+    expect(labels).toContain('Đợt 1');
+    expect(labels.join(' ')).toContain('Sáu trăm năm mươi nghìn đồng chẵn');
+  });
+
+  it('theo học viên: có dòng Học viên và cột Điểm danh', () => {
+    const data = buildInvoiceData({ classData, sessions, payments, mssv: 'SV01' });
+    const { rows } = readSheetText(createInvoiceWorkbook(data));
+    const labels = rows.flat().filter(Boolean).map(String);
+
+    expect(labels).toContain('SV01 - Nguyễn Văn A');
+    const header = rows.find(r => r[0] === 'STT');
+    expect(header).toEqual(['STT', 'Ngày', 'Thời lượng (giờ)', 'Sĩ số', 'Điểm danh', 'Đơn giá/giờ', 'Thành tiền']);
+    const headerIndex = rows.indexOf(header);
+    expect(rows[headerIndex + 1][4]).toBe('Có mặt');
+    expect(rows[headerIndex + 1][6]).toBe(200000);
+    expect(rows[headerIndex + 2][4]).toBe('Vắng');
+    expect(rows.flat()).toContain(250000); // còn lại = 400.000 - 150.000
+  });
+});

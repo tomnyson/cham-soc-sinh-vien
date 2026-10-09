@@ -173,6 +173,83 @@ function formatInvoiceDate(date) {
   return `${day}/${month}/${parsed.getFullYear()}`;
 }
 
+const ATTENDANCE_LABELS = { present: 'Có mặt', absent: 'Vắng' };
+
+/**
+ * Chèn ô "Điểm danh" vào vị trí cột thứ 5 khi hóa đơn in cho một học viên.
+ * @param {Array} cells - 6 ô theo bố cục cả lớp
+ * @param {boolean} withAttendance
+ * @param {*} attendanceCell
+ * @returns {Array}
+ */
+function withAttendanceColumn(cells, withAttendance, attendanceCell = '') {
+  return withAttendance ? [...cells.slice(0, 4), attendanceCell, ...cells.slice(4)] : cells;
+}
+
+/**
+ * Các dòng tổng: tổng cộng / tạm tính, voucher, tổng thanh toán, đã thanh toán, còn lại.
+ * @param {object} data - kết quả của buildInvoiceData()
+ * @param {boolean} withAttendance
+ * @returns {Array<Array>}
+ */
+function buildInvoiceTotalRows(data, withAttendance) {
+  const totals = data.totals || { sessionCount: 0, totalHours: 0, totalAmount: 0 };
+  const discountAmount = totals.discountAmount || 0;
+  const paidAmount = totals.paidAmount || 0;
+  const subtotal = totals.subtotal === undefined ? totals.totalAmount : totals.subtotal;
+  const line = (label, amount) => withAttendanceColumn(['', label, '', '', '', amount], withAttendance);
+
+  const lines = [
+    [''],
+    withAttendanceColumn(
+      [
+        '',
+        discountAmount > 0 ? 'TẠM TÍNH' : 'TỔNG CỘNG',
+        totals.totalHours,
+        `${totals.sessionCount} buổi`,
+        '',
+        discountAmount > 0 ? subtotal : totals.totalAmount,
+      ],
+      withAttendance
+    ),
+  ];
+
+  if (discountAmount > 0) {
+    lines.push(line((data.voucher && data.voucher.label) || 'Giảm giá', -discountAmount));
+    lines.push(line('TỔNG THANH TOÁN', totals.totalAmount));
+  }
+
+  if (paidAmount > 0) {
+    const remaining = totals.remainingAmount || 0;
+    lines.push(line('ĐÃ THANH TOÁN', -paidAmount));
+    lines.push(line(remaining < 0 ? 'TRẢ THỪA' : 'CÒN LẠI', Math.abs(remaining)));
+  }
+
+  return lines;
+}
+
+/**
+ * Bảng lịch sử các khoản đã thu trên hóa đơn.
+ * @param {Array} payments - invoice.payments
+ * @returns {Array<Array>}
+ */
+function buildPaymentHistoryRows(payments) {
+  const list = Array.isArray(payments) ? payments : [];
+  if (!list.length) return [];
+  return [
+    [''],
+    ['LỊCH SỬ THANH TOÁN'],
+    ['Ngày thu', 'Học viên', 'Hình thức', 'Số tiền', 'Ghi chú'],
+    ...list.map(p => [
+      formatInvoiceDate(p.paidAt),
+      p.studentName ? `${p.mssv} - ${p.studentName}` : p.mssv,
+      p.methodLabel,
+      p.amount,
+      p.note || '',
+    ]),
+  ];
+}
+
 /**
  * Tạo workbook Excel cho hóa đơn (bảng kê học phí)
  * @param {object} invoiceData - kết quả của buildInvoiceData()
@@ -182,8 +259,8 @@ function createInvoiceWorkbook(invoiceData) {
   const data = invoiceData || {};
   const cls = data.class || {};
   const config = data.config || {};
-  const totals = data.totals || { sessionCount: 0, totalHours: 0, totalAmount: 0 };
   const rows = Array.isArray(data.rows) ? data.rows : [];
+  const student = data.student || null;
 
   const semesterLabel = SEMESTER_LABELS[cls.semester] || '';
   const periodParts = [semesterLabel, cls.year || '', cls.block ? `Block ${cls.block}` : '']
@@ -211,41 +288,41 @@ function createInvoiceWorkbook(invoiceData) {
     ],
     ['Kính gửi:', config.payerName || '', '', 'Điện thoại:', config.payerPhone || ''],
     ['Địa chỉ:', config.payerAddress || ''],
-    [''],
-    ['STT', 'Ngày', 'Thời lượng (giờ)', 'Sĩ số', 'Đơn giá/giờ', 'Thành tiền'],
   ];
 
-  rows.forEach(row => {
-    sheet.push([
-      row.index,
-      formatInvoiceDate(row.date),
-      row.durationHours,
-      `${row.presentCount}/${row.totalStudents}`,
-      row.hourlyRate,
-      row.totalCost,
-    ]);
-  });
-
-  const discountAmount = totals.discountAmount || 0;
-  const subtotal = totals.subtotal === undefined ? totals.totalAmount : totals.subtotal;
-
-  sheet.push(['']);
-  sheet.push([
-    '',
-    discountAmount > 0 ? 'TẠM TÍNH' : 'TỔNG CỘNG',
-    totals.totalHours,
-    `${totals.sessionCount} buổi`,
-    '',
-    discountAmount > 0 ? subtotal : totals.totalAmount,
-  ]);
-
-  if (discountAmount > 0) {
-    const label = (data.voucher && data.voucher.label) || 'Giảm giá';
-    sheet.push(['', label, '', '', '', -discountAmount]);
-    sheet.push(['', 'TỔNG THANH TOÁN', '', '', '', totals.totalAmount]);
+  if (student) {
+    sheet.push(['Học viên:', student.name ? `${student.mssv} - ${student.name}` : student.mssv]);
   }
 
+  sheet.push(['']);
+  sheet.push(
+    withAttendanceColumn(
+      ['STT', 'Ngày', 'Thời lượng (giờ)', 'Sĩ số', 'Đơn giá/giờ', 'Thành tiền'],
+      Boolean(student),
+      'Điểm danh'
+    )
+  );
+
+  rows.forEach(row => {
+    sheet.push(
+      withAttendanceColumn(
+        [
+          row.index,
+          formatInvoiceDate(row.date),
+          row.durationHours,
+          `${row.presentCount}/${row.totalStudents}`,
+          row.hourlyRate,
+          row.totalCost,
+        ],
+        Boolean(student),
+        ATTENDANCE_LABELS[row.attendanceStatus] || ''
+      )
+    );
+  });
+
+  sheet.push(...buildInvoiceTotalRows(data, Boolean(student)));
   sheet.push(['Bằng chữ:', data.amountInWords || '']);
+  sheet.push(...buildPaymentHistoryRows(data.payments));
 
   if (config.bankAccount) {
     sheet.push(['']);
@@ -266,7 +343,11 @@ function createInvoiceWorkbook(invoiceData) {
   }
 
   const ws = XLSX.utils.aoa_to_sheet(sheet);
-  ws['!cols'] = [{ wch: 16 }, { wch: 26 }, { wch: 16 }, { wch: 10 }, { wch: 16 }, { wch: 18 }];
+  ws['!cols'] = withAttendanceColumn(
+    [{ wch: 16 }, { wch: 26 }, { wch: 16 }, { wch: 10 }, { wch: 16 }, { wch: 18 }],
+    Boolean(student),
+    { wch: 12 }
+  );
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Hóa đơn');

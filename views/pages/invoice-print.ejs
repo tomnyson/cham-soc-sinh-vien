@@ -202,6 +202,29 @@
         color: #0f7b3f;
       }
 
+      tfoot .paid td {
+        font-weight: 600;
+        color: var(--ink-soft);
+      }
+
+      .paid-history {
+        margin: 0 0 var(--space-block);
+      }
+
+      .paid-history__title {
+        margin: 0 0 6px;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--ink-soft);
+      }
+
+      .paid-history table {
+        margin: 0;
+        font-size: 12px;
+      }
+
       .empty-row td {
         padding: 22px 8px;
         text-align: center;
@@ -384,7 +407,27 @@
           <span class="info-row__label">Sĩ số lớp:</span>
           <span class="info-row__value"><%= invoice.class.studentCount %> sinh viên</span>
         </div>
+        <% if (invoice.student) { %>
+        <div class="info-row">
+          <span class="info-row__label">Học viên:</span>
+          <span class="info-row__value">
+            <strong><%= invoice.student.mssv %></strong><% if (invoice.student.name) { %> — <%=
+            invoice.student.name %><% } %>
+          </span>
+        </div>
+        <% } %>
       </section>
+
+      <%
+        const isStudentInvoice = Boolean(invoice.student);
+        const colCount = isStudentInvoice ? 7 : 6;
+        const attendanceLabels = { present: 'Có mặt', absent: 'Vắng' };
+        const paidAmount = invoice.totals.paidAmount || 0;
+        const remainingAmount = invoice.totals.remainingAmount === undefined
+          ? invoice.totals.totalAmount
+          : invoice.totals.remainingAmount;
+        const amountDue = Math.max(remainingAmount, 0);
+      %>
 
       <table>
         <thead>
@@ -393,14 +436,17 @@
             <th>Ngày học</th>
             <th class="center" style="width: 90px">Số giờ</th>
             <th class="center" style="width: 80px">Sĩ số</th>
+            <% if (isStudentInvoice) { %>
+            <th class="center" style="width: 84px">Điểm danh</th>
+            <% } %>
             <th class="num" style="width: 110px">Đơn giá/giờ</th>
-            <th class="num" style="width: 120px">Thành tiền</th>
+            <th class="num" style="width: 120px"><%= isStudentInvoice ? 'Phần học viên' : 'Thành tiền' %></th>
           </tr>
         </thead>
         <tbody>
           <% if (!invoice.rows.length) { %>
           <tr class="empty-row">
-            <td colspan="6">Không có buổi học nào trong khoảng thời gian đã chọn</td>
+            <td colspan="<%= colCount %>">Không có buổi học nào trong khoảng thời gian đã chọn</td>
           </tr>
           <% } %> <% invoice.rows.forEach(function (row) { %>
           <tr>
@@ -408,6 +454,9 @@
             <td><%= fmtDate(row.date) %></td>
             <td class="center"><%= row.durationHours %></td>
             <td class="center"><%= row.presentCount %>/<%= row.totalStudents %></td>
+            <% if (isStudentInvoice) { %>
+            <td class="center"><%= attendanceLabels[row.attendanceStatus] || '—' %></td>
+            <% } %>
             <td class="num"><%= fmtMoney(row.hourlyRate) %></td>
             <td class="num"><%= fmtMoney(row.totalCost) %></td>
           </tr>
@@ -421,19 +470,28 @@
               buổi)
             </td>
             <td class="center"><%= invoice.totals.totalHours %></td>
-            <td colspan="2"></td>
+            <td colspan="<%= colCount - 4 %>"></td>
             <td class="num<%= hasDiscount ? '' : ' grand' %>">
               <%= fmtMoney(hasDiscount ? invoice.totals.subtotal : invoice.totals.totalAmount) %>
             </td>
           </tr>
           <% if (hasDiscount) { %>
           <tr class="discount">
-            <td colspan="5"><%= invoice.voucher.label %></td>
+            <td colspan="<%= colCount - 1 %>"><%= invoice.voucher.label %></td>
             <td class="num">−<%= fmtMoney(invoice.totals.discountAmount) %></td>
           </tr>
           <tr>
-            <td colspan="5">TỔNG THANH TOÁN</td>
+            <td colspan="<%= colCount - 1 %>">TỔNG THANH TOÁN</td>
             <td class="num grand"><%= fmtMoney(invoice.totals.totalAmount) %></td>
+          </tr>
+          <% } %> <% if (paidAmount > 0) { %>
+          <tr class="paid">
+            <td colspan="<%= colCount - 1 %>">ĐÃ THANH TOÁN</td>
+            <td class="num">−<%= fmtMoney(paidAmount) %></td>
+          </tr>
+          <tr>
+            <td colspan="<%= colCount - 1 %>"><%= remainingAmount < 0 ? 'TRẢ THỪA' : 'CÒN LẠI' %></td>
+            <td class="num grand"><%= fmtMoney(Math.abs(remainingAmount)) %></td>
           </tr>
           <% } %>
         </tfoot>
@@ -442,6 +500,38 @@
       <p class="amount-words">
         <span>Bằng chữ:</span> <strong><%= invoice.amountInWords %></strong>
       </p>
+
+      <% if (invoice.payments && invoice.payments.length) { %>
+      <section class="paid-history" aria-label="Lịch sử thanh toán">
+        <p class="paid-history__title">Lịch sử thanh toán</p>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 90px">Ngày thu</th>
+              <% if (!isStudentInvoice) { %>
+              <th>Học viên</th>
+              <% } %>
+              <th style="width: 110px">Hình thức</th>
+              <th>Ghi chú</th>
+              <th class="num" style="width: 120px">Số tiền</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% invoice.payments.forEach(function (p) { %>
+            <tr>
+              <td><%= fmtDate(p.paidAt) %></td>
+              <% if (!isStudentInvoice) { %>
+              <td><%= p.mssv %><% if (p.studentName) { %> — <%= p.studentName %><% } %></td>
+              <% } %>
+              <td><%= p.methodLabel %></td>
+              <td><%= p.note || '' %></td>
+              <td class="num"><%= fmtMoney(p.amount) %></td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </section>
+      <% } %>
 
       <% if (invoice.config.bankAccount) { %>
       <section class="payment" aria-label="Thông tin chuyển khoản">
@@ -468,7 +558,7 @@
           </div>
           <div class="info-row">
             <span class="info-row__label">Số tiền:</span>
-            <span class="info-row__value"><%= fmtMoney(invoice.totals.totalAmount) %> đ</span>
+            <span class="info-row__value"><%= fmtMoney(amountDue) %> đ</span>
           </div>
         </div>
         <% if (invoice.qrUrl) { %>
