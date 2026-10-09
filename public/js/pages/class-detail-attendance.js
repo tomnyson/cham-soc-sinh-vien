@@ -4,6 +4,7 @@ import {
     getInvoiceStudentMssv,
     collectInvoiceConfig
 } from '/js/pages/class-detail-invoice.js';
+import { appendFormerStudentOptions } from '/js/pages/class-detail-payment.js';
 
 // Attendance Logic
 document.addEventListener('DOMContentLoaded', function() {
@@ -144,6 +145,7 @@ async function loadPaymentSummary(classId) {
         const res = await fetch(`/api/classes/${classId}/payments${query ? `?${query}` : ''}`);
         const data = await res.json();
         if (!data.success) throw new Error(data.error || 'Không tải được công nợ');
+        appendFormerStudentOptions(document.getElementById('invoiceStudent'), data.data.ledger.students);
         const summary = data.data.rangeSummary;
         paidEl.textContent = formatVnd(summary.paid);
         outstandingEl.textContent = formatVnd(summary.outstanding);

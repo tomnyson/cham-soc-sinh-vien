@@ -95,7 +95,14 @@ exports.createPayment = async (req, res, next) => {
         const classData = await findOwnedClass(classId, req.user);
         if (!classData) return notFound(res);
 
-        const { value, error } = parsePaymentInput(req.body, classData.students);
+        // Học viên đã rời lớp vẫn còn nợ từ các buổi cũ → vẫn cho ghi nhận khoản thu
+        const sessions = await AttendanceSession.find({ classId }, { 'records.mssv': 1 }).lean();
+        const formerStudents = sessions
+            .flatMap(s => s.records || [])
+            .map(r => ({ mssv: String(r.mssv) }));
+        const payableStudents = [...(classData.students || []), ...formerStudents];
+
+        const { value, error } = parsePaymentInput(req.body, payableStudents);
         if (error) return res.status(400).json({ success: false, error });
 
         const payment = await Payment.create({

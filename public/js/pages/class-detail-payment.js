@@ -49,6 +49,23 @@ function studentName(mssv) {
   return entry ? entry.name : mssv;
 }
 
+/**
+ * Thêm vào select các học viên đã rời lớp nhưng còn trong sổ công nợ
+ * (danh sách render từ server chỉ có học viên hiện tại).
+ * @param {HTMLSelectElement|null} select
+ * @param {Array<{mssv: string, name: string, inClass: boolean}>} ledgerStudents
+ */
+export function appendFormerStudentOptions(select, ledgerStudents) {
+  if (!select) return;
+  const existing = new Set(Array.from(select.options, option => option.value));
+  ledgerStudents
+    .filter(student => !student.inClass && !existing.has(student.mssv))
+    .forEach(student => {
+      const label = `${student.name || student.mssv} (${student.mssv}) — đã rời lớp`;
+      select.appendChild(new Option(label, student.mssv));
+    });
+}
+
 function renderLedger() {
   const tbody = document.getElementById('paymentLedgerBody');
   const { students, totals } = state.ledger;
@@ -162,6 +179,9 @@ async function loadPayments() {
 
     state.payments = data.data.payments;
     state.ledger = data.data.ledger;
+    ['paymentStudent', 'paymentHistoryFilter', 'invoiceStudent'].forEach(id =>
+      appendFormerStudentOptions(document.getElementById(id), state.ledger.students)
+    );
     renderLedger();
     renderHistory();
     renderStudentOutstanding();

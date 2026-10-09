@@ -139,6 +139,27 @@ describe('createPayment', () => {
     expect(await Payment.countDocuments()).toBe(0);
   });
 
+  it('cho phép thu tiền học viên đã rời lớp nhưng còn trong điểm danh', async () => {
+    await AttendanceSession.create({
+      classId: 'class_test_1',
+      date: new Date(2026, 5, 1, 10, 0),
+      durationHours: 1,
+      hourlyRate: 200000,
+      records: [{ mssv: 'SV03', status: 'present' }],
+      createdBy: 'user_1',
+    });
+
+    const res = makeRes();
+    await paymentController.createPayment(
+      makeReq({ body: { mssv: 'SV03', amount: 200000 } }),
+      res,
+      jest.fn()
+    );
+
+    expect(res.statusCode).toBe(201);
+    expect(await Payment.countDocuments({ mssv: 'SV03' })).toBe(1);
+  });
+
   it('trả 404 khi lớp thuộc user khác', async () => {
     const res = makeRes();
     await paymentController.createPayment(
