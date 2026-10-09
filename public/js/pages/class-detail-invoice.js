@@ -28,6 +28,14 @@ export function getInvoiceRangeQuery() {
 }
 
 /**
+ * MSSV học viên đang chọn để in hóa đơn riêng (rỗng = cả lớp).
+ * @returns {string}
+ */
+export function getInvoiceStudentMssv() {
+  return document.getElementById('invoiceStudent')?.value || '';
+}
+
+/**
  * Thu thập giá trị form cấu hình hóa đơn. Trả null nếu form chưa render.
  * @returns {object|null}
  */
@@ -48,11 +56,13 @@ export function collectInvoiceConfig() {
 let activeVoucher = null;
 
 /**
- * Ghép khoảng ngày và voucher thành query string cho hóa đơn.
+ * Ghép khoảng ngày, học viên và voucher thành query string cho hóa đơn.
  * @returns {string}
  */
 function buildInvoiceQuery() {
   const params = new URLSearchParams(getInvoiceRangeQuery());
+  const mssv = getInvoiceStudentMssv();
+  if (mssv) params.set('mssv', mssv);
   if (activeVoucher) {
     if (activeVoucher.code) params.set('voucherCode', activeVoucher.code);
     params.set('discountType', activeVoucher.type);
@@ -117,13 +127,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnPrint = document.getElementById('btnPrintInvoice');
   const btnExcel = document.getElementById('btnExportInvoiceExcel');
 
+  const reloadHistory = () => {
+    if (typeof window.loadAttendanceHistory === 'function') {
+      window.loadAttendanceHistory();
+    }
+  };
+
   if (btnApply) {
-    btnApply.addEventListener('click', () => {
-      if (typeof window.loadAttendanceHistory === 'function') {
-        window.loadAttendanceHistory();
-      }
-    });
+    btnApply.addEventListener('click', reloadHistory);
   }
+  document.getElementById('invoiceStudent')?.addEventListener('change', reloadHistory);
 
   const modalEl = document.getElementById('invoiceVoucherModal');
   const voucherModal = modalEl ? window.bootstrap.Modal.getOrCreateInstance(modalEl) : null;

@@ -25,7 +25,7 @@
 - [x] Task 1: `payment.util` — `allocateSessionCost`, `buildStudentLedger`, `sumActivePayments`, `parsePaymentInput` + test
 - [x] Task 2: `payment.model` + `payment.controller` (GET/POST/PUT void) + routes + controller test
 - [x] Task 3: Hóa đơn — `buildInvoiceData` nhận `mssv`/`payments`; `loadInvoice` nạp payments; Excel + trang in hiển thị Đã thanh toán / Còn lại; QR = số còn lại
-- [ ] Task 4: UI — tab "Thu tiền" (partial + module JS), ô ĐÃ THU / CÒN NỢ + chọn học viên ở tab Lịch sử
+- [x] Task 4: UI — tab "Thu tiền" (partial + module JS), ô ĐÃ THU / CÒN NỢ + chọn học viên ở tab Lịch sử
 - [ ] Task 5: GitNexus `detect_changes`, chạy toàn bộ test liên quan
 
 ## Rủi ro đã biết

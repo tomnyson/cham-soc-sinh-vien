@@ -1,0 +1,116 @@
+<%
+    const paymentStudents = Array.isArray(students) ? students : [];
+%>
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-4 d-flex align-items-center gap-2">
+                    <i class="bi bi-cash-coin text-primary"></i>
+                    Ghi nhận khoản thu
+                </h6>
+                <form id="paymentForm" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold text-uppercase tracking-wide" for="paymentStudent">Học viên</label>
+                        <select class="form-select border-0 bg-light" id="paymentStudent" required>
+                            <option value="">-- Chọn học viên --</option>
+                            <% paymentStudents.forEach(student => { %>
+                                <option value="<%= student.mssv %>"><%= student.name %> (<%= student.mssv %>)</option>
+                            <% }) %>
+                        </select>
+                        <div class="form-text" id="paymentStudentOutstanding"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold text-uppercase tracking-wide" for="paymentAmount">Số tiền (VNĐ)</label>
+                        <input type="number" class="form-control form-control-lg border-0 bg-light fw-semibold" id="paymentAmount" min="1" step="1000" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold text-uppercase tracking-wide" for="paymentPaidAt">Ngày thu</label>
+                        <input type="datetime-local" class="form-control border-0 bg-light" id="paymentPaidAt">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold text-uppercase tracking-wide" for="paymentMethod">Hình thức</label>
+                        <select class="form-select border-0 bg-light" id="paymentMethod">
+                            <option value="cash">Tiền mặt</option>
+                            <option value="transfer">Chuyển khoản</option>
+                            <option value="discount">Giảm trừ</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label text-muted small fw-bold text-uppercase tracking-wide" for="paymentNote">Ghi chú</label>
+                        <input type="text" class="form-control border-0 bg-light" id="paymentNote" maxlength="300" placeholder="VD: Đóng đợt 1">
+                    </div>
+                    <div id="paymentFormError" class="alert alert-danger py-2 px-3 small rounded-3 d-none" role="alert"></div>
+                    <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill fw-bold shadow-sm" id="btnSavePayment">
+                        Lưu khoản thu
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8 d-flex flex-column gap-4">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                    <h6 class="fw-bold d-flex align-items-center gap-2 mb-0">
+                        <i class="bi bi-journal-text text-primary"></i> Công nợ học viên
+                    </h6>
+                    <div class="d-flex gap-2 small">
+                        <span class="px-3 py-1 rounded-3 border">Phát sinh: <strong id="ledgerTotalCharged">0 đ</strong></span>
+                        <span class="px-3 py-1 rounded-3 border text-success">Đã thu: <strong id="ledgerTotalPaid">0 đ</strong></span>
+                        <span class="px-3 py-1 rounded-3 border text-danger">Còn nợ: <strong id="ledgerTotalOutstanding">0 đ</strong></span>
+                    </div>
+                </div>
+                <div id="ledgerUnallocatedNote" class="alert alert-warning py-2 px-3 small rounded-3 d-none"></div>
+                <div class="table-responsive" style="max-height: 280px;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th class="ps-3 border-0 text-muted small fw-bold text-uppercase tracking-wide">Học viên</th>
+                                <th class="text-center border-0 text-muted small fw-bold text-uppercase tracking-wide">Số buổi</th>
+                                <th class="text-end border-0 text-muted small fw-bold text-uppercase tracking-wide">Phát sinh</th>
+                                <th class="text-end border-0 text-muted small fw-bold text-uppercase tracking-wide">Đã thu</th>
+                                <th class="text-end pe-3 border-0 text-muted small fw-bold text-uppercase tracking-wide">Còn nợ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentLedgerBody" class="border-top-0">
+                            <tr><td colspan="5" class="text-center py-4 text-muted">Đang tải...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <h6 class="fw-bold d-flex align-items-center gap-2 mb-0">
+                        <i class="bi bi-receipt text-primary"></i> Lịch sử đã thu
+                    </h6>
+                    <select class="form-select form-select-sm border-0 bg-light w-auto" id="paymentHistoryFilter" aria-label="Lọc theo học viên">
+                        <option value="">Tất cả học viên</option>
+                        <% paymentStudents.forEach(student => { %>
+                            <option value="<%= student.mssv %>"><%= student.name %> (<%= student.mssv %>)</option>
+                        <% }) %>
+                    </select>
+                </div>
+                <div class="table-responsive" style="max-height: 320px;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th class="ps-3 border-0 text-muted small fw-bold text-uppercase tracking-wide">Ngày thu</th>
+                                <th class="border-0 text-muted small fw-bold text-uppercase tracking-wide">Học viên</th>
+                                <th class="border-0 text-muted small fw-bold text-uppercase tracking-wide">Hình thức</th>
+                                <th class="text-end border-0 text-muted small fw-bold text-uppercase tracking-wide">Số tiền</th>
+                                <th class="border-0 text-muted small fw-bold text-uppercase tracking-wide">Ghi chú</th>
+                                <th class="pe-3 border-0"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentHistoryBody" class="border-top-0">
+                            <tr><td colspan="6" class="text-center py-4 text-muted">Đang tải...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

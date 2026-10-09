@@ -1921,6 +1921,13 @@
                                 data-bs-target="#attendance-history" type="button" role="tab" onclick="loadAttendanceHistory()">
                                 <i class="bi bi-clock-history me-2"></i>Lịch sử
                             </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold text-muted px-2 pb-3" id="tab-attendance-payment" data-bs-toggle="pill"
+                                data-bs-target="#attendance-payment" type="button" role="tab">
+                                <i class="bi bi-cash-coin me-2"></i>Thu tiền
+                            </button>
+                        </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link fw-bold text-muted px-2 pb-3" id="tab-attendance-config" data-bs-toggle="pill"
                                 data-bs-target="#attendance-config" type="button" role="tab">
@@ -2009,9 +2016,19 @@
                                     <h6 class="fw-bold d-flex align-items-center gap-2 mb-0">
                                         <i class="bi bi-clock-history text-primary"></i> Lịch sử buổi học
                                     </h6>
-                                    <div class="text-end px-3 py-2 rounded-3 border text-start d-flex flex-column justify-content-center">
-                                        <span class="text-muted small fw-bold text-uppercase tracking-wide" style="font-size: 0.75rem;">Tổng doanh thu</span>
-                                        <h4 class="text-success fw-bold mb-0 mt-1" id="attTotalRevenue">0 đ</h4>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <div class="px-3 py-2 rounded-3 border d-flex flex-column justify-content-center">
+                                            <span class="text-muted small fw-bold text-uppercase tracking-wide" style="font-size: 0.75rem;">Tổng doanh thu</span>
+                                            <h4 class="text-primary fw-bold mb-0 mt-1" id="attTotalRevenue">0 đ</h4>
+                                        </div>
+                                        <div class="px-3 py-2 rounded-3 border d-flex flex-column justify-content-center">
+                                            <span class="text-muted small fw-bold text-uppercase tracking-wide" style="font-size: 0.75rem;">Đã thu</span>
+                                            <h4 class="text-success fw-bold mb-0 mt-1" id="attTotalPaid">0 đ</h4>
+                                        </div>
+                                        <div class="px-3 py-2 rounded-3 border d-flex flex-column justify-content-center">
+                                            <span class="text-muted small fw-bold text-uppercase tracking-wide" style="font-size: 0.75rem;">Còn nợ</span>
+                                            <h4 class="text-danger fw-bold mb-0 mt-1" id="attTotalOutstanding">0 đ</h4>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="d-flex flex-wrap align-items-end gap-2 mb-4">
@@ -2022,6 +2039,15 @@
                                     <div>
                                         <label class="form-label text-muted small fw-bold text-uppercase tracking-wide mb-1" for="invoiceToDate">Đến ngày</label>
                                         <input type="date" class="form-control border-0 bg-light" id="invoiceToDate">
+                                    </div>
+                                    <div>
+                                        <label class="form-label text-muted small fw-bold text-uppercase tracking-wide mb-1" for="invoiceStudent">Học viên</label>
+                                        <select class="form-select border-0 bg-light" id="invoiceStudent">
+                                            <option value="">Cả lớp</option>
+                                            <% (classData.students || []).forEach(student => { %>
+                                                <option value="<%= student.mssv %>"><%= student.name %> (<%= student.mssv %>)</option>
+                                            <% }) %>
+                                        </select>
                                     </div>
                                     <button class="btn btn-light border rounded-pill fw-semibold px-3" id="btnApplyInvoiceRange">
                                         <i class="bi bi-funnel me-1"></i> Áp dụng
@@ -2066,7 +2092,11 @@
                             </div>
                         </div>
                     </div>
-                    
+
+                    <div class="tab-pane fade" id="attendance-payment" role="tabpanel">
+                        <%- include('../partials/attendance-payment-tab', { students: classData.students || [] }) %>
+                    </div>
+
                     <div class="tab-pane fade" id="attendance-config" role="tabpanel">
                         <div class="card border-0 shadow-sm rounded-4">
                             <div class="card-body p-4">
@@ -2191,6 +2221,7 @@
 
 <script type="module" src="/js/pages/class-detail-invoice.js"></script>
 <script type="module" src="/js/pages/class-detail-attendance.js"></script>
+<script type="module" src="/js/pages/class-detail-payment.js"></script>
 
 <script type="module" src="<%- assetPath('/js/pages/class-detail.js') %>"></script>
 <script src="<%- assetPath('/js/pages/report-tool.js') %>"></script>
