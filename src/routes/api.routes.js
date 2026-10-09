@@ -9,6 +9,7 @@ const classController = require('../controllers/class.controller');
 const brandingController = require('../controllers/branding.controller');
 const attendanceController = require('../controllers/attendance.controller');
 const invoiceController = require('../controllers/invoice.controller');
+const paymentController = require('../controllers/payment.controller');
 
 const dashboardRoutes = require('./dashboard.routes');
 const adminRoutes = require('./admin.routes');
@@ -125,6 +126,11 @@ router.post('/classes/:classId/attendance', authenticate, requireActiveLecturer,
 // Invoice Routes - hóa đơn / bảng kê học phí (chỉ đọc dữ liệu)
 router.get('/classes/:classId/invoice', authenticate, requireActiveLecturer, asyncHandler(invoiceController.getInvoiceData));
 router.get('/classes/:classId/invoice/export', authenticate, requireActiveLecturer, asyncHandler(invoiceController.exportInvoiceExcel));
+
+// Payment Routes - lịch sử thu tiền theo học viên (không xoá, chỉ huỷ)
+router.get('/classes/:classId/payments', authenticate, requireActiveLecturer, asyncHandler(paymentController.getPayments));
+router.post('/classes/:classId/payments', authenticate, requireActiveLecturer, asyncHandler(paymentController.createPayment));
+router.put('/classes/:classId/payments/:paymentId/void', authenticate, requireActiveLecturer, asyncHandler(paymentController.voidPayment));
 
 // ===== Global Branding (Admin Only) =====
 router.get('/branding', authenticate, requireAdmin, asyncHandler(brandingController.getBranding));
