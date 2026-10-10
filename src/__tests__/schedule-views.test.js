@@ -86,9 +86,57 @@ describe('views/pages/schedule.ejs', () => {
     expect(root.querySelector('label[for="scheduleClassFilter"]')).not.toBeNull();
     expect(root.querySelector('#scheduleEmpty').classList.contains('d-none')).toBe(true);
     expect(root.querySelector('#scheduleEmpty').textContent.replace(/\s+/g, ' ').trim()).toBe(
-      'Chưa có lớp nào có lịch. Vào trang lớp → Điểm danh & Học phí → Lịch để thêm khung giờ.'
+      'Chưa có lớp nào có lịch. Bấm "Thêm lịch" để tạo khung giờ đầu tiên.'
     );
     expect(root.querySelector('#scheduleCalendar.sched')).not.toBeNull();
+  });
+
+  it('có nút "Thêm lịch" mở modal thêm lịch', () => {
+    const root = body();
+    const button = root.querySelector('button#btnAddSchedule');
+    expect(button.type).toBe('button');
+    expect(button.textContent.trim()).toBe('Thêm lịch');
+    expect(button.dataset.bsToggle).toBe('modal');
+    expect(button.dataset.bsTarget).toBe('#addScheduleModal');
+
+    const modal = root.querySelector('#addScheduleModal.modal');
+    expect(modal.getAttribute('aria-labelledby')).toBe('addScheduleModalLabel');
+    expect(root.querySelector('#addScheduleModalLabel').textContent.trim()).toBe('Thêm lịch dạy');
+  });
+
+  it('form thêm lịch có chọn lớp, đủ ô khung giờ có nhãn, vùng báo lỗi và nút lưu', () => {
+    const root = body();
+    const form = root.querySelector('form#addScheduleForm');
+    expect(form.noValidate).toBe(true);
+
+    const classSelect = form.querySelector('select#addScheduleClass');
+    expect(classSelect.disabled).toBe(true);
+    expect(form.querySelector('label[for="addScheduleClass"]')).not.toBeNull();
+
+    const rows = form.querySelectorAll('.sched-slot-row');
+    expect(rows).toHaveLength(1);
+    const fields = {
+      weekday: 'SELECT',
+      startTime: 'time',
+      endTime: 'time',
+      startDate: 'date',
+      endDate: 'date',
+      location: 'text',
+    };
+    Object.entries(fields).forEach(([name, kind]) => {
+      const input = rows[0].querySelector(`[data-field="${name}"]`);
+      expect(input).not.toBeNull();
+      expect(kind === 'SELECT' ? input.tagName : input.type).toBe(kind);
+      expect(form.querySelector(`label[for="${input.id}"]`)).not.toBeNull();
+    });
+    expect(rows[0].querySelector('[data-field="location"]').maxLength).toBe(100);
+
+    const error = form.querySelector('#addScheduleError');
+    expect(error.getAttribute('role')).toBe('alert');
+    expect(error.classList.contains('d-none')).toBe(true);
+    const save = form.querySelector('button#btnSaveNewSchedule');
+    expect(save.type).toBe('submit');
+    expect(save.textContent.trim()).toBe('Lưu lịch');
   });
 
   it('nạp CSS lịch và script trang', () => {

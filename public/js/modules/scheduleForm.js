@@ -212,3 +212,35 @@ export function buildOccurrenceUrl(occurrence) {
   }
   return buildAttendUrl(occurrence);
 }
+
+/**
+ * Khung giờ từ API → một phần tử body PUT (ngày 'YYYY-MM-DD' theo giờ VN).
+ * @param {object} slot
+ * @returns {object}
+ */
+export function slotToPayload(slot) {
+  const values = slotToFormValues(slot);
+  return {
+    weekday: Number(values.weekday),
+    startTime: values.startTime,
+    endTime: values.endTime,
+    startDate: values.startDate,
+    endDate: values.endDate || null,
+    location: values.location,
+  };
+}
+
+/**
+ * PUT thay toàn bộ lịch → ghép khung giờ mới vào cuối lịch hiện có.
+ * Không sửa mảng gốc.
+ * @param {object[]|undefined} schedule lịch hiện có (dạng API)
+ * @param {object} slot khung giờ mới (dạng body PUT)
+ * @returns {{schedule: object[]} | {error: string}}
+ */
+export function appendSlot(schedule, slot) {
+  const existing = schedule || [];
+  if (existing.length >= MAX_SLOTS) {
+    return { error: `Lớp đã đủ ${MAX_SLOTS} khung giờ. Vào trang lớp để sửa lịch.` };
+  }
+  return { schedule: [...existing.map(slotToPayload), slot] };
+}

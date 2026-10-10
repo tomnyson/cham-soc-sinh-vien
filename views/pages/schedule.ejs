@@ -7,16 +7,21 @@
                 <h1 id="scheduleHeading" class="h3 fw-bold mb-1">Lịch dạy</h1>
                 <p class="text-muted mb-0">Lịch học cố định của các lớp. Bấm vào buổi để mở nhanh điểm danh.</p>
             </div>
-            <div>
-                <label for="scheduleClassFilter" class="form-label small text-muted mb-1">Lọc theo lớp</label>
-                <select id="scheduleClassFilter" class="form-select" disabled>
-                    <option value="">Tất cả lớp</option>
-                </select>
+            <div class="d-flex flex-wrap align-items-end gap-2">
+                <div>
+                    <label for="scheduleClassFilter" class="form-label small text-muted mb-1">Lọc theo lớp</label>
+                    <select id="scheduleClassFilter" class="form-select" disabled>
+                        <option value="">Tất cả lớp</option>
+                    </select>
+                </div>
+                <button type="button" id="btnAddSchedule" class="btn btn-primary rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#addScheduleModal">
+                    <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Thêm lịch
+                </button>
             </div>
         </div>
 
         <div id="scheduleEmpty" class="alert alert-info d-none" role="status">
-            Chưa có lớp nào có lịch. Vào trang lớp → Điểm danh &amp; Học phí → Lịch để thêm khung giờ.
+            Chưa có lớp nào có lịch. Bấm "Thêm lịch" để tạo khung giờ đầu tiên.
         </div>
 
         <div class="card border-0 shadow-sm rounded-4">
@@ -25,6 +30,57 @@
             </div>
         </div>
     </section>
+
+    <div class="modal fade" id="addScheduleModal" tabindex="-1" aria-labelledby="addScheduleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form id="addScheduleForm" class="modal-content rounded-4 border-0" novalidate>
+                <div class="modal-header">
+                    <h2 id="addScheduleModalLabel" class="modal-title h5 fw-bold">Thêm lịch dạy</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="addScheduleClass" class="form-label">Lớp</label>
+                        <select id="addScheduleClass" class="form-select" disabled>
+                            <option value="">Đang tải danh sách lớp...</option>
+                        </select>
+                    </div>
+                    <div class="sched-slot-row row g-3">
+                        <div class="col-12 col-sm-4">
+                            <label for="addScheduleWeekday" class="form-label">Thứ</label>
+                            <select id="addScheduleWeekday" class="form-select" data-field="weekday"></select>
+                        </div>
+                        <div class="col-6 col-sm-4">
+                            <label for="addScheduleStart" class="form-label">Bắt đầu</label>
+                            <input type="time" id="addScheduleStart" class="form-control" data-field="startTime">
+                        </div>
+                        <div class="col-6 col-sm-4">
+                            <label for="addScheduleEnd" class="form-label">Kết thúc</label>
+                            <input type="time" id="addScheduleEnd" class="form-control" data-field="endTime">
+                        </div>
+                        <div class="col-6">
+                            <label for="addScheduleFrom" class="form-label">Từ ngày</label>
+                            <input type="date" id="addScheduleFrom" class="form-control" data-field="startDate">
+                        </div>
+                        <div class="col-6">
+                            <label for="addScheduleTo" class="form-label">Đến ngày</label>
+                            <input type="date" id="addScheduleTo" class="form-control" data-field="endDate">
+                        </div>
+                        <div class="col-12">
+                            <label for="addScheduleLocation" class="form-label">Địa điểm</label>
+                            <input type="text" id="addScheduleLocation" class="form-control" data-field="location" maxlength="100" placeholder="VD: P.301">
+                        </div>
+                    </div>
+                    <p class="small text-muted mt-3 mb-0">Để trống "Đến ngày" nếu chưa biết ngày kết thúc. Mỗi lớp tối đa 14 khung giờ.</p>
+                    <div id="addScheduleError" class="alert alert-danger py-2 small mt-3 mb-0 d-none" role="alert"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Huỷ</button>
+                    <button type="submit" id="btnSaveNewSchedule" class="btn btn-primary rounded-pill px-4">Lưu lịch</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <script type="module" src="<%- assetPath('/js/pages/schedule.js') %>"></script>

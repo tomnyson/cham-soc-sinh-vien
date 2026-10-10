@@ -14,6 +14,8 @@ const {
   fillAttendanceForm,
   buildAttendUrl,
   buildOccurrenceUrl,
+  slotToPayload,
+  appendSlot,
 } = loadEsModule('public/js/modules/scheduleForm.js');
 
 const API_SLOT = {
@@ -245,5 +247,59 @@ describe('buildOccurrenceUrl', () => {
 
   it.each(['upcoming', 'missed'])('buổi %s mở form điểm danh mới', status => {
     expect(buildOccurrenceUrl({ ...base, status })).toBe(buildAttendUrl({ ...base, status }));
+  });
+});
+
+describe('slotToPayload', () => {
+  it('đổi khung giờ từ API về đúng dạng body PUT (ngày theo giờ VN)', () => {
+    expect(slotToPayload(API_SLOT)).toEqual({
+      weekday: 1,
+      startTime: '18:00',
+      endTime: '20:00',
+      startDate: '2026-09-07',
+      endDate: null,
+      location: 'P.301',
+    });
+  });
+
+  it('giữ endDate khi có', () => {
+    const slot = { ...API_SLOT, endDate: '2026-12-20T17:00:00.000Z', location: undefined };
+    expect(slotToPayload(slot)).toMatchObject({ endDate: '2026-12-21', location: '' });
+  });
+});
+
+describe('appendSlot', () => {
+  const NEW_SLOT = {
+    weekday: 3,
+    startTime: '07:30',
+    endTime: '09:30',
+    startDate: '2026-10-12',
+    endDate: null,
+    location: '',
+  };
+
+  it('ghép khung giờ mới vào cuối, giữ nguyên các khung giờ cũ', () => {
+    const existing = [API_SLOT, { ...API_SLOT, weekday: 5 }];
+    const { schedule, error } = appendSlot(existing, NEW_SLOT);
+    expect(error).toBeUndefined();
+    expect(schedule).toEqual([slotToPayload(existing[0]), slotToPayload(existing[1]), NEW_SLOT]);
+  });
+
+  it('lịch rỗng hoặc thiếu → chỉ có khung giờ mới', () => {
+    expect(appendSlot([], NEW_SLOT).schedule).toEqual([NEW_SLOT]);
+    expect(appendSlot(undefined, NEW_SLOT).schedule).toEqual([NEW_SLOT]);
+  });
+
+  it('không sửa mảng gốc', () => {
+    const existing = [API_SLOT];
+    appendSlot(existing, NEW_SLOT);
+    expect(existing).toEqual([API_SLOT]);
+  });
+
+  it('chặn khi lớp đã đủ MAX_SLOTS khung giờ', () => {
+    const full = Array.from({ length: MAX_SLOTS }, () => API_SLOT);
+    const result = appendSlot(full, NEW_SLOT);
+    expect(result.schedule).toBeUndefined();
+    expect(result.error).toBe('Lớp đã đủ 14 khung giờ. Vào trang lớp để sửa lịch.');
   });
 });
