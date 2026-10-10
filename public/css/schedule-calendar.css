@@ -1,0 +1,340 @@
+/* Lịch dạy: lịch tuần / tháng vẽ bởi public/js/modules/scheduleCalendar.js */
+
+.sched {
+  --sched-color-0: #2563eb;
+  --sched-color-1: #db2777;
+  --sched-color-2: #059669;
+  --sched-color-3: #b45309;
+  --sched-color-4: #7c3aed;
+  --sched-color-5: #0e7490;
+  --sched-color-6: #4d7c0f;
+  --sched-color-7: #475569;
+  --sched-done: #15803d;
+  --sched-missed: #dc2626;
+  --sched-border: var(--bs-border-color, #dee2e6);
+  --sched-muted: var(--bs-secondary-color, #6c757d);
+  --sched-surface: var(--bs-body-bg, #fff);
+  --sched-surface-alt: var(--bs-tertiary-bg, #f8f9fa);
+  --sched-today: var(--bs-primary, #0d6efd);
+  --sched-radius: 0.75rem;
+  --sched-radius-sm: 0.4rem;
+  --sched-gap: 0.5rem;
+  --sched-duration: 150ms;
+
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sched-color-0 {
+  --sched-accent: var(--sched-color-0);
+}
+.sched-color-1 {
+  --sched-accent: var(--sched-color-1);
+}
+.sched-color-2 {
+  --sched-accent: var(--sched-color-2);
+}
+.sched-color-3 {
+  --sched-accent: var(--sched-color-3);
+}
+.sched-color-4 {
+  --sched-accent: var(--sched-color-4);
+}
+.sched-color-5 {
+  --sched-accent: var(--sched-color-5);
+}
+.sched-color-6 {
+  --sched-accent: var(--sched-color-6);
+}
+.sched-color-7 {
+  --sched-accent: var(--sched-color-7);
+}
+
+/* Thanh công cụ */
+.sched-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sched-gap);
+}
+
+.sched-toolbar__nav,
+.sched-toolbar__views {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.sched-toolbar__label {
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.sched-btn {
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--sched-border);
+  border-radius: var(--sched-radius-sm);
+  background: var(--sched-surface);
+  color: inherit;
+  font-weight: 600;
+  transition: background-color var(--sched-duration) ease;
+}
+
+.sched-btn:hover {
+  background: var(--sched-surface-alt);
+}
+
+.sched-btn[aria-pressed='true'] {
+  border-color: var(--sched-today);
+  background: var(--sched-today);
+  color: #fff;
+}
+
+.sched-btn:focus-visible,
+.sched-event:focus-visible,
+.sched-chip:focus-visible,
+.sched-more:focus-visible {
+  outline: 2px solid var(--sched-today);
+  outline-offset: 2px;
+}
+
+.sched-status {
+  margin: 0;
+  padding: 2rem 1rem;
+  color: var(--sched-muted);
+  text-align: center;
+}
+
+.sched-status--error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sched-gap);
+  color: var(--sched-missed);
+}
+
+/* Tuần */
+.sched-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--sched-gap);
+}
+
+.sched-week__empty {
+  display: none;
+}
+
+.sched-day {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-height: 8rem;
+  padding: 0.5rem;
+  border: 1px solid var(--sched-border);
+  border-radius: var(--sched-radius);
+  background: var(--sched-surface);
+}
+
+.sched-day--today {
+  border-color: var(--sched-today);
+  box-shadow: inset 0 3px 0 var(--sched-today);
+}
+
+.sched-day__head {
+  display: flex;
+  justify-content: space-between;
+  color: var(--sched-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.sched-day--today .sched-day__head {
+  color: var(--sched-today);
+}
+
+.sched-event {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid transparent;
+  border-left: 4px solid var(--sched-accent);
+  border-radius: var(--sched-radius-sm);
+  background: color-mix(in srgb, var(--sched-accent) 10%, var(--sched-surface));
+  color: inherit;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  text-align: left;
+  transition:
+    transform var(--sched-duration) ease,
+    box-shadow var(--sched-duration) ease;
+}
+
+.sched-event:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 12%);
+}
+
+.sched-event__time {
+  font-weight: 700;
+}
+
+.sched-event__class {
+  color: var(--sched-accent);
+  font-weight: 600;
+}
+
+.sched-event__location {
+  color: var(--sched-muted);
+}
+
+.sched-event__badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.sched-event--done .sched-event__badge {
+  color: var(--sched-done);
+}
+
+.sched-event--missed {
+  border-color: var(--sched-missed);
+}
+
+.sched-event--missed .sched-event__badge {
+  color: var(--sched-missed);
+}
+
+/* Tháng */
+.sched-month__head,
+.sched-month {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.sched-month__weekday {
+  color: var(--sched-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.sched-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  min-height: 6rem;
+  padding: 0.3rem;
+  border: 1px solid var(--sched-border);
+  border-radius: var(--sched-radius-sm);
+  background: var(--sched-surface);
+}
+
+.sched-cell--outside {
+  background: var(--sched-surface-alt);
+  color: var(--sched-muted);
+}
+
+.sched-cell--today {
+  border-color: var(--sched-today);
+}
+
+.sched-cell__date {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.sched-cell--today .sched-cell__date {
+  color: var(--sched-today);
+}
+
+.sched-chip {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  padding: 0.1rem 0.3rem;
+  border: 0;
+  border-left: 3px solid var(--sched-accent);
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--sched-accent) 12%, var(--sched-surface));
+  color: inherit;
+  font-size: 0.7rem;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sched-chip--done {
+  color: var(--sched-done);
+  font-weight: 600;
+}
+
+.sched-chip--missed {
+  box-shadow: inset 0 0 0 1px var(--sched-missed);
+}
+
+.sched-more {
+  padding: 0 0.3rem;
+  border: 0;
+  background: none;
+  color: var(--sched-today);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+/* Màn hình nhỏ: tuần thành danh sách theo ngày, ẩn ngày trống */
+@media (max-width: 767.98px) {
+  .sched-toolbar__label {
+    flex-basis: 100%;
+    order: -1;
+  }
+
+  .sched-week {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sched-day {
+    min-height: 0;
+  }
+
+  .sched-day--empty {
+    display: none;
+  }
+
+  .sched-week__empty {
+    display: block;
+    margin: 0;
+    padding: 1.5rem 0;
+    color: var(--sched-muted);
+    text-align: center;
+  }
+
+  .sched-cell {
+    min-height: 4rem;
+  }
+
+  .sched-chip {
+    font-size: 0.65rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sched-btn,
+  .sched-event {
+    transition: none;
+  }
+
+  .sched-event:hover {
+    transform: none;
+  }
+}
