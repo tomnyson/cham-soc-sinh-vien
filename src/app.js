@@ -399,6 +399,19 @@ app.get('/profiles', optionalAuth, async (req, res, next) => {
   }
 });
 
+app.get('/schedule', optionalAuth, async (req, res, next) => {
+  try {
+    if (!ensureLecturerAccess(req, res)) return;
+    await renderLayoutPage(req, res, 'schedule', {
+      title: 'Lịch dạy - FPT Polytechnic',
+      currentRoute: '/schedule',
+    });
+  } catch (error) {
+    console.error('Error rendering schedule:', error);
+    next(error);
+  }
+});
+
 app.get('/classes', optionalAuth, async (req, res, next) => {
   try {
     if (!ensureLecturerAccess(req, res)) return;

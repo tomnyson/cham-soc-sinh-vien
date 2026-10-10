@@ -1,0 +1,30 @@
+<!-- Lịch dạy: lịch cố định của mọi lớp. JS: public/js/pages/schedule.js -->
+<link rel="stylesheet" href="<%- assetPath('/css/schedule-calendar.css') %>">
+<div class="container-fluid py-4 edu-page schedule-page">
+    <section aria-labelledby="scheduleHeading">
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+            <div>
+                <h1 id="scheduleHeading" class="h3 fw-bold mb-1">Lịch dạy</h1>
+                <p class="text-muted mb-0">Lịch học cố định của các lớp. Bấm vào buổi để mở nhanh điểm danh.</p>
+            </div>
+            <div>
+                <label for="scheduleClassFilter" class="form-label small text-muted mb-1">Lọc theo lớp</label>
+                <select id="scheduleClassFilter" class="form-select" disabled>
+                    <option value="">Tất cả lớp</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="scheduleEmpty" class="alert alert-info d-none" role="status">
+            Chưa có lớp nào có lịch. Vào trang lớp → Điểm danh &amp; Học phí → Lịch để thêm khung giờ.
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-3 p-md-4">
+                <div id="scheduleCalendar" class="sched"></div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script type="module" src="<%- assetPath('/js/pages/schedule.js') %>"></script>

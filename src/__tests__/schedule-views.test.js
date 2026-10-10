@@ -72,3 +72,47 @@ describe('views/pages/class-detail.ejs', () => {
     expect(schedule).toBeGreaterThan(attendance);
   });
 });
+
+describe('views/pages/schedule.ejs', () => {
+  const body = () => mount(renderView('views/pages/schedule.ejs'));
+
+  it('có tiêu đề, bộ lọc, trạng thái trống và khung lịch', () => {
+    const root = body();
+    expect(root.querySelector('h1#scheduleHeading').textContent.trim()).toBe('Lịch dạy');
+    const filter = root.querySelector('select#scheduleClassFilter');
+    expect(filter.disabled).toBe(true);
+    expect(filter.options[0].value).toBe('');
+    expect(filter.options[0].textContent).toBe('Tất cả lớp');
+    expect(root.querySelector('label[for="scheduleClassFilter"]')).not.toBeNull();
+    expect(root.querySelector('#scheduleEmpty').classList.contains('d-none')).toBe(true);
+    expect(root.querySelector('#scheduleEmpty').textContent.replace(/\s+/g, ' ').trim()).toBe(
+      'Chưa có lớp nào có lịch. Vào trang lớp → Điểm danh & Học phí → Lịch để thêm khung giờ.'
+    );
+    expect(root.querySelector('#scheduleCalendar.sched')).not.toBeNull();
+  });
+
+  it('nạp CSS lịch và script trang', () => {
+    const html = renderView('views/pages/schedule.ejs');
+    expect(html).toContain('href="/css/schedule-calendar.css"');
+    expect(html).toContain('<script type="module" src="/js/pages/schedule.js"></script>');
+  });
+});
+
+describe('điều hướng tới /schedule', () => {
+  it('sidebar có link "Lịch dạy" ngay sau "Quản lý Lớp học"', () => {
+    const source = read('views/partials/sidebar.ejs');
+    const classes = source.indexOf('href="/classes"');
+    const schedule = source.indexOf('href="/schedule"');
+    expect(classes).toBeGreaterThan(-1);
+    expect(schedule).toBeGreaterThan(classes);
+    expect(source).toContain("activeClass(currentRoute, '/schedule')");
+    expect(source).toContain('<span>Lịch dạy</span>');
+  });
+
+  it('app.js đăng ký route trang /schedule có kiểm quyền giảng viên', () => {
+    const source = read('src/app.js');
+    expect(source).toMatch(
+      /app\.get\('\/schedule', optionalAuth[\s\S]{0,200}ensureLecturerAccess\(req, res\)[\s\S]{0,200}renderLayoutPage\(req, res, 'schedule'/
+    );
+  });
+});
