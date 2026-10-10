@@ -5,6 +5,7 @@ import {
     collectInvoiceConfig
 } from '/js/pages/class-detail-invoice.js';
 import { appendFormerStudentOptions } from '/js/pages/class-detail-payment.js';
+import { vnLocalToIso } from '/js/modules/scheduleForm.js';
 
 // Attendance Logic
 document.addEventListener('DOMContentLoaded', function() {
@@ -40,7 +41,8 @@ document.addEventListener('DOMContentLoaded', function() {
         btnSave.addEventListener('click', async () => {
             try {
                 const classId = document.getElementById('classDetailPage').dataset.classId;
-                const date = dateInput ? dateInput.value : null;
+                // Ô datetime-local là giờ VN → gửi ISO có múi giờ để server UTC lưu đúng ngày
+                const date = dateInput && dateInput.value ? vnLocalToIso(dateInput.value) : null;
                 const duration = parseFloat(durationInput.value) || 1;
                 const rate = parseFloat(rateInput.value) || 0;
                 

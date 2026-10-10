@@ -1,0 +1,48 @@
+<%# Tab "Lịch" trong modal điểm danh. JS: public/js/pages/class-detail-schedule.js %>
+<div class="d-flex flex-column gap-4">
+    <section aria-labelledby="classScheduleHeading">
+        <h6 id="classScheduleHeading" class="fw-bold mb-3 d-flex align-items-center gap-2">
+            <i class="bi bi-calendar-week text-primary"></i>
+            Lịch học của lớp
+        </h6>
+        <div id="classScheduleCalendar" class="sched"></div>
+    </section>
+
+    <section class="card border-0 shadow-sm rounded-4" aria-labelledby="scheduleFormHeading">
+        <div class="card-body p-4">
+            <h6 id="scheduleFormHeading" class="fw-bold mb-1 d-flex align-items-center gap-2">
+                <i class="bi bi-clock text-primary"></i>
+                Khung giờ cố định hằng tuần
+            </h6>
+            <p class="small text-muted mb-3">Tối đa 14 khung giờ. Để trống "Đến ngày" nếu chưa biết ngày kết thúc.</p>
+            <form id="scheduleForm" novalidate>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-2">
+                        <thead class="small text-muted">
+                            <tr>
+                                <th scope="col">Thứ</th>
+                                <th scope="col">Bắt đầu</th>
+                                <th scope="col">Kết thúc</th>
+                                <th scope="col">Từ ngày</th>
+                                <th scope="col">Đến ngày</th>
+                                <th scope="col">Địa điểm</th>
+                                <th scope="col"><span class="visually-hidden">Xoá</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="scheduleSlotBody"></tbody>
+                    </table>
+                </div>
+                <p id="scheduleSlotEmpty" class="small text-muted text-center py-3 mb-2 d-none">Chưa có khung giờ nào.</p>
+                <div id="scheduleFormError" class="alert alert-danger py-2 small d-none" role="alert"></div>
+                <div class="d-flex flex-wrap gap-2 justify-content-between">
+                    <button type="button" id="btnAddScheduleSlot" class="btn btn-outline-primary rounded-pill px-3" disabled>
+                        <i class="bi bi-plus-lg me-1"></i>Thêm khung giờ
+                    </button>
+                    <button type="submit" id="btnSaveSchedule" class="btn btn-primary rounded-pill px-4" disabled>
+                        <i class="bi bi-save me-1"></i>Lưu lịch
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+</div>
