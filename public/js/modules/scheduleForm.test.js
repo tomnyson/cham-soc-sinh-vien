@@ -13,6 +13,7 @@ const {
   vnLocalToIso,
   fillAttendanceForm,
   buildAttendUrl,
+  buildOccurrenceUrl,
 } = loadEsModule('public/js/modules/scheduleForm.js');
 
 const API_SLOT = {
@@ -230,5 +231,19 @@ describe('buildAttendUrl', () => {
         durationHours: 1.25,
       })
     ).toBe('/classes/SOF%20308%2FA?attend=2026-10-05T11%3A00%3A00.000Z&hours=1.25');
+  });
+});
+
+describe('buildOccurrenceUrl', () => {
+  const base = { classId: 'SOF 308/A', start: '2026-10-05T11:00:00.000Z', durationHours: 1.25 };
+
+  it('buổi done mở lịch sử điểm danh, classId được mã hoá', () => {
+    expect(buildOccurrenceUrl({ ...base, status: 'done' })).toBe(
+      '/classes/SOF%20308%2FA?attendHistory=1'
+    );
+  });
+
+  it.each(['upcoming', 'missed'])('buổi %s mở form điểm danh mới', status => {
+    expect(buildOccurrenceUrl({ ...base, status })).toBe(buildAttendUrl({ ...base, status }));
   });
 });

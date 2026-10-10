@@ -204,3 +204,11 @@ export function buildAttendUrl(occurrence) {
   const params = `attend=${encodeURIComponent(start)}&hours=${encodeURIComponent(occurrence.durationHours)}`;
   return `/classes/${encodeURIComponent(occurrence.classId)}?${params}`;
 }
+
+/** Buổi đã điểm danh → mở lịch sử điểm danh; còn lại → mở form điểm danh mới. */
+export function buildOccurrenceUrl(occurrence) {
+  if (occurrence.status === 'done') {
+    return `/classes/${encodeURIComponent(occurrence.classId)}?attendHistory=1`;
+  }
+  return buildAttendUrl(occurrence);
+}

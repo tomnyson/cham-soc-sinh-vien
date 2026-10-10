@@ -210,6 +210,23 @@ describe('saveClassSchedule', () => {
     expect(after.invoiceConfig).toEqual(before.invoiceConfig);
   });
 
+  it('không đổi updatedAt của lớp', async () => {
+    const oldUpdatedAt = vn('2020-01-01T00:00:00');
+    // Driver gốc → bỏ qua timestamps của mongoose, ghim updatedAt về giá trị cũ
+    await Class.collection.updateOne(
+      { classId: 'class_test_1' },
+      { $set: { updatedAt: oldUpdatedAt } }
+    );
+
+    const res = makeRes();
+    await scheduleController.saveClassSchedule(makeReq({ body }), res, jest.fn());
+
+    expect(res.statusCode).toBe(200);
+    const after = await Class.findOne({ classId: 'class_test_1' }).lean();
+    expect(after.schedule).toHaveLength(1);
+    expect(after.updatedAt).toEqual(oldUpdatedAt);
+  });
+
   it('cho phép xoá hết lịch bằng mảng rỗng', async () => {
     const res = makeRes();
     await scheduleController.saveClassSchedule(makeReq({ body: { schedule: [] } }), res, jest.fn());

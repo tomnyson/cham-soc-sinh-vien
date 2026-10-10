@@ -5,7 +5,7 @@ import {
     collectInvoiceConfig
 } from '/js/pages/class-detail-invoice.js';
 import { appendFormerStudentOptions } from '/js/pages/class-detail-payment.js';
-import { vnLocalToIso } from '/js/modules/scheduleForm.js';
+import { toDateTimeLocalValue, vnLocalToIso } from '/js/modules/scheduleForm.js';
 
 // Attendance Logic
 document.addEventListener('DOMContentLoaded', function() {
@@ -17,11 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Set default date to today
     if (dateInput && !dateInput.value) {
-        const today = new Date();
-        // offset timezone to local
-        const offset = today.getTimezoneOffset() * 60000;
-        const localISOTime = (new Date(today - offset)).toISOString().slice(0, 16);
-        dateInput.value = localISOTime;
+        dateInput.value = toDateTimeLocalValue(new Date());
     }
 
     function updateCalc() {

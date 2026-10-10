@@ -213,6 +213,19 @@ describe('renderMonth', () => {
     expect(chip.classList.contains('sched-chip--done')).toBe(true);
     expect(chip.getAttribute('aria-label')).toContain('đã điểm danh');
   });
+
+  it('chip missed có tiền tố "! " (không chỉ phân biệt bằng màu), upcoming thì không', () => {
+    renderMonth(container, [occ({ status: 'missed' }), occ({ status: 'upcoming' })], {
+      range: MONTH,
+      anchor: '2026-10-01',
+      today: '2026-10-08',
+    });
+    const chips = [...container.querySelectorAll('button.sched-chip')];
+    const missed = chips.find(c => c.classList.contains('sched-chip--missed'));
+    const upcoming = chips.find(c => c.classList.contains('sched-chip--upcoming'));
+    expect(missed.textContent.startsWith('! ')).toBe(true);
+    expect(upcoming.textContent.startsWith('! ')).toBe(false);
+  });
 });
 
 describe('createCalendar', () => {

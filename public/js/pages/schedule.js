@@ -1,5 +1,5 @@
 import { createCalendar } from '/js/modules/scheduleCalendar.js';
-import { buildAttendUrl } from '/js/modules/scheduleForm.js';
+import { buildOccurrenceUrl } from '/js/modules/scheduleForm.js';
 
 let filterReady = false;
 
@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadRange,
     showClassName: true,
     onSelect: occurrence => {
-      window.location.href = buildAttendUrl(occurrence);
+      window.location.href = buildOccurrenceUrl(occurrence);
     },
   });
 

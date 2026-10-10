@@ -121,14 +121,23 @@ function clearAttendQuery() {
   const url = new URL(window.location.href);
   url.searchParams.delete('attend');
   url.searchParams.delete('hours');
+  url.searchParams.delete('attendHistory');
   window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
 }
 
 /** Mở nhanh từ trang /schedule: ?attend=<ISO>&hours=<n>. Sai thì bỏ qua im lặng. */
 function openFromQuery() {
-  const params = parseAttendParams(window.location.search);
   const modal = byId('attendanceModal');
-  if (!params || !modal || !window.bootstrap) return;
+  if (!modal || !window.bootstrap) return;
+  if (new URLSearchParams(window.location.search).get('attendHistory') === '1') {
+    window.bootstrap.Modal.getOrCreateInstance(modal).show();
+    showTab('tab-attendance-history');
+    if (typeof window.loadAttendanceHistory === 'function') window.loadAttendanceHistory();
+    clearAttendQuery();
+    return;
+  }
+  const params = parseAttendParams(window.location.search);
+  if (!params) return;
   fillAttendanceForm(document, params);
   window.bootstrap.Modal.getOrCreateInstance(modal).show();
   showTab('tab-take-attendance');

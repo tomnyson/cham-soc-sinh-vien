@@ -14,6 +14,8 @@ const WEEKDAY_NAMES = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Th
 const COLUMN_NAMES = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 const STATUS_ARIA = { done: 'đã điểm danh', missed: 'chưa điểm danh', upcoming: 'chưa diễn ra' };
 const STATUS_BADGE = { done: '✓ Đã điểm danh', missed: 'Chưa điểm danh' };
+// Chip tháng không có badge → dùng ký hiệu chữ để trạng thái không chỉ dựa vào màu
+const CHIP_PREFIX = { done: '✓ ', missed: '! ' };
 
 const shiftToVn = date => new Date(new Date(date).getTime() + VN_OFFSET_MS).toISOString();
 const dayMonth = key => `${key.slice(8, 10)}/${key.slice(5, 7)}`;
@@ -132,7 +134,7 @@ function buildEvent(occ, { showClassName, onSelect }) {
 
 function buildChip(occ, { showClassName, onSelect }) {
   const chip = occurrenceButton('sched-chip', occ, onSelect);
-  const prefix = occ.status === 'done' ? '✓ ' : '';
+  const prefix = CHIP_PREFIX[occ.status] || '';
   const name = showClassName ? occ.className : occ.location;
   chip.textContent = `${prefix}${[formatTime(occ.start), name].filter(Boolean).join(' ')}`;
   return chip;

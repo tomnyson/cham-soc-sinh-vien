@@ -84,7 +84,7 @@ exports.saveClassSchedule = async (req, res, next) => {
     const updated = await Class.findOneAndUpdate(
       { classId, userId: classData.userId },
       { $set: { schedule: value } },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true, timestamps: false }
     )
       .select({ schedule: 1 })
       .lean();
