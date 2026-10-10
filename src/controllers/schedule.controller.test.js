@@ -314,3 +314,81 @@ describe('getTeacherSchedule', () => {
     expect(res.body.error).toBe(RANGE_ERROR);
   });
 });
+
+describe('exportTeacherIcs', () => {
+  const makeIcsRes = () => {
+    const res = makeRes();
+    res.headers = {};
+    res.set = headers => {
+      res.headers = { ...res.headers, ...headers };
+      return res;
+    };
+    res.send = payload => {
+      res.body = payload;
+      return res;
+    };
+    return res;
+  };
+
+  it('xuất mọi lớp có lịch của user hiện tại, bỏ lớp lưu trữ và lớp user khác', async () => {
+    const res = makeIcsRes();
+    await scheduleController.exportTeacherIcs(makeReq(), res, jest.fn());
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['Content-Type']).toBe('text/calendar; charset=utf-8');
+    expect(res.headers['Content-Disposition']).toBe('attachment; filename="lich-day.ics"');
+    expect(res.body.match(/BEGIN:VEVENT/g)).toHaveLength(1);
+    expect(res.body).toContain('SUMMARY:SOF308');
+    expect(res.body).toContain('DTSTART;TZID=Asia/Ho_Chi_Minh:20260907T180000');
+    expect(res.body).not.toContain('ARC101');
+    expect(res.body).not.toContain('OTH101');
+  });
+
+  it('lọc theo classId (có trim) và đặt tên file theo lớp', async () => {
+    await Class.create({
+      classId: 'class_test_2',
+      name: 'WEB201',
+      userId: 'user_1',
+      schedule: [MONDAY_SLOT],
+    });
+    const res = makeIcsRes();
+    await scheduleController.exportTeacherIcs(
+      makeReq({ query: { classId: ' class_test_2 ' } }),
+      res,
+      jest.fn()
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['Content-Disposition']).toBe(
+      'attachment; filename="lich-day-class_test_2.ics"'
+    );
+    expect(res.body).toContain('SUMMARY:WEB201');
+    expect(res.body).not.toContain('SUMMARY:SOF308');
+  });
+
+  it.each([
+    ['lớp của user khác', { query: { classId: 'class_other' } }],
+    ['lớp đã lưu trữ', { query: { classId: 'class_archived' } }],
+    ['lớp chưa có lịch', { query: { classId: 'class_empty' } }],
+    ['classId dạng object không thành toán tử truy vấn', { query: { classId: { $ne: 'x' } } }],
+    ['user không có lớp nào có lịch', { user: { _id: 'user_3', id: 'user_3' } }],
+  ])('trả 404 khi %s', async (_label, reqOptions) => {
+    const res = makeIcsRes();
+    await scheduleController.exportTeacherIcs(makeReq(reqOptions), res, jest.fn());
+
+    expect(res.statusCode).toBe(404);
+    expect(res.body).toEqual({ success: false, error: 'Chưa có lịch để xuất.' });
+  });
+
+  it('lỗi DB chuyển cho next', async () => {
+    const error = new Error('db down');
+    const spy = jest.spyOn(Class, 'find').mockImplementationOnce(() => {
+      throw error;
+    });
+    const next = jest.fn();
+    await scheduleController.exportTeacherIcs(makeReq(), makeIcsRes(), next);
+
+    expect(next).toHaveBeenCalledWith(error);
+    spy.mockRestore();
+  });
+});

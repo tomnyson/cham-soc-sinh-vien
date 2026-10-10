@@ -137,6 +137,7 @@ router.put('/classes/:classId/payments/:paymentId/void', authenticate, requireAc
 router.get('/classes/:classId/schedule', authenticate, requireActiveLecturer, asyncHandler(scheduleController.getClassSchedule));
 router.put('/classes/:classId/schedule', authenticate, requireActiveLecturer, asyncHandler(scheduleController.saveClassSchedule));
 router.get('/schedule', authenticate, requireActiveLecturer, asyncHandler(scheduleController.getTeacherSchedule));
+router.get('/schedule/ics', authenticate, requireActiveLecturer, asyncHandler(scheduleController.exportTeacherIcs));
 
 // ===== Global Branding (Admin Only) =====
 router.get('/branding', authenticate, requireAdmin, asyncHandler(brandingController.getBranding));

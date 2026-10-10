@@ -8,6 +8,9 @@ const {
   expandOccurrences,
   markAttendance,
 } = require('../utils/schedule.util');
+const { buildIcs, icsFileName } = require('../utils/schedule-ics.util');
+
+const NO_SCHEDULE_ERROR = 'Chưa có lịch để xuất.';
 
 /**
  * Lấy lớp thuộc user đang đăng nhập. Trả null nếu không có hoặc không thuộc user.
@@ -39,6 +42,25 @@ function findSessionsInRange(classIds, range) {
     { classId: { $in: classIds }, date: { $gte: start, $lt: end } },
     { classId: 1, date: 1 }
   ).lean();
+}
+
+/**
+ * Lớp chưa lưu trữ, đã có lịch của giảng viên, sắp theo tên. Có classId → chỉ lớp đó.
+ * @param {object} user
+ * @param {string} [classId]
+ */
+function findScheduledClasses(user, classId = '') {
+  return Class.find(
+    {
+      userId: String(user._id),
+      isArchived: { $ne: true },
+      'schedule.0': { $exists: true },
+      ...(classId ? { classId } : {}),
+    },
+    { classId: 1, name: 1, schedule: 1 }
+  )
+    .sort({ name: 1 })
+    .lean();
 }
 
 /**
@@ -110,16 +132,7 @@ exports.getTeacherSchedule = async (req, res, next) => {
     const { value: range, error } = parseRange(query.from, query.to);
     if (error) return res.status(400).json({ success: false, error });
 
-    const classes = await Class.find(
-      {
-        userId: String(req.user._id),
-        isArchived: { $ne: true },
-        'schedule.0': { $exists: true },
-      },
-      { classId: 1, name: 1, schedule: 1 }
-    )
-      .sort({ name: 1 })
-      .lean();
+    const classes = await findScheduledClasses(req.user);
 
     const sessions = classes.length
       ? await findSessionsInRange(
@@ -140,6 +153,31 @@ exports.getTeacherSchedule = async (req, res, next) => {
         occurrences,
       },
     });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * GET /api/schedule/ics?classId=
+ * Tải lịch dạy dạng .ics để import vào Google Calendar. Chỉ đọc DB.
+ */
+exports.exportTeacherIcs = async (req, res, next) => {
+  try {
+    // Ép về chuỗi: ?classId[$ne]=x không được thành toán tử truy vấn
+    const classId = String((req.query && req.query.classId) || '').trim();
+    const classes = await findScheduledClasses(req.user, classId);
+    const content = buildIcs(classes, new Date());
+    if (!content.includes('BEGIN:VEVENT')) {
+      return res.status(404).json({ success: false, error: NO_SCHEDULE_ERROR });
+    }
+
+    return res
+      .set({
+        'Content-Type': 'text/calendar; charset=utf-8',
+        'Content-Disposition': `attachment; filename="${icsFileName(classId)}"`,
+      })
+      .send(content);
   } catch (error) {
     return next(error);
   }

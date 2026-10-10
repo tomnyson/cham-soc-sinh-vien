@@ -163,4 +163,10 @@ describe('điều hướng tới /schedule', () => {
       /app\.get\('\/schedule', optionalAuth[\s\S]{0,200}ensureLecturerAccess\(req, res\)[\s\S]{0,200}renderLayoutPage\(req, res, 'schedule'/
     );
   });
+
+  it('api.routes.js đăng ký GET /schedule/ics có kiểm quyền giảng viên', () => {
+    expect(read('src/routes/api.routes.js')).toContain(
+      "router.get('/schedule/ics', authenticate, requireActiveLecturer, asyncHandler(scheduleController.exportTeacherIcs));"
+    );
+  });
 });
