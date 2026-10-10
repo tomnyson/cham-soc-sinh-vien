@@ -169,7 +169,8 @@ async function exportIcs(button) {
     document.body.appendChild(link);
     link.click();
     link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 0);
+    // Thu hồi ngay có thể huỷ lượt tải trên Safari / Firefox cũ
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   } catch (e) {
     console.error(e);
     uiState.showNotification(e.message || 'Lỗi kết nối khi tải file lịch.', 'error');

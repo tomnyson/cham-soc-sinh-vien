@@ -75,19 +75,21 @@ function firstOccurrenceKey(slot) {
   return addDays(startKey, (slot.weekday - startWeekday + 7) % 7);
 }
 
-function buildEvent(classData, slot, stamp) {
+const slotUid = (classData, slot) =>
+  [
+    classData.classId,
+    slot.weekday,
+    slot.startTime.replace(':', ''),
+    compactDate(toDateKey(slot.startDate)),
+  ].join('-');
+
+function buildEvent(classData, slot, stamp, uid) {
   const firstKey = firstOccurrenceKey(slot);
   const endKey = slot.endDate ? toDateKey(slot.endDate) : null;
   if (endKey && firstKey > endKey) return [];
 
   // RFC 5545: DTSTART có TZID thì UNTIL phải ở UTC → 23:59:59 giờ VN của endDate
   const until = endKey ? `;UNTIL=${utcStamp(`${endKey}T23:59:59+07:00`)}` : '';
-  const uid = [
-    classData.classId,
-    slot.weekday,
-    slot.startTime.replace(':', ''),
-    compactDate(toDateKey(slot.startDate)),
-  ].join('-');
 
   return [
     'BEGIN:VEVENT',
@@ -112,9 +114,17 @@ function buildEvent(classData, slot, stamp) {
  */
 function buildIcs(classes, now) {
   const stamp = utcStamp(now);
-  const events = classes.flatMap(classData =>
-    (classData.schedule || []).flatMap(slot => buildEvent(classData, slot, stamp))
+  const slots = classes.flatMap(classData =>
+    (classData.schedule || []).map(slot => ({ classData, slot }))
   );
+  // Khung trùng lớp + thứ + giờ bắt đầu + ngày bắt đầu → thêm hậu tố, tránh Google gộp mất sự kiện
+  const uidCount = new Map();
+  const events = slots.flatMap(({ classData, slot }) => {
+    const base = slotUid(classData, slot);
+    const count = (uidCount.get(base) || 0) + 1;
+    uidCount.set(base, count);
+    return buildEvent(classData, slot, stamp, count === 1 ? base : `${base}-${count}`);
+  });
   return `${[...HEADER, ...events, 'END:VCALENDAR'].map(foldLine).join('\r\n')}\r\n`;
 }
 

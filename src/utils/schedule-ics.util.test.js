@@ -122,6 +122,16 @@ describe('buildIcs', () => {
     expect(ics).toContain('SUMMARY:SOF308_01');
   });
 
+  it('hai khung trùng lớp, thứ, giờ bắt đầu, ngày bắt đầu → UID khác nhau', () => {
+    const schedule = [slot(), slot({ endTime: '21:00', location: 'P.302' }), slot()];
+    const uids = lines(buildIcs([classOf(schedule)], NOW)).filter(line => line.startsWith('UID:'));
+    expect(uids).toEqual([
+      'UID:SOF308_01-3-1800-20260907@cham-soc-sv',
+      'UID:SOF308_01-3-1800-20260907-2@cham-soc-sv',
+      'UID:SOF308_01-3-1800-20260907-3@cham-soc-sv',
+    ]);
+  });
+
   it('không sửa input', () => {
     const classes = [classOf([slot({ endDate: vn('2026-12-31T00:00:00') })])];
     const before = JSON.stringify(classes);
