@@ -139,6 +139,15 @@ describe('views/pages/schedule.ejs', () => {
     expect(save.textContent.trim()).toBe('Lưu lịch');
   });
 
+  it('có nút "Tải .ics" kèm hướng dẫn import Google Calendar', () => {
+    const root = body();
+    const button = root.querySelector('button#btnExportIcs');
+    expect(button.type).toBe('button');
+    expect(button.textContent.trim()).toBe('Tải .ics');
+    expect(button.title).toBe('Tải file rồi vào Google Calendar → Cài đặt → Nhập và xuất → Nhập');
+    expect(button.querySelector('i.bi-calendar-plus').getAttribute('aria-hidden')).toBe('true');
+  });
+
   it('nạp CSS lịch và script trang', () => {
     const html = renderView('views/pages/schedule.ejs');
     expect(html).toContain('href="/css/schedule-calendar.css"');

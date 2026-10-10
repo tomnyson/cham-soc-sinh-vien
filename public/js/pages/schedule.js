@@ -144,6 +144,40 @@ function setupAddSchedule(calendar) {
   byId('addScheduleForm').addEventListener('submit', event => saveNewSlot(event, calendar));
 }
 
+function icsFileNameFrom(res) {
+  const match = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') || '');
+  return match ? match[1] : 'lich-day.ics';
+}
+
+// Tải .ics theo bộ lọc lớp đang chọn ('' = tất cả lớp)
+async function exportIcs(button) {
+  const classId = byId('scheduleClassFilter').value;
+  button.disabled = true;
+  try {
+    const query = classId ? `?${new URLSearchParams({ classId })}` : '';
+    const res = await fetch(`/api/schedule/ics${query}`);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Không tải được file lịch.');
+    }
+
+    const url = URL.createObjectURL(await res.blob());
+    const link = Object.assign(document.createElement('a'), {
+      href: url,
+      download: icsFileNameFrom(res),
+    });
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  } catch (e) {
+    console.error(e);
+    uiState.showNotification(e.message || 'Lỗi kết nối khi tải file lịch.', 'error');
+  } finally {
+    button.disabled = false;
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const root = byId('scheduleCalendar');
   if (!root) return;
@@ -159,5 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
   byId('scheduleClassFilter').addEventListener('change', event => {
     calendar.setFilter(event.target.value || null);
   });
+  const exportButton = byId('btnExportIcs');
+  exportButton.addEventListener('click', () => exportIcs(exportButton));
   setupAddSchedule(calendar);
 });
