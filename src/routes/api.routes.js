@@ -10,6 +10,7 @@ const brandingController = require('../controllers/branding.controller');
 const attendanceController = require('../controllers/attendance.controller');
 const invoiceController = require('../controllers/invoice.controller');
 const paymentController = require('../controllers/payment.controller');
+const scheduleController = require('../controllers/schedule.controller');
 
 const dashboardRoutes = require('./dashboard.routes');
 const adminRoutes = require('./admin.routes');
@@ -131,6 +132,11 @@ router.get('/classes/:classId/invoice/export', authenticate, requireActiveLectur
 router.get('/classes/:classId/payments', authenticate, requireActiveLecturer, asyncHandler(paymentController.getPayments));
 router.post('/classes/:classId/payments', authenticate, requireActiveLecturer, asyncHandler(paymentController.createPayment));
 router.put('/classes/:classId/payments/:paymentId/void', authenticate, requireActiveLecturer, asyncHandler(paymentController.voidPayment));
+
+// Schedule Routes - lịch dạy cố định hằng tuần (PUT chỉ $set field schedule)
+router.get('/classes/:classId/schedule', authenticate, requireActiveLecturer, asyncHandler(scheduleController.getClassSchedule));
+router.put('/classes/:classId/schedule', authenticate, requireActiveLecturer, asyncHandler(scheduleController.saveClassSchedule));
+router.get('/schedule', authenticate, requireActiveLecturer, asyncHandler(scheduleController.getTeacherSchedule));
 
 // ===== Global Branding (Admin Only) =====
 router.get('/branding', authenticate, requireAdmin, asyncHandler(brandingController.getBranding));
