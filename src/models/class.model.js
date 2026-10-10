@@ -42,6 +42,19 @@ const invoiceConfigSchema = new mongoose.Schema({
 }, { _id: false });
 
 /**
+ * Schedule Slot Sub-Schema - Khung giờ học cố định hằng tuần
+ * Kiểm tra chính ở src/utils/schedule.util.js, ở đây chỉ là lưới an toàn.
+ */
+const scheduleSlotSchema = new mongoose.Schema({
+    weekday: { type: Number, required: true, min: 0, max: 6 }, // 0 = Chủ nhật … 6 = Thứ bảy
+    startTime: { type: String, required: true, match: /^([01]\d|2[0-3]):[0-5]\d$/ }, // 'HH:mm'
+    endTime: { type: String, required: true, match: /^([01]\d|2[0-3]):[0-5]\d$/ },
+    startDate: { type: Date, required: true }, // 00:00 giờ VN của ngày bắt đầu
+    endDate: { type: Date, default: null }, // null = không giới hạn
+    location: { type: String, default: '', trim: true, maxlength: 100 }
+}, { _id: false });
+
+/**
  * Class Schema - Lưu trữ thông tin lớp học
  */
 const classSchema = new mongoose.Schema({
@@ -130,6 +143,12 @@ const classSchema = new mongoose.Schema({
     invoiceConfig: {
         type: invoiceConfigSchema,
         default: () => ({})
+    },
+
+    // Lịch học cố định hằng tuần (thêm mới - lớp cũ không có field này mặc định [])
+    schedule: {
+        type: [scheduleSlotSchema],
+        default: []
     }
 }, {
     timestamps: true,
