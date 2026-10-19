@@ -291,16 +291,30 @@ require('../config/passport.config')(passport);
 
 // Static assets only. Keep "/" on the server-rendered route instead of the
 // legacy public/index.html shell, whose menu can drift from the EJS layout.
+// URLs built by assetPath() carry ?v=<content hash> and can be cached forever.
+// Everything else (notably ES module imports, which have no ?v=) must
+// revalidate via ETag so a deploy is picked up without clearing the cache.
 app.use(
   express.static(path.join(__dirname, '../public'), {
     index: false,
     setHeaders(res, filePath) {
       if (path.extname(filePath) === '.html') {
         res.setHeader('Cache-Control', 'no-store, must-revalidate');
+      } else if (res.req.query.v) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else {
+        res.setHeader('Cache-Control', 'no-cache');
       }
     },
   })
 );
+
+// Pages and API responses are per-user; never let the browser or Cloudflare
+// store them, or one lecturer's student data gets served to someone else.
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'private, no-store');
+  next();
+});
 
 // API routes (must be before page routes)
 app.use('/api', apiRoutes);
