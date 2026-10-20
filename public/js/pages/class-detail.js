@@ -33,10 +33,6 @@ const profiles = serverData.profiles || {};
 const initialGrades = normalizeGradeStudents(classData?.grades?.students || {}, classData?.students || []);
 const ZALO_CHAT_URL = 'https://chat.zalo.me/';
 
-function normalizeMssvKey(value = '') {
-    return String(value || '').trim().toUpperCase();
-}
-
 function toPlainGradeObject(value) {
     if (value instanceof Map) {
         return Object.fromEntries(value.entries());
